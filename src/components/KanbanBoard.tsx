@@ -627,6 +627,7 @@ export function KanbanBoard() {
           lead={selectedLead}
           onClose={() => setSelectedLead(null)}
           onMove={(newStatus) => updateLeadStatus(selectedLead.id, newStatus)}
+          onUpdate={(patch) => updateLead(selectedLead.id, patch)}
         />
       )}
     </div>
