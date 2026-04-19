@@ -156,6 +156,12 @@ function LeadModal({ lead, onClose, onMove }: { lead: Lead; onClose: () => void;
             {columns.map((col) => (
               <button
                 key={col.id}
+                onClick={() => {
+                  if (lead.status !== col.id) {
+                    onMove(col.id);
+                    onClose();
+                  }
+                }}
                 className="flex-1 py-2 rounded-lg text-center"
                 style={{
                   background: lead.status === col.id ? `${col.color}25` : "rgba(255,255,255,0.03)",
