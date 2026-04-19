@@ -1,6 +1,7 @@
-import React, { useState } from "react";
-import { Lead, LeadStatus } from "../data/mockData";
+import React, { useState, useEffect } from "react";
+import { Lead, LeadStatus, LeadOrigin } from "../data/mockData";
 import { useLeads } from "../hooks/useLeads";
+import { EditableField } from "./EditableField";
 import {
   DndContext,
   DragEndEvent,
