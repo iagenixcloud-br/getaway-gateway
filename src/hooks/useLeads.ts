@@ -65,6 +65,7 @@ export const rowToLead = (row: LeadRow): Lead => ({
   id: row.id,
   name: row.name,
   phone: row.phone,
+  city: row.city || "—",
   origin: "WA" as LeadOrigin,
   status: mapStatus(row.status),
   property: row.interest || "—",

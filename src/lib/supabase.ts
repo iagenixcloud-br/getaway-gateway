@@ -19,5 +19,6 @@ export interface LeadRow {
   status: string | null;
   interest: string | null;
   budget: number | null;
+  city: string | null;
   tenant_id: string | null;
 }

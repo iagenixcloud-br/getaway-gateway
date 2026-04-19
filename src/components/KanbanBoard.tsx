@@ -184,77 +184,53 @@ function LeadModal({ lead, onClose, onMove }: { lead: Lead; onClose: () => void;
 
 // ── Lead Card ─────────────────────────────────────────────────
 function LeadCard({ lead, onClick }: { lead: Lead; onClick: () => void }) {
-  const waiting = waitingLabel(lead.waitingHours);
-  const urgColor = waitingUrgency(lead.waitingHours);
-  const origin = originColors[lead.origin];
-
   return (
     <div
       className="glass glass-hover rounded-xl p-4 cursor-pointer"
       onClick={onClick}
       style={{ marginBottom: 8 }}
     >
-      {/* Waiting Warning */}
-      {waiting && (
-        <div
-          className="flex items-center gap-1.5 mb-3 px-2 py-1.5 rounded-lg"
-          style={{ background: `${urgColor}15`, border: `1px solid ${urgColor}30` }}
-        >
-          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke={urgColor} strokeWidth="2.5">
-            <circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" />
-          </svg>
-          <span style={{ fontSize: 10, fontWeight: 600, color: urgColor }}>{waiting}</span>
-        </div>
-      )}
+      {/* Nome */}
+      <p
+        style={{
+          fontSize: 14,
+          fontWeight: 600,
+          color: "var(--text-primary)",
+          overflow: "hidden",
+          textOverflow: "ellipsis",
+          whiteSpace: "nowrap",
+          marginBottom: 8,
+        }}
+      >
+        {lead.name}
+      </p>
 
-      {/* Lead Info */}
-      <div className="flex items-center gap-3 mb-3">
-        <img
-          src={lead.avatar}
-          alt={lead.name}
-          className="w-9 h-9 rounded-xl object-cover flex-shrink-0"
-        />
-        <div className="flex-1 min-w-0">
-          <p style={{ fontSize: 13, fontWeight: 600, color: "var(--text-primary)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-            {lead.name}
-          </p>
-          <p style={{ fontSize: 11, color: "var(--text-muted)" }}>{lead.phone}</p>
-        </div>
-        <span className="badge flex-shrink-0" style={{ background: origin.bg, color: origin.color }}>
-          {lead.origin}
+      {/* Telefone */}
+      <div className="flex items-center gap-2 mb-2">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ color: "var(--text-muted)", flexShrink: 0 }}>
+          <path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 014.8 11.5a19.79 19.79 0 01-3.07-8.67A2 2 0 013.7 1h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L7.91 8.2a16 16 0 006.29 6.29l1.46-1.46a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 15.24v1.68z" />
+        </svg>
+        <span style={{ fontSize: 12, color: "var(--text-muted)" }}>{lead.phone}</span>
+      </div>
+
+      {/* Cidade */}
+      <div className="flex items-center gap-2 mb-2">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ color: "var(--text-muted)", flexShrink: 0 }}>
+          <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z" /><circle cx="12" cy="10" r="3" />
+        </svg>
+        <span style={{ fontSize: 12, color: "var(--text-muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+          {lead.city}
         </span>
       </div>
 
-      {/* Property */}
-      <div className="flex items-center gap-2 mb-3">
+      {/* Imóvel solicitado */}
+      <div className="flex items-center gap-2">
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ color: "var(--text-muted)", flexShrink: 0 }}>
           <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
         </svg>
-        <span style={{ fontSize: 11, color: "var(--text-muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+        <span style={{ fontSize: 12, color: "var(--text-muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
           {lead.property}
         </span>
-      </div>
-
-      {/* Footer */}
-      <div className="flex items-center justify-between">
-        <span style={{ fontSize: 13, fontWeight: 700, color: "var(--gold)" }}>{lead.budget}</span>
-        <div className="flex items-center gap-1.5">
-          <div
-            className="w-1.5 h-1.5 rounded-full"
-            style={{ background: healthColor(lead.healthScore) }}
-          />
-          <span style={{ fontSize: 10, color: healthColor(lead.healthScore), fontWeight: 600 }}>
-            {lead.healthScore}
-          </span>
-        </div>
-      </div>
-
-      {/* Health Bar */}
-      <div className="health-bar mt-2">
-        <div
-          className="health-fill"
-          style={{ width: `${lead.healthScore}%`, background: healthColor(lead.healthScore) }}
-        />
       </div>
     </div>
   );
