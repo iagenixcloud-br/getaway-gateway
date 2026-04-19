@@ -2,12 +2,16 @@ import { useEffect, useState } from "react";
 import { supabase, LeadRow } from "../lib/supabase";
 import { Lead, LeadStatus, LeadOrigin } from "../data/mockData";
 
-// Map raw DB status → Kanban column
+// Valores oficiais salvos no banco (coluna `status` da tabela leads):
+// 'novo' | 'atrasado' | 'visitar' | 'agendados' | 'favoritos' | 'fechado' | 'arquivados'
+//
+// O n8n deve inserir/atualizar usando EXATAMENTE esses valores.
+// Aceitamos algumas variações comuns por segurança (ex: 'novo lead' legado).
 const mapStatus = (s: string | null): LeadStatus => {
   const normalized = (s || "").toLowerCase().trim();
   switch (normalized) {
-    case "novo lead":
     case "novo":
+    case "novo lead":
     case "new":
       return "novo";
     case "atrasado":
@@ -124,5 +128,19 @@ export function useLeads() {
     };
   }, []);
 
-  return { leads, loading, error };
+  const updateLeadStatus = async (id: string, newStatus: LeadStatus) => {
+    // Otimista: move o card imediatamente
+    setLeads((prev) =>
+      prev.map((l) => (l.id === id ? { ...l, status: newStatus } : l)),
+    );
+    const { error } = await supabase
+      .from("leads")
+      .update({ status: newStatus })
+      .eq("id", id);
+    if (error) {
+      setError(`Falha ao mover lead: ${error.message}`);
+    }
+  };
+
+  return { leads, loading, error, updateLeadStatus };
 }

@@ -44,7 +44,7 @@ const columns: { id: LeadStatus; label: string; color: string; icon: string }[] 
 ];
 
 // ── Lead Detail Modal ─────────────────────────────────────────
-function LeadModal({ lead, onClose }: { lead: Lead; onClose: () => void }) {
+function LeadModal({ lead, onClose, onMove }: { lead: Lead; onClose: () => void; onMove: (status: LeadStatus) => void }) {
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div
@@ -156,6 +156,12 @@ function LeadModal({ lead, onClose }: { lead: Lead; onClose: () => void }) {
             {columns.map((col) => (
               <button
                 key={col.id}
+                onClick={() => {
+                  if (lead.status !== col.id) {
+                    onMove(col.id);
+                    onClose();
+                  }
+                }}
                 className="flex-1 py-2 rounded-lg text-center"
                 style={{
                   background: lead.status === col.id ? `${col.color}25` : "rgba(255,255,255,0.03)",
@@ -257,7 +263,7 @@ function LeadCard({ lead, onClick }: { lead: Lead; onClick: () => void }) {
 // ── Main Kanban ───────────────────────────────────────────────
 export function KanbanBoard() {
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
-  const { leads: allLeads, loading, error } = useLeads();
+  const { leads: allLeads, loading, error, updateLeadStatus } = useLeads();
 
   const getColumnLeads = (status: LeadStatus) =>
     allLeads.filter((l) => l.status === status);
@@ -397,7 +403,11 @@ export function KanbanBoard() {
 
       {/* Modal */}
       {selectedLead && (
-        <LeadModal lead={selectedLead} onClose={() => setSelectedLead(null)} />
+        <LeadModal
+          lead={selectedLead}
+          onClose={() => setSelectedLead(null)}
+          onMove={(newStatus) => updateLeadStatus(selectedLead.id, newStatus)}
+        />
       )}
     </div>
   );
