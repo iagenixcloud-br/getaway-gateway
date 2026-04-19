@@ -434,15 +434,6 @@ export function KanbanBoard() {
   const getColumnLeads = (status: LeadStatus) =>
     allLeads.filter((l) => l.status === status);
 
-  const columnTotal = (status: LeadStatus) => {
-    const col = getColumnLeads(status);
-    const total = col.reduce((sum, l) => {
-      const val = parseFloat(l.budget.replace(/[^0-9,]/g, "").replace(",", "."));
-      return sum + val;
-    }, 0);
-    return total;
-  };
-
   const handleDragStart = (event: DragStartEvent) => {
     const lead = allLeads.find((l) => l.id === event.active.id);
     setActiveLead(lead || null);
