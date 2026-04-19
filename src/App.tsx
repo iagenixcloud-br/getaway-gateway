@@ -1,12 +1,41 @@
 import React from "react";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
 import "./index.css";
 import { Layout } from "./components/Layout";
 import { KanbanBoard } from "./components/KanbanBoard";
+import { AuthProvider } from "./contexts/AuthContext";
+import { ProtectedRoute } from "./components/ProtectedRoute";
+import { Login } from "./pages/Login";
+import { Corretores } from "./pages/Corretores";
 
 export default function App() {
   return (
-    <Layout>
-      <KanbanBoard />
-    </Layout>
+    <BrowserRouter>
+      <AuthProvider>
+        <Routes>
+          <Route path="/login" element={<Login />} />
+          <Route
+            path="/"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <KanbanBoard />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/corretores"
+            element={
+              <ProtectedRoute requireAdmin>
+                <Layout>
+                  <Corretores />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+        </Routes>
+      </AuthProvider>
+    </BrowserRouter>
   );
 }
