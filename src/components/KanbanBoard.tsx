@@ -555,17 +555,6 @@ export function KanbanBoard() {
                 )}
               </DroppableArea>
 
-              {/* Column Footer */}
-              <div
-                className="mt-3 px-4 py-2 rounded-xl flex items-center justify-between"
-                style={{ background: "rgba(255,255,255,0.02)", border: "1px solid var(--glass-border)" }}
-              >
-                <span style={{ fontSize: 11, color: "var(--text-muted)" }}>VGV potencial</span>
-                <span style={{ fontSize: 12, fontWeight: 600, color: col.color }}>
-                  R$ {columnTotal(col.id).toFixed(1)}M
-                </span>
-              </div>
-
               {/* Add Lead Button */}
               <button
                 className="mt-2 w-full py-2.5 rounded-xl flex items-center justify-center gap-2 glass-hover"
