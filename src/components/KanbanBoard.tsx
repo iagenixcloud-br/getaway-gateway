@@ -403,7 +403,11 @@ export function KanbanBoard() {
 
       {/* Modal */}
       {selectedLead && (
-        <LeadModal lead={selectedLead} onClose={() => setSelectedLead(null)} />
+        <LeadModal
+          lead={selectedLead}
+          onClose={() => setSelectedLead(null)}
+          onMove={(newStatus) => updateLeadStatus(selectedLead.id, newStatus)}
+        />
       )}
     </div>
   );
