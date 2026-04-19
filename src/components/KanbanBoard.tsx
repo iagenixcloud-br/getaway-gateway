@@ -257,7 +257,7 @@ function LeadCard({ lead, onClick }: { lead: Lead; onClick: () => void }) {
 // ── Main Kanban ───────────────────────────────────────────────
 export function KanbanBoard() {
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
-  const [allLeads] = useState<Lead[]>(leads);
+  const { leads: allLeads, loading, error } = useLeads();
 
   const getColumnLeads = (status: LeadStatus) =>
     allLeads.filter((l) => l.status === status);
