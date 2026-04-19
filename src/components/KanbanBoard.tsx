@@ -307,7 +307,12 @@ function DroppableArea({
 // ── Main Kanban ───────────────────────────────────────────────
 export function KanbanBoard() {
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
+  const [activeLead, setActiveLead] = useState<Lead | null>(null);
   const { leads: allLeads, loading, error, updateLeadStatus } = useLeads();
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+  );
 
   const getColumnLeads = (status: LeadStatus) =>
     allLeads.filter((l) => l.status === status);
@@ -321,7 +326,28 @@ export function KanbanBoard() {
     return total;
   };
 
+  const handleDragStart = (event: DragStartEvent) => {
+    const lead = allLeads.find((l) => l.id === event.active.id);
+    setActiveLead(lead || null);
+  };
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    setActiveLead(null);
+    const { active, over } = event;
+    if (!over) return;
+    const newStatus = over.id as LeadStatus;
+    const lead = allLeads.find((l) => l.id === active.id);
+    if (!lead || lead.status === newStatus) return;
+    updateLeadStatus(lead.id, newStatus);
+  };
+
   return (
+    <DndContext
+      sensors={sensors}
+      collisionDetection={closestCorners}
+      onDragStart={handleDragStart}
+      onDragEnd={handleDragEnd}
+    >
     <div>
       {(loading || error) && (
         <div
