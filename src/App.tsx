@@ -3,11 +3,11 @@ import "./index.css";
 import { Layout } from "./components/Layout";
 import { Dashboard } from "./components/Dashboard";
 import { KanbanBoard } from "./components/KanbanBoard";
-import { PropertyGallery } from "./components/PropertyGallery";
+import { MarketingHub } from "./components/MarketingHub";
 import { BrokerRanking } from "./components/BrokerRanking";
 import { WhatsAppConfig } from "./components/WhatsAppConfig";
 
-type View = "dashboard" | "kanban" | "imoveis" | "corretores" | "whatsapp";
+type View = "dashboard" | "kanban" | "marketing" | "corretores" | "whatsapp";
 
 export default function App() {
   const [activeView, setActiveView] = useState<View>("dashboard");
@@ -16,7 +16,7 @@ export default function App() {
     switch (activeView) {
       case "dashboard":   return <Dashboard />;
       case "kanban":      return <KanbanBoard />;
-      case "imoveis":     return <PropertyGallery />;
+      case "marketing":   return <MarketingHub />;
       case "corretores":  return <BrokerRanking />;
       case "whatsapp":    return <WhatsAppConfig />;
       default:            return <Dashboard />;
