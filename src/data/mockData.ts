@@ -2,7 +2,7 @@
 // ANDRADE IMOBILIÁRIA CRM ELITE — Mock Data
 // ============================================================
 
-export type LeadStatus = "prioridade" | "atrasado" | "visitar" | "agendados" | "favoritos" | "fechado" | "arquivados";
+export type LeadStatus = "novo" | "atrasado" | "visitar" | "agendados" | "favoritos" | "fechado" | "arquivados";
 export type LeadOrigin = "FB" | "IG" | "WA" | "Site" | "Indicação";
 
 export interface Lead {
