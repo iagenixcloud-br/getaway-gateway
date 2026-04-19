@@ -1,5 +1,6 @@
 import React, { useState } from "react";
-import { leads, Lead, LeadStatus } from "../data/mockData";
+import { Lead, LeadStatus } from "../data/mockData";
+import { useLeads } from "../hooks/useLeads";
 
 // ── Helpers ──────────────────────────────────────────────────
 const originColors: Record<string, { bg: string; color: string }> = {
