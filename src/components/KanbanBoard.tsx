@@ -477,5 +477,14 @@ export function KanbanBoard() {
         />
       )}
     </div>
+
+    <DragOverlay dropAnimation={null}>
+      {activeLead ? (
+        <div style={{ width: 280, transform: "rotate(2deg)" }}>
+          <LeadCard lead={activeLead} />
+        </div>
+      ) : null}
+    </DragOverlay>
+    </DndContext>
   );
 }
