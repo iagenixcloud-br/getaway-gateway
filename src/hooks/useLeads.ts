@@ -128,5 +128,19 @@ export function useLeads() {
     };
   }, []);
 
-  return { leads, loading, error };
+  const updateLeadStatus = async (id: string, newStatus: LeadStatus) => {
+    // Otimista: move o card imediatamente
+    setLeads((prev) =>
+      prev.map((l) => (l.id === id ? { ...l, status: newStatus } : l)),
+    );
+    const { error } = await supabase
+      .from("leads")
+      .update({ status: newStatus })
+      .eq("id", id);
+    if (error) {
+      setError(`Falha ao mover lead: ${error.message}`);
+    }
+  };
+
+  return { leads, loading, error, updateLeadStatus };
 }
