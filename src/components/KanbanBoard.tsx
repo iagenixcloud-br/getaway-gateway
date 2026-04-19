@@ -1,6 +1,18 @@
 import React, { useState } from "react";
 import { Lead, LeadStatus } from "../data/mockData";
 import { useLeads } from "../hooks/useLeads";
+import {
+  DndContext,
+  DragEndEvent,
+  DragOverlay,
+  DragStartEvent,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  useDraggable,
+  useDroppable,
+  closestCorners,
+} from "@dnd-kit/core";
 
 // ── Helpers ──────────────────────────────────────────────────
 const originColors: Record<string, { bg: string; color: string }> = {
@@ -183,12 +195,12 @@ function LeadModal({ lead, onClose, onMove }: { lead: Lead; onClose: () => void;
 }
 
 // ── Lead Card ─────────────────────────────────────────────────
-function LeadCard({ lead, onClick }: { lead: Lead; onClick: () => void }) {
+function LeadCard({ lead, onClick, isDragging }: { lead: Lead; onClick?: () => void; isDragging?: boolean }) {
   return (
     <div
-      className="glass glass-hover rounded-xl p-4 cursor-pointer"
+      className="glass glass-hover rounded-xl p-4"
       onClick={onClick}
-      style={{ marginBottom: 8 }}
+      style={{ marginBottom: 8, opacity: isDragging ? 0.4 : 1, cursor: "grab" }}
     >
       {/* Nome */}
       <p
@@ -236,10 +248,71 @@ function LeadCard({ lead, onClick }: { lead: Lead; onClick: () => void }) {
   );
 }
 
+// ── Draggable wrapper ─────────────────────────────────────────
+function DraggableLeadCard({ lead, onClick }: { lead: Lead; onClick: () => void }) {
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
+    id: lead.id,
+    data: { lead },
+  });
+  // Clique sem arrastar abre o modal; arrastar move o card
+  const [downPos, setDownPos] = React.useState<{ x: number; y: number } | null>(null);
+  return (
+    <div
+      ref={setNodeRef}
+      {...listeners}
+      {...attributes}
+      style={{ touchAction: "none" }}
+      onPointerDownCapture={(e) => setDownPos({ x: e.clientX, y: e.clientY })}
+      onClickCapture={(e) => {
+        if (downPos) {
+          const dx = Math.abs(e.clientX - downPos.x);
+          const dy = Math.abs(e.clientY - downPos.y);
+          if (dx < 5 && dy < 5) onClick();
+        }
+      }}
+    >
+      <LeadCard lead={lead} isDragging={isDragging} />
+    </div>
+  );
+}
+
+// ── Droppable column wrapper ──────────────────────────────────
+function DroppableArea({
+  id,
+  color,
+  children,
+}: {
+  id: LeadStatus;
+  color: string;
+  children: React.ReactNode;
+}) {
+  const { setNodeRef, isOver } = useDroppable({ id });
+  return (
+    <div
+      ref={setNodeRef}
+      className="flex-1 overflow-y-auto space-y-0 rounded-xl transition-colors"
+      style={{
+        minHeight: 400,
+        maxHeight: "calc(100vh - 340px)",
+        background: isOver ? `${color}15` : "transparent",
+        outline: isOver ? `2px dashed ${color}80` : "none",
+        outlineOffset: -4,
+      }}
+    >
+      {children}
+    </div>
+  );
+}
+
 // ── Main Kanban ───────────────────────────────────────────────
 export function KanbanBoard() {
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
+  const [activeLead, setActiveLead] = useState<Lead | null>(null);
   const { leads: allLeads, loading, error, updateLeadStatus } = useLeads();
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+  );
 
   const getColumnLeads = (status: LeadStatus) =>
     allLeads.filter((l) => l.status === status);
@@ -253,7 +326,28 @@ export function KanbanBoard() {
     return total;
   };
 
+  const handleDragStart = (event: DragStartEvent) => {
+    const lead = allLeads.find((l) => l.id === event.active.id);
+    setActiveLead(lead || null);
+  };
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    setActiveLead(null);
+    const { active, over } = event;
+    if (!over) return;
+    const newStatus = over.id as LeadStatus;
+    const lead = allLeads.find((l) => l.id === active.id);
+    if (!lead || lead.status === newStatus) return;
+    updateLeadStatus(lead.id, newStatus);
+  };
+
   return (
+    <DndContext
+      sensors={sensors}
+      collisionDetection={closestCorners}
+      onDragStart={handleDragStart}
+      onDragEnd={handleDragEnd}
+    >
     <div>
       {(loading || error) && (
         <div
@@ -322,29 +416,26 @@ export function KanbanBoard() {
                 </span>
               </div>
 
-              {/* Cards */}
-              <div
-                className="flex-1 overflow-y-auto space-y-0"
-                style={{ minHeight: 400, maxHeight: "calc(100vh - 340px)" }}
-              >
+              {/* Cards (droppable) */}
+              <DroppableArea id={col.id} color={col.color}>
                 {colLeads.length === 0 ? (
                   <div
                     className="flex flex-col items-center justify-center py-12 rounded-xl"
                     style={{ border: `2px dashed ${col.color}20`, color: "var(--text-muted)" }}
                   >
                     <span style={{ fontSize: 24, marginBottom: 8, opacity: 0.3 }}>✦</span>
-                    <span style={{ fontSize: 12 }}>Nenhum lead aqui</span>
+                    <span style={{ fontSize: 12 }}>Solte um lead aqui</span>
                   </div>
                 ) : (
                   colLeads.map((lead) => (
-                    <LeadCard
+                    <DraggableLeadCard
                       key={lead.id}
                       lead={lead}
                       onClick={() => setSelectedLead(lead)}
                     />
                   ))
                 )}
-              </div>
+              </DroppableArea>
 
               {/* Column Footer */}
               <div
@@ -386,5 +477,14 @@ export function KanbanBoard() {
         />
       )}
     </div>
+
+    <DragOverlay dropAnimation={null}>
+      {activeLead ? (
+        <div style={{ width: 280, transform: "rotate(2deg)" }}>
+          <LeadCard lead={activeLead} />
+        </div>
+      ) : null}
+    </DragOverlay>
+    </DndContext>
   );
 }
