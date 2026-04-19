@@ -33,10 +33,13 @@ const waitingUrgency = (hours: number): string => {
 
 // ── Column Config ─────────────────────────────────────────────
 const columns: { id: LeadStatus; label: string; color: string; icon: string }[] = [
-  { id: "novo", label: "Novo Lead", color: "#3b82f6", icon: "✦" },
-  { id: "contato", label: "Em Contato", color: "#8b5cf6", icon: "◈" },
-  { id: "visita", label: "Visita Agendada", color: "#D4AF37", icon: "⌂" },
-  { id: "proposta", label: "Proposta Enviada", color: "#22c55e", icon: "◉" },
+  { id: "prioridade", label: "Prioridade", color: "#ef4444", icon: "▲" },
+  { id: "atrasado", label: "Atrasado", color: "#f59e0b", icon: "⏱" },
+  { id: "visitar", label: "Visitar", color: "#3b82f6", icon: "⌂" },
+  { id: "agendados", label: "Agendados", color: "#8b5cf6", icon: "◈" },
+  { id: "favoritos", label: "Favoritos", color: "#D4AF37", icon: "★" },
+  { id: "fechado", label: "Negócio Fechado", color: "#22c55e", icon: "✓" },
+  { id: "arquivados", label: "Arquivados", color: "#64748b", icon: "▣" },
 ];
 
 // ── Lead Detail Modal ─────────────────────────────────────────
