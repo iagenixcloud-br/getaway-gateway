@@ -7,6 +7,7 @@ import { AuthProvider } from "./contexts/AuthContext";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { Login } from "./pages/Login";
 import { Corretores } from "./pages/Corretores";
+import { Desempenho } from "./pages/Desempenho";
 
 export default function App() {
   return (
@@ -30,6 +31,16 @@ export default function App() {
               <ProtectedRoute requireAdmin>
                 <Layout>
                   <Corretores />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/desempenho"
+            element={
+              <ProtectedRoute requireAdmin>
+                <Layout>
+                  <Desempenho />
                 </Layout>
               </ProtectedRoute>
             }
