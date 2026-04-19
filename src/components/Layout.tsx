@@ -1,6 +1,6 @@
 import React from "react";
 
-type View = "dashboard" | "kanban" | "imoveis" | "corretores" | "whatsapp";
+type View = "dashboard" | "kanban" | "marketing" | "corretores" | "whatsapp";
 
 interface LayoutProps {
   activeView: View;
@@ -11,7 +11,7 @@ interface LayoutProps {
 const navItems: { id: View; label: string; icon: string }[] = [
   { id: "dashboard", label: "Dashboard", icon: "⬛" },
   { id: "kanban", label: "Pipeline de Leads", icon: "◈" },
-  { id: "imoveis", label: "Imóveis", icon: "⌂" },
+  { id: "marketing", label: "Marketing", icon: "✦" },
   { id: "corretores", label: "Corretores", icon: "◉" },
   { id: "whatsapp", label: "WhatsApp", icon: "✉" },
 ];
@@ -33,10 +33,9 @@ const NavIcon = ({ id }: { id: View }) => {
         <rect x="17" y="3" width="5" height="15" rx="1" />
       </svg>
     ),
-    imoveis: (
+    marketing: (
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-        <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
-        <polyline points="9 22 9 12 15 12 15 22" />
+        <path d="M3 11l18-8-8 18-2-8-8-2z" />
       </svg>
     ),
     corretores: (
