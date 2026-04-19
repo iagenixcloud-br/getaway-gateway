@@ -584,6 +584,7 @@ export function KanbanBoard() {
                       key={lead.id}
                       lead={lead}
                       onClick={() => setSelectedLead(lead)}
+                      onUpdate={(patch) => updateLead(lead.id, patch)}
                     />
                   ))
                 )}
