@@ -460,7 +460,7 @@ function DroppableArea({
 export function KanbanBoard() {
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [activeLead, setActiveLead] = useState<Lead | null>(null);
-  const { leads: allLeads, loading, error, updateLeadStatus } = useLeads();
+  const { leads: allLeads, loading, error, updateLeadStatus, updateLead } = useLeads();
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
