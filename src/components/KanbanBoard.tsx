@@ -44,7 +44,7 @@ const columns: { id: LeadStatus; label: string; color: string; icon: string }[] 
 ];
 
 // ── Lead Detail Modal ─────────────────────────────────────────
-function LeadModal({ lead, onClose }: { lead: Lead; onClose: () => void }) {
+function LeadModal({ lead, onClose, onMove }: { lead: Lead; onClose: () => void; onMove: (status: LeadStatus) => void }) {
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div
