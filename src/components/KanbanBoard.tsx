@@ -57,7 +57,249 @@ const columns: { id: LeadStatus; label: string; color: string; icon: string }[] 
 ];
 
 // ── Lead Detail Modal ─────────────────────────────────────────
-function LeadModal({ lead, onClose, onMove }: { lead: Lead; onClose: () => void; onMove: (status: LeadStatus) => void }) {
+function LeadModal({
+  lead,
+  onClose,
+  onMove,
+  onUpdate,
+}: {
+  lead: Lead;
+  onClose: () => void;
+  onMove: (status: LeadStatus) => void;
+  onUpdate: (patch: Partial<Lead>) => void;
+}) {
+  // Estado local do formulário (sincroniza com prop)
+  const [form, setForm] = useState<Lead>(lead);
+  useEffect(() => setForm(lead), [lead]);
+
+  const set = <K extends keyof Lead>(key: K, value: Lead[K]) =>
+    setForm((f) => ({ ...f, [key]: value }));
+
+  const dirty =
+    form.name !== lead.name ||
+    form.phone !== lead.phone ||
+    form.city !== lead.city ||
+    form.property !== lead.property ||
+    form.budget !== lead.budget ||
+    form.origin !== lead.origin;
+
+  const handleSave = () => {
+    onUpdate({
+      name: form.name,
+      phone: form.phone,
+      city: form.city,
+      property: form.property,
+      budget: form.budget,
+      origin: form.origin,
+    });
+    onClose();
+  };
+
+  const inputStyle: React.CSSProperties = {
+    width: "100%",
+    background: "rgba(255,255,255,0.04)",
+    border: "1px solid var(--glass-border)",
+    borderRadius: 8,
+    padding: "8px 10px",
+    fontSize: 13,
+    color: "var(--text-primary)",
+    fontFamily: "inherit",
+    outline: "none",
+  };
+
+  const labelStyle: React.CSSProperties = {
+    fontSize: 11,
+    color: "var(--text-muted)",
+    marginBottom: 4,
+    display: "block",
+    fontWeight: 500,
+  };
+
+  const origins: LeadOrigin[] = ["FB", "IG", "WA", "Site", "Indicação"];
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div
+        className="modal-content glass rounded-2xl p-8 w-full"
+        style={{ maxWidth: 560, border: "1px solid rgba(212,175,55,0.2)", maxHeight: "90vh", overflowY: "auto" }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="flex items-start gap-4 mb-6">
+          <img
+            src={lead.avatar}
+            alt={lead.name}
+            className="w-16 h-16 rounded-2xl object-cover"
+            style={{ border: "2px solid var(--gold)" }}
+          />
+          <div className="flex-1">
+            <h2 style={{ fontFamily: "Montserrat, sans-serif", fontWeight: 700, fontSize: 20, marginBottom: 2 }}>
+              Editar Lead
+            </h2>
+            <p style={{ fontSize: 12, color: "var(--text-muted)" }}>
+              Cadastrado em {new Date(lead.createdAt).toLocaleDateString("pt-BR")}
+            </p>
+          </div>
+          <button
+            onClick={onClose}
+            className="w-8 h-8 rounded-xl flex items-center justify-center"
+            style={{ background: "rgba(255,255,255,0.05)", color: "var(--text-muted)", cursor: "pointer" }}
+          >
+            ✕
+          </button>
+        </div>
+
+        {/* Form Grid */}
+        <div className="grid grid-cols-2 gap-3 mb-4">
+          <div className="col-span-2">
+            <label style={labelStyle}>Nome</label>
+            <input
+              style={inputStyle}
+              value={form.name}
+              onChange={(e) => set("name", e.target.value)}
+            />
+          </div>
+          <div>
+            <label style={labelStyle}>Telefone</label>
+            <input
+              style={inputStyle}
+              value={form.phone}
+              onChange={(e) => set("phone", e.target.value)}
+            />
+          </div>
+          <div>
+            <label style={labelStyle}>Cidade</label>
+            <input
+              style={inputStyle}
+              value={form.city}
+              onChange={(e) => set("city", e.target.value)}
+            />
+          </div>
+          <div className="col-span-2">
+            <label style={labelStyle}>Imóvel de Interesse</label>
+            <input
+              style={inputStyle}
+              value={form.property}
+              onChange={(e) => set("property", e.target.value)}
+            />
+          </div>
+          <div>
+            <label style={labelStyle}>Budget</label>
+            <input
+              style={inputStyle}
+              value={form.budget}
+              placeholder="R$ 1.5M"
+              onChange={(e) => set("budget", e.target.value)}
+            />
+          </div>
+          <div>
+            <label style={labelStyle}>Origem</label>
+            <select
+              style={inputStyle}
+              value={form.origin}
+              onChange={(e) => set("origin", e.target.value as LeadOrigin)}
+            >
+              {origins.map((o) => (
+                <option key={o} value={o} style={{ background: "#1a1a1a" }}>
+                  {o}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        {/* Save / Cancel */}
+        <div className="flex gap-2 mb-4">
+          <button
+            onClick={handleSave}
+            disabled={!dirty}
+            className="flex-1 py-2.5 rounded-xl"
+            style={{
+              background: dirty ? "var(--gold)" : "rgba(212,175,55,0.2)",
+              color: dirty ? "#0a0a0a" : "var(--text-muted)",
+              fontSize: 13,
+              fontWeight: 700,
+              cursor: dirty ? "pointer" : "not-allowed",
+              border: "none",
+            }}
+          >
+            {dirty ? "Salvar alterações" : "Sem alterações"}
+          </button>
+          <button
+            onClick={() => setForm(lead)}
+            disabled={!dirty}
+            className="px-4 py-2.5 rounded-xl"
+            style={{
+              background: "rgba(255,255,255,0.05)",
+              color: "var(--text-muted)",
+              fontSize: 13,
+              fontWeight: 600,
+              cursor: dirty ? "pointer" : "not-allowed",
+              border: "1px solid var(--glass-border)",
+            }}
+          >
+            Resetar
+          </button>
+        </div>
+
+        {/* Action Buttons */}
+        <div className="grid grid-cols-2 gap-3">
+          <a
+            href={`https://wa.me/${lead.phone.replace(/\D/g, "")}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center justify-center gap-2 py-3 rounded-xl"
+            style={{ background: "rgba(37,211,102,0.1)", border: "1px solid rgba(37,211,102,0.3)", color: "#25D366", fontSize: 13, fontWeight: 600, cursor: "pointer", textDecoration: "none" }}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z" />
+            </svg>
+            WhatsApp
+          </a>
+          <button
+            className="flex items-center justify-center gap-2 py-3 rounded-xl"
+            style={{ background: "var(--gold-dim)", border: "1px solid rgba(212,175,55,0.3)", color: "var(--gold)", fontSize: 13, fontWeight: 600, cursor: "pointer" }}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" />
+            </svg>
+            Agendar
+          </button>
+        </div>
+
+        {/* Move Stage */}
+        <div className="mt-4 pt-4" style={{ borderTop: "1px solid var(--glass-border)" }}>
+          <p style={{ fontSize: 12, color: "var(--text-muted)", marginBottom: 8 }}>Mover para etapa:</p>
+          <div className="flex gap-2 flex-wrap">
+            {columns.map((col) => (
+              <button
+                key={col.id}
+                onClick={() => {
+                  if (lead.status !== col.id) {
+                    onMove(col.id);
+                    onClose();
+                  }
+                }}
+                className="flex-1 py-2 rounded-lg text-center"
+                style={{
+                  background: lead.status === col.id ? `${col.color}25` : "rgba(255,255,255,0.03)",
+                  border: `1px solid ${lead.status === col.id ? col.color + "60" : "rgba(255,255,255,0.08)"}`,
+                  fontSize: 11,
+                  fontWeight: 600,
+                  color: lead.status === col.id ? col.color : "var(--text-muted)",
+                  cursor: "pointer",
+                  minWidth: 70,
+                }}
+              >
+                {col.icon} {col.label.split(" ")[0]}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div
