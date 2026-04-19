@@ -1,6 +1,18 @@
 import React, { useState } from "react";
 import { Lead, LeadStatus } from "../data/mockData";
 import { useLeads } from "../hooks/useLeads";
+import {
+  DndContext,
+  DragEndEvent,
+  DragOverlay,
+  DragStartEvent,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  useDraggable,
+  useDroppable,
+  closestCorners,
+} from "@dnd-kit/core";
 
 // ── Helpers ──────────────────────────────────────────────────
 const originColors: Record<string, { bg: string; color: string }> = {
