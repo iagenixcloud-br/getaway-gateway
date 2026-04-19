@@ -2,7 +2,7 @@
 // ANDRADE IMOBILIÁRIA CRM ELITE — Mock Data
 // ============================================================
 
-export type LeadStatus = "prioridade" | "atrasado" | "visitar" | "agendados" | "favoritos" | "fechado" | "arquivados";
+export type LeadStatus = "novo" | "atrasado" | "visitar" | "agendados" | "favoritos" | "fechado" | "arquivados";
 export type LeadOrigin = "FB" | "IG" | "WA" | "Site" | "Indicação";
 
 export interface Lead {
@@ -58,7 +58,7 @@ export const leads: Lead[] = [
     name: "Ricardo Mendonça",
     phone: "(11) 98234-5671",
     origin: "IG",
-    status: "prioridade",
+    status: "novo",
     property: "Penthouse Jardins",
     waitingHours: 2,
     avatar: "https://i.pravatar.cc/150?img=11",
@@ -71,7 +71,7 @@ export const leads: Lead[] = [
     name: "Fernanda Castelo",
     phone: "(11) 97456-8821",
     origin: "FB",
-    status: "prioridade",
+    status: "novo",
     property: "Cobertura Itaim",
     waitingHours: 5,
     avatar: "https://i.pravatar.cc/150?img=5",

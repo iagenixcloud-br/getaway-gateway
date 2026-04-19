@@ -33,7 +33,7 @@ const waitingUrgency = (hours: number): string => {
 
 // ── Column Config ─────────────────────────────────────────────
 const columns: { id: LeadStatus; label: string; color: string; icon: string }[] = [
-  { id: "prioridade", label: "Prioridade", color: "#ef4444", icon: "▲" },
+  { id: "novo", label: "Novo Lead", color: "#06b6d4", icon: "✦" },
   { id: "atrasado", label: "Atrasado", color: "#f59e0b", icon: "⏱" },
   { id: "visitar", label: "Visitar", color: "#3b82f6", icon: "⌂" },
   { id: "agendados", label: "Agendados", color: "#8b5cf6", icon: "◈" },
