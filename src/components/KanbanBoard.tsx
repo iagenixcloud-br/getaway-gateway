@@ -302,7 +302,18 @@ function LeadModal({
 }
 
 // ── Lead Card ─────────────────────────────────────────────────
-function LeadCard({ lead, onClick, isDragging }: { lead: Lead; onClick?: () => void; isDragging?: boolean }) {
+function LeadCard({
+  lead,
+  onClick,
+  isDragging,
+  onUpdate,
+}: {
+  lead: Lead;
+  onClick?: () => void;
+  isDragging?: boolean;
+  onUpdate?: (patch: Partial<Lead>) => void;
+}) {
+  const editable = !!onUpdate;
   return (
     <div
       className="glass glass-hover rounded-xl p-4"
@@ -310,26 +321,42 @@ function LeadCard({ lead, onClick, isDragging }: { lead: Lead; onClick?: () => v
       style={{ marginBottom: 8, opacity: isDragging ? 0.4 : 1, cursor: "grab" }}
     >
       {/* Nome */}
-      <p
-        style={{
-          fontSize: 14,
-          fontWeight: 600,
-          color: "var(--text-primary)",
-          overflow: "hidden",
-          textOverflow: "ellipsis",
-          whiteSpace: "nowrap",
-          marginBottom: 8,
-        }}
-      >
-        {lead.name}
-      </p>
+      <div style={{ marginBottom: 8 }}>
+        {editable ? (
+          <EditableField
+            value={lead.name}
+            onSave={(v) => onUpdate!({ name: v })}
+            fontSize={14}
+            fontWeight={600}
+            color="var(--text-primary)"
+            placeholder="Nome do lead"
+          />
+        ) : (
+          <p
+            style={{
+              fontSize: 14,
+              fontWeight: 600,
+              color: "var(--text-primary)",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+            }}
+          >
+            {lead.name}
+          </p>
+        )}
+      </div>
 
       {/* Telefone */}
       <div className="flex items-center gap-2 mb-2">
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ color: "var(--text-muted)", flexShrink: 0 }}>
           <path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 014.8 11.5a19.79 19.79 0 01-3.07-8.67A2 2 0 013.7 1h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L7.91 8.2a16 16 0 006.29 6.29l1.46-1.46a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 15.24v1.68z" />
         </svg>
-        <span style={{ fontSize: 12, color: "var(--text-muted)" }}>{lead.phone}</span>
+        {editable ? (
+          <EditableField value={lead.phone} onSave={(v) => onUpdate!({ phone: v })} placeholder="Telefone" />
+        ) : (
+          <span style={{ fontSize: 12, color: "var(--text-muted)" }}>{lead.phone}</span>
+        )}
       </div>
 
       {/* Cidade */}
@@ -337,9 +364,13 @@ function LeadCard({ lead, onClick, isDragging }: { lead: Lead; onClick?: () => v
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ color: "var(--text-muted)", flexShrink: 0 }}>
           <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z" /><circle cx="12" cy="10" r="3" />
         </svg>
-        <span style={{ fontSize: 12, color: "var(--text-muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-          {lead.city}
-        </span>
+        {editable ? (
+          <EditableField value={lead.city} onSave={(v) => onUpdate!({ city: v })} placeholder="Cidade" />
+        ) : (
+          <span style={{ fontSize: 12, color: "var(--text-muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            {lead.city}
+          </span>
+        )}
       </div>
 
       {/* Imóvel solicitado */}
@@ -347,21 +378,32 @@ function LeadCard({ lead, onClick, isDragging }: { lead: Lead; onClick?: () => v
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ color: "var(--text-muted)", flexShrink: 0 }}>
           <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
         </svg>
-        <span style={{ fontSize: 12, color: "var(--text-muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-          {lead.property}
-        </span>
+        {editable ? (
+          <EditableField value={lead.property} onSave={(v) => onUpdate!({ property: v })} placeholder="Imóvel de interesse" />
+        ) : (
+          <span style={{ fontSize: 12, color: "var(--text-muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            {lead.property}
+          </span>
+        )}
       </div>
     </div>
   );
 }
 
 // ── Draggable wrapper ─────────────────────────────────────────
-function DraggableLeadCard({ lead, onClick }: { lead: Lead; onClick: () => void }) {
+function DraggableLeadCard({
+  lead,
+  onClick,
+  onUpdate,
+}: {
+  lead: Lead;
+  onClick: () => void;
+  onUpdate: (patch: Partial<Lead>) => void;
+}) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: lead.id,
     data: { lead },
   });
-  // Clique sem arrastar abre o modal; arrastar move o card
   const [downPos, setDownPos] = React.useState<{ x: number; y: number } | null>(null);
   return (
     <div
@@ -374,11 +416,14 @@ function DraggableLeadCard({ lead, onClick }: { lead: Lead; onClick: () => void 
         if (downPos) {
           const dx = Math.abs(e.clientX - downPos.x);
           const dy = Math.abs(e.clientY - downPos.y);
-          if (dx < 5 && dy < 5) onClick();
+          // Só abre o modal se o clique não veio de um campo editável
+          const target = e.target as HTMLElement;
+          const insideEditable = target.closest("input, textarea, select, [data-editable]");
+          if (dx < 5 && dy < 5 && !insideEditable) onClick();
         }
       }}
     >
-      <LeadCard lead={lead} isDragging={isDragging} />
+      <LeadCard lead={lead} isDragging={isDragging} onUpdate={onUpdate} />
     </div>
   );
 }
