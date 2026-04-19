@@ -78,18 +78,14 @@ function LeadModal({
   const dirty =
     form.name !== lead.name ||
     form.phone !== lead.phone ||
-    form.city !== lead.city ||
     form.property !== lead.property ||
-    form.budget !== lead.budget ||
     form.origin !== lead.origin;
 
   const handleSave = () => {
     onUpdate({
       name: form.name,
       phone: form.phone,
-      city: form.city,
       property: form.property,
-      budget: form.budget,
       origin: form.origin,
     });
     onClose();
@@ -167,14 +163,6 @@ function LeadModal({
               onChange={(e) => set("phone", e.target.value)}
             />
           </div>
-          <div>
-            <label style={labelStyle}>Cidade</label>
-            <input
-              style={inputStyle}
-              value={form.city}
-              onChange={(e) => set("city", e.target.value)}
-            />
-          </div>
           <div className="col-span-2">
             <label style={labelStyle}>Imóvel de Interesse</label>
             <input
@@ -183,16 +171,7 @@ function LeadModal({
               onChange={(e) => set("property", e.target.value)}
             />
           </div>
-          <div>
-            <label style={labelStyle}>Budget</label>
-            <input
-              style={inputStyle}
-              value={form.budget}
-              placeholder="R$ 1.5M"
-              onChange={(e) => set("budget", e.target.value)}
-            />
-          </div>
-          <div>
+          <div className="col-span-2">
             <label style={labelStyle}>Origem</label>
             <select
               style={inputStyle}
@@ -359,20 +338,6 @@ function LeadCard({
         )}
       </div>
 
-      {/* Cidade */}
-      <div className="flex items-center gap-2 mb-2">
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ color: "var(--text-muted)", flexShrink: 0 }}>
-          <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z" /><circle cx="12" cy="10" r="3" />
-        </svg>
-        {editable ? (
-          <EditableField value={lead.city} onSave={(v) => onUpdate!({ city: v })} placeholder="Cidade" />
-        ) : (
-          <span style={{ fontSize: 12, color: "var(--text-muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-            {lead.city}
-          </span>
-        )}
-      </div>
-
       {/* Imóvel solicitado */}
       <div className="flex items-center gap-2">
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ color: "var(--text-muted)", flexShrink: 0 }}>
@@ -468,15 +433,6 @@ export function KanbanBoard() {
 
   const getColumnLeads = (status: LeadStatus) =>
     allLeads.filter((l) => l.status === status);
-
-  const columnTotal = (status: LeadStatus) => {
-    const col = getColumnLeads(status);
-    const total = col.reduce((sum, l) => {
-      const val = parseFloat(l.budget.replace(/[^0-9,]/g, "").replace(",", "."));
-      return sum + val;
-    }, 0);
-    return total;
-  };
 
   const handleDragStart = (event: DragStartEvent) => {
     const lead = allLeads.find((l) => l.id === event.active.id);
@@ -589,17 +545,6 @@ export function KanbanBoard() {
                   ))
                 )}
               </DroppableArea>
-
-              {/* Column Footer */}
-              <div
-                className="mt-3 px-4 py-2 rounded-xl flex items-center justify-between"
-                style={{ background: "rgba(255,255,255,0.02)", border: "1px solid var(--glass-border)" }}
-              >
-                <span style={{ fontSize: 11, color: "var(--text-muted)" }}>VGV potencial</span>
-                <span style={{ fontSize: 12, fontWeight: 600, color: col.color }}>
-                  R$ {columnTotal(col.id).toFixed(1)}M
-                </span>
-              </div>
 
               {/* Add Lead Button */}
               <button
