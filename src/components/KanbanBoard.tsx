@@ -33,10 +33,13 @@ const waitingUrgency = (hours: number): string => {
 
 // ── Column Config ─────────────────────────────────────────────
 const columns: { id: LeadStatus; label: string; color: string; icon: string }[] = [
-  { id: "novo", label: "Novo Lead", color: "#3b82f6", icon: "✦" },
-  { id: "contato", label: "Em Contato", color: "#8b5cf6", icon: "◈" },
-  { id: "visita", label: "Visita Agendada", color: "#D4AF37", icon: "⌂" },
-  { id: "proposta", label: "Proposta Enviada", color: "#22c55e", icon: "◉" },
+  { id: "prioridade", label: "Prioridade", color: "#ef4444", icon: "▲" },
+  { id: "atrasado", label: "Atrasado", color: "#f59e0b", icon: "⏱" },
+  { id: "visitar", label: "Visitar", color: "#3b82f6", icon: "⌂" },
+  { id: "agendados", label: "Agendados", color: "#8b5cf6", icon: "◈" },
+  { id: "favoritos", label: "Favoritos", color: "#D4AF37", icon: "★" },
+  { id: "fechado", label: "Negócio Fechado", color: "#22c55e", icon: "✓" },
+  { id: "arquivados", label: "Arquivados", color: "#64748b", icon: "▣" },
 ];
 
 // ── Lead Detail Modal ─────────────────────────────────────────
@@ -270,7 +273,7 @@ export function KanbanBoard() {
   return (
     <div>
       {/* Top Stats Bar */}
-      <div className="grid grid-cols-4 gap-3 mb-6">
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3 mb-6">
         {columns.map((col) => {
           const count = getColumnLeads(col.id).length;
           return (
@@ -376,52 +379,6 @@ export function KanbanBoard() {
           );
         })}
 
-        {/* Closed Column */}
-        <div className="kanban-column flex-shrink-0 flex flex-col" style={{ minWidth: 280, maxWidth: 300 }}>
-          <div
-            className="flex items-center justify-between px-4 py-3 rounded-xl mb-3"
-            style={{ background: "rgba(34,197,94,0.1)", border: "1px solid rgba(34,197,94,0.25)" }}
-          >
-            <div className="flex items-center gap-2">
-              <span style={{ color: "#22c55e" }}>✓</span>
-              <span style={{ fontSize: 13, fontWeight: 600, color: "var(--text-primary)" }}>Fechado</span>
-            </div>
-            <span className="badge" style={{ background: "rgba(34,197,94,0.2)", color: "#22c55e" }}>
-              {allLeads.filter((l) => l.status === "fechado").length}
-            </span>
-          </div>
-
-          <div className="flex-1 overflow-y-auto space-y-0" style={{ maxHeight: "calc(100vh - 340px)" }}>
-            {allLeads
-              .filter((l) => l.status === "fechado")
-              .map((lead) => (
-                <div
-                  key={lead.id}
-                  className="glass glass-hover rounded-xl p-4 cursor-pointer mb-2"
-                  onClick={() => setSelectedLead(lead)}
-                >
-                  <div className="flex items-center gap-3">
-                    <div
-                      className="w-8 h-8 rounded-xl flex items-center justify-center"
-                      style={{ background: "rgba(34,197,94,0.15)" }}
-                    >
-                      <span style={{ color: "#22c55e", fontSize: 14 }}>✓</span>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p style={{ fontSize: 13, fontWeight: 600, color: "var(--text-primary)" }}>{lead.name}</p>
-                      <p style={{ fontSize: 11, color: "var(--text-muted)" }}>{lead.property}</p>
-                    </div>
-                  </div>
-                  <div className="flex justify-between items-center mt-3">
-                    <span style={{ fontSize: 13, fontWeight: 700, color: "#22c55e" }}>{lead.budget}</span>
-                    <span className="badge" style={{ background: "rgba(34,197,94,0.15)", color: "#22c55e" }}>
-                      Vendido
-                    </span>
-                  </div>
-                </div>
-              ))}
-          </div>
-        </div>
       </div>
 
       {/* Modal */}
