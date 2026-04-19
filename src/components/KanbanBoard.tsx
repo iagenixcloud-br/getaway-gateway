@@ -78,18 +78,14 @@ function LeadModal({
   const dirty =
     form.name !== lead.name ||
     form.phone !== lead.phone ||
-    form.city !== lead.city ||
     form.property !== lead.property ||
-    form.budget !== lead.budget ||
     form.origin !== lead.origin;
 
   const handleSave = () => {
     onUpdate({
       name: form.name,
       phone: form.phone,
-      city: form.city,
       property: form.property,
-      budget: form.budget,
       origin: form.origin,
     });
     onClose();
