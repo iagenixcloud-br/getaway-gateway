@@ -96,9 +96,6 @@ export function Desempenho() {
     };
   }, [isAdmin]);
 
-  if (authLoading) return null;
-  if (!isAdmin) return <Navigate to="/" replace />;
-
   // Filtra leads pelo período
   const filtered = useMemo(() => {
     const cfg = RANGES.find((r) => r.key === range)!;
@@ -153,6 +150,9 @@ export function Desempenho() {
     });
     return buckets;
   }, [filtered, range]);
+
+  if (authLoading) return null;
+  if (!isAdmin) return <Navigate to="/" replace />;
 
   return (
     <div>
