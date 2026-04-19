@@ -17,6 +17,7 @@ export interface Lead {
   id: string;
   name: string;
   phone: string;
+  city: string;
   origin: LeadOrigin;
   status: LeadStatus;
   property: string;
