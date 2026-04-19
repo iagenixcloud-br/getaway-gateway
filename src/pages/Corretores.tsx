@@ -64,37 +64,32 @@ export function Corretores() {
     setFormMsg(null);
     setSubmitting(true);
 
-    // 1) cria conta no auth (signUp). Como admin já está logado, isso não troca a sessão.
-    //    OBS: signUp do anon-key cria o usuário e dispara o trigger handle_new_user
-    //    que insere em profiles automaticamente.
-    const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-      email: email.trim(),
-      password,
-      options: {
-        data: { name: name.trim(), phone: phone.trim() || null },
-        emailRedirectTo: window.location.origin,
+    // Chama a Edge Function 'create-corretor' que roda no servidor com service_role.
+    // Isso NÃO troca a sessão do admin atual.
+    const { data, error } = await supabase.functions.invoke("create-corretor", {
+      body: {
+        name: name.trim(),
+        email: email.trim(),
+        password,
+        phone: phone.trim() || null,
       },
     });
 
-    if (signUpError) {
-      setSubmitting(false);
-      setFormMsg({ type: "err", text: signUpError.message });
+    setSubmitting(false);
+
+    if (error) {
+      // Tenta extrair mensagem do corpo da resposta de erro
+      const ctx = (error as { context?: { error?: string } }).context;
+      const msg = ctx?.error || error.message || "Falha ao cadastrar corretor";
+      setFormMsg({ type: "err", text: msg });
       return;
     }
 
-    // 2) atribui role 'corretor'
-    if (signUpData.user) {
-      const { error: roleError } = await supabase
-        .from("user_roles")
-        .insert({ user_id: signUpData.user.id, role: "corretor" });
-      if (roleError) {
-        setSubmitting(false);
-        setFormMsg({ type: "err", text: `Conta criada, mas falhou ao atribuir role: ${roleError.message}` });
-        return;
-      }
+    if (data?.error) {
+      setFormMsg({ type: "err", text: data.error });
+      return;
     }
 
-    setSubmitting(false);
     setFormMsg({ type: "ok", text: `Corretor ${name} cadastrado!` });
     setName("");
     setEmail("");
