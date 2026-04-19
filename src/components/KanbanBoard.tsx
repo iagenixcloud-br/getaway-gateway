@@ -359,20 +359,6 @@ function LeadCard({
         )}
       </div>
 
-      {/* Cidade */}
-      <div className="flex items-center gap-2 mb-2">
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ color: "var(--text-muted)", flexShrink: 0 }}>
-          <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z" /><circle cx="12" cy="10" r="3" />
-        </svg>
-        {editable ? (
-          <EditableField value={lead.city} onSave={(v) => onUpdate!({ city: v })} placeholder="Cidade" />
-        ) : (
-          <span style={{ fontSize: 12, color: "var(--text-muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-            {lead.city}
-          </span>
-        )}
-      </div>
-
       {/* Imóvel solicitado */}
       <div className="flex items-center gap-2">
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ color: "var(--text-muted)", flexShrink: 0 }}>
