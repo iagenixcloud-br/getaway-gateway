@@ -416,29 +416,26 @@ export function KanbanBoard() {
                 </span>
               </div>
 
-              {/* Cards */}
-              <div
-                className="flex-1 overflow-y-auto space-y-0"
-                style={{ minHeight: 400, maxHeight: "calc(100vh - 340px)" }}
-              >
+              {/* Cards (droppable) */}
+              <DroppableArea id={col.id} color={col.color}>
                 {colLeads.length === 0 ? (
                   <div
                     className="flex flex-col items-center justify-center py-12 rounded-xl"
                     style={{ border: `2px dashed ${col.color}20`, color: "var(--text-muted)" }}
                   >
                     <span style={{ fontSize: 24, marginBottom: 8, opacity: 0.3 }}>✦</span>
-                    <span style={{ fontSize: 12 }}>Nenhum lead aqui</span>
+                    <span style={{ fontSize: 12 }}>Solte um lead aqui</span>
                   </div>
                 ) : (
                   colLeads.map((lead) => (
-                    <LeadCard
+                    <DraggableLeadCard
                       key={lead.id}
                       lead={lead}
                       onClick={() => setSelectedLead(lead)}
                     />
                   ))
                 )}
-              </div>
+              </DroppableArea>
 
               {/* Column Footer */}
               <div
