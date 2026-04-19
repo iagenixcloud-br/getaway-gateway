@@ -1,5 +1,6 @@
 import React, { useState } from "react";
-import { leads, Lead, LeadStatus } from "../data/mockData";
+import { Lead, LeadStatus } from "../data/mockData";
+import { useLeads } from "../hooks/useLeads";
 
 // ── Helpers ──────────────────────────────────────────────────
 const originColors: Record<string, { bg: string; color: string }> = {
@@ -256,7 +257,7 @@ function LeadCard({ lead, onClick }: { lead: Lead; onClick: () => void }) {
 // ── Main Kanban ───────────────────────────────────────────────
 export function KanbanBoard() {
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
-  const [allLeads] = useState<Lead[]>(leads);
+  const { leads: allLeads, loading, error } = useLeads();
 
   const getColumnLeads = (status: LeadStatus) =>
     allLeads.filter((l) => l.status === status);
@@ -272,6 +273,19 @@ export function KanbanBoard() {
 
   return (
     <div>
+      {(loading || error) && (
+        <div
+          className="glass rounded-xl px-4 py-2 mb-4"
+          style={{
+            border: error ? "1px solid #ef444450" : "1px solid var(--glass-border)",
+            fontSize: 12,
+            color: error ? "#ef4444" : "var(--text-muted)",
+          }}
+        >
+          {error ? `Erro ao carregar leads: ${error}` : "Conectando ao Supabase..."}
+        </div>
+      )}
+
       {/* Top Stats Bar */}
       <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3 mb-6">
         {columns.map((col) => {
