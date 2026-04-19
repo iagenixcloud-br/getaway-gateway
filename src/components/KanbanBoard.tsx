@@ -163,14 +163,6 @@ function LeadModal({
               onChange={(e) => set("phone", e.target.value)}
             />
           </div>
-          <div>
-            <label style={labelStyle}>Cidade</label>
-            <input
-              style={inputStyle}
-              value={form.city}
-              onChange={(e) => set("city", e.target.value)}
-            />
-          </div>
           <div className="col-span-2">
             <label style={labelStyle}>Imóvel de Interesse</label>
             <input
@@ -179,16 +171,7 @@ function LeadModal({
               onChange={(e) => set("property", e.target.value)}
             />
           </div>
-          <div>
-            <label style={labelStyle}>Budget</label>
-            <input
-              style={inputStyle}
-              value={form.budget}
-              placeholder="R$ 1.5M"
-              onChange={(e) => set("budget", e.target.value)}
-            />
-          </div>
-          <div>
+          <div className="col-span-2">
             <label style={labelStyle}>Origem</label>
             <select
               style={inputStyle}
