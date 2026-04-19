@@ -1,6 +1,7 @@
-import React, { useState } from "react";
-import { Lead, LeadStatus } from "../data/mockData";
+import React, { useState, useEffect } from "react";
+import { Lead, LeadStatus, LeadOrigin } from "../data/mockData";
 import { useLeads } from "../hooks/useLeads";
+import { EditableField } from "./EditableField";
 import {
   DndContext,
   DragEndEvent,
@@ -56,12 +57,71 @@ const columns: { id: LeadStatus; label: string; color: string; icon: string }[] 
 ];
 
 // ── Lead Detail Modal ─────────────────────────────────────────
-function LeadModal({ lead, onClose, onMove }: { lead: Lead; onClose: () => void; onMove: (status: LeadStatus) => void }) {
+function LeadModal({
+  lead,
+  onClose,
+  onMove,
+  onUpdate,
+}: {
+  lead: Lead;
+  onClose: () => void;
+  onMove: (status: LeadStatus) => void;
+  onUpdate: (patch: Partial<Lead>) => void;
+}) {
+  // Estado local do formulário (sincroniza com prop)
+  const [form, setForm] = useState<Lead>(lead);
+  useEffect(() => setForm(lead), [lead]);
+
+  const set = <K extends keyof Lead>(key: K, value: Lead[K]) =>
+    setForm((f) => ({ ...f, [key]: value }));
+
+  const dirty =
+    form.name !== lead.name ||
+    form.phone !== lead.phone ||
+    form.city !== lead.city ||
+    form.property !== lead.property ||
+    form.budget !== lead.budget ||
+    form.origin !== lead.origin;
+
+  const handleSave = () => {
+    onUpdate({
+      name: form.name,
+      phone: form.phone,
+      city: form.city,
+      property: form.property,
+      budget: form.budget,
+      origin: form.origin,
+    });
+    onClose();
+  };
+
+  const inputStyle: React.CSSProperties = {
+    width: "100%",
+    background: "rgba(255,255,255,0.04)",
+    border: "1px solid var(--glass-border)",
+    borderRadius: 8,
+    padding: "8px 10px",
+    fontSize: 13,
+    color: "var(--text-primary)",
+    fontFamily: "inherit",
+    outline: "none",
+  };
+
+  const labelStyle: React.CSSProperties = {
+    fontSize: 11,
+    color: "var(--text-muted)",
+    marginBottom: 4,
+    display: "block",
+    fontWeight: 500,
+  };
+
+  const origins: LeadOrigin[] = ["FB", "IG", "WA", "Site", "Indicação"];
+
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div
         className="modal-content glass rounded-2xl p-8 w-full"
-        style={{ maxWidth: 560, border: "1px solid rgba(212,175,55,0.2)" }}
+        style={{ maxWidth: 560, border: "1px solid rgba(212,175,55,0.2)", maxHeight: "90vh", overflowY: "auto" }}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -73,61 +133,113 @@ function LeadModal({ lead, onClose, onMove }: { lead: Lead; onClose: () => void;
             style={{ border: "2px solid var(--gold)" }}
           />
           <div className="flex-1">
-            <div className="flex items-center gap-2 mb-1">
-              <h2 style={{ fontFamily: "Montserrat, sans-serif", fontWeight: 700, fontSize: 20 }}>
-                {lead.name}
-              </h2>
-              <span
-                className="badge"
-                style={{ ...originColors[lead.origin], fontSize: 10 }}
-              >
-                {lead.origin}
-              </span>
-            </div>
-            <p style={{ fontSize: 13, color: "var(--text-muted)" }}>{lead.phone}</p>
-            <div className="flex items-center gap-2 mt-2">
-              <span style={{ fontSize: 12, color: "#D4AF37" }}>Budget:</span>
-              <span style={{ fontSize: 14, fontWeight: 700, color: "var(--text-primary)" }}>{lead.budget}</span>
-            </div>
+            <h2 style={{ fontFamily: "Montserrat, sans-serif", fontWeight: 700, fontSize: 20, marginBottom: 2 }}>
+              Editar Lead
+            </h2>
+            <p style={{ fontSize: 12, color: "var(--text-muted)" }}>
+              Cadastrado em {new Date(lead.createdAt).toLocaleDateString("pt-BR")}
+            </p>
           </div>
           <button
             onClick={onClose}
             className="w-8 h-8 rounded-xl flex items-center justify-center"
-            style={{ background: "rgba(255,255,255,0.05)", color: "var(--text-muted)" }}
+            style={{ background: "rgba(255,255,255,0.05)", color: "var(--text-muted)", cursor: "pointer" }}
           >
             ✕
           </button>
         </div>
 
-        {/* Health Score */}
-        <div className="p-4 rounded-xl mb-4" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid var(--glass-border)" }}>
-          <div className="flex items-center justify-between mb-2">
-            <span style={{ fontSize: 12, color: "var(--text-muted)" }}>Health Score</span>
-            <span style={{ fontSize: 16, fontWeight: 700, color: healthColor(lead.healthScore) }}>
-              {lead.healthScore}/100
-            </span>
-          </div>
-          <div className="health-bar">
-            <div
-              className="health-fill"
-              style={{ width: `${lead.healthScore}%`, background: healthColor(lead.healthScore) }}
+        {/* Form Grid */}
+        <div className="grid grid-cols-2 gap-3 mb-4">
+          <div className="col-span-2">
+            <label style={labelStyle}>Nome</label>
+            <input
+              style={inputStyle}
+              value={form.name}
+              onChange={(e) => set("name", e.target.value)}
             />
+          </div>
+          <div>
+            <label style={labelStyle}>Telefone</label>
+            <input
+              style={inputStyle}
+              value={form.phone}
+              onChange={(e) => set("phone", e.target.value)}
+            />
+          </div>
+          <div>
+            <label style={labelStyle}>Cidade</label>
+            <input
+              style={inputStyle}
+              value={form.city}
+              onChange={(e) => set("city", e.target.value)}
+            />
+          </div>
+          <div className="col-span-2">
+            <label style={labelStyle}>Imóvel de Interesse</label>
+            <input
+              style={inputStyle}
+              value={form.property}
+              onChange={(e) => set("property", e.target.value)}
+            />
+          </div>
+          <div>
+            <label style={labelStyle}>Budget</label>
+            <input
+              style={inputStyle}
+              value={form.budget}
+              placeholder="R$ 1.5M"
+              onChange={(e) => set("budget", e.target.value)}
+            />
+          </div>
+          <div>
+            <label style={labelStyle}>Origem</label>
+            <select
+              style={inputStyle}
+              value={form.origin}
+              onChange={(e) => set("origin", e.target.value as LeadOrigin)}
+            >
+              {origins.map((o) => (
+                <option key={o} value={o} style={{ background: "#1a1a1a" }}>
+                  {o}
+                </option>
+              ))}
+            </select>
           </div>
         </div>
 
-        {/* Info Grid */}
-        <div className="grid grid-cols-2 gap-3 mb-6">
-          {[
-            { label: "Imóvel de Interesse", value: lead.property },
-            { label: "Status", value: lead.status.charAt(0).toUpperCase() + lead.status.slice(1) },
-            { label: "Origem", value: lead.origin },
-            { label: "Cadastrado em", value: new Date(lead.createdAt).toLocaleDateString("pt-BR") },
-          ].map((item) => (
-            <div key={item.label} className="p-3 rounded-xl" style={{ background: "rgba(255,255,255,0.03)" }}>
-              <p style={{ fontSize: 11, color: "var(--text-muted)", marginBottom: 3 }}>{item.label}</p>
-              <p style={{ fontSize: 13, fontWeight: 600, color: "var(--text-primary)" }}>{item.value}</p>
-            </div>
-          ))}
+        {/* Save / Cancel */}
+        <div className="flex gap-2 mb-4">
+          <button
+            onClick={handleSave}
+            disabled={!dirty}
+            className="flex-1 py-2.5 rounded-xl"
+            style={{
+              background: dirty ? "var(--gold)" : "rgba(212,175,55,0.2)",
+              color: dirty ? "#0a0a0a" : "var(--text-muted)",
+              fontSize: 13,
+              fontWeight: 700,
+              cursor: dirty ? "pointer" : "not-allowed",
+              border: "none",
+            }}
+          >
+            {dirty ? "Salvar alterações" : "Sem alterações"}
+          </button>
+          <button
+            onClick={() => setForm(lead)}
+            disabled={!dirty}
+            className="px-4 py-2.5 rounded-xl"
+            style={{
+              background: "rgba(255,255,255,0.05)",
+              color: "var(--text-muted)",
+              fontSize: 13,
+              fontWeight: 600,
+              cursor: dirty ? "pointer" : "not-allowed",
+              border: "1px solid var(--glass-border)",
+            }}
+          >
+            Resetar
+          </button>
         </div>
 
         {/* Action Buttons */}
@@ -158,7 +270,7 @@ function LeadModal({ lead, onClose, onMove }: { lead: Lead; onClose: () => void;
         {/* Move Stage */}
         <div className="mt-4 pt-4" style={{ borderTop: "1px solid var(--glass-border)" }}>
           <p style={{ fontSize: 12, color: "var(--text-muted)", marginBottom: 8 }}>Mover para etapa:</p>
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
             {columns.map((col) => (
               <button
                 key={col.id}
@@ -176,6 +288,7 @@ function LeadModal({ lead, onClose, onMove }: { lead: Lead; onClose: () => void;
                   fontWeight: 600,
                   color: lead.status === col.id ? col.color : "var(--text-muted)",
                   cursor: "pointer",
+                  minWidth: 70,
                 }}
               >
                 {col.icon} {col.label.split(" ")[0]}
@@ -189,7 +302,18 @@ function LeadModal({ lead, onClose, onMove }: { lead: Lead; onClose: () => void;
 }
 
 // ── Lead Card ─────────────────────────────────────────────────
-function LeadCard({ lead, onClick, isDragging }: { lead: Lead; onClick?: () => void; isDragging?: boolean }) {
+function LeadCard({
+  lead,
+  onClick,
+  isDragging,
+  onUpdate,
+}: {
+  lead: Lead;
+  onClick?: () => void;
+  isDragging?: boolean;
+  onUpdate?: (patch: Partial<Lead>) => void;
+}) {
+  const editable = !!onUpdate;
   return (
     <div
       className="glass glass-hover rounded-xl p-4"
@@ -197,26 +321,42 @@ function LeadCard({ lead, onClick, isDragging }: { lead: Lead; onClick?: () => v
       style={{ marginBottom: 8, opacity: isDragging ? 0.4 : 1, cursor: "grab" }}
     >
       {/* Nome */}
-      <p
-        style={{
-          fontSize: 14,
-          fontWeight: 600,
-          color: "var(--text-primary)",
-          overflow: "hidden",
-          textOverflow: "ellipsis",
-          whiteSpace: "nowrap",
-          marginBottom: 8,
-        }}
-      >
-        {lead.name}
-      </p>
+      <div style={{ marginBottom: 8 }}>
+        {editable ? (
+          <EditableField
+            value={lead.name}
+            onSave={(v) => onUpdate!({ name: v })}
+            fontSize={14}
+            fontWeight={600}
+            color="var(--text-primary)"
+            placeholder="Nome do lead"
+          />
+        ) : (
+          <p
+            style={{
+              fontSize: 14,
+              fontWeight: 600,
+              color: "var(--text-primary)",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+            }}
+          >
+            {lead.name}
+          </p>
+        )}
+      </div>
 
       {/* Telefone */}
       <div className="flex items-center gap-2 mb-2">
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ color: "var(--text-muted)", flexShrink: 0 }}>
           <path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 014.8 11.5a19.79 19.79 0 01-3.07-8.67A2 2 0 013.7 1h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L7.91 8.2a16 16 0 006.29 6.29l1.46-1.46a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 15.24v1.68z" />
         </svg>
-        <span style={{ fontSize: 12, color: "var(--text-muted)" }}>{lead.phone}</span>
+        {editable ? (
+          <EditableField value={lead.phone} onSave={(v) => onUpdate!({ phone: v })} placeholder="Telefone" />
+        ) : (
+          <span style={{ fontSize: 12, color: "var(--text-muted)" }}>{lead.phone}</span>
+        )}
       </div>
 
       {/* Cidade */}
@@ -224,9 +364,13 @@ function LeadCard({ lead, onClick, isDragging }: { lead: Lead; onClick?: () => v
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ color: "var(--text-muted)", flexShrink: 0 }}>
           <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z" /><circle cx="12" cy="10" r="3" />
         </svg>
-        <span style={{ fontSize: 12, color: "var(--text-muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-          {lead.city}
-        </span>
+        {editable ? (
+          <EditableField value={lead.city} onSave={(v) => onUpdate!({ city: v })} placeholder="Cidade" />
+        ) : (
+          <span style={{ fontSize: 12, color: "var(--text-muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            {lead.city}
+          </span>
+        )}
       </div>
 
       {/* Imóvel solicitado */}
@@ -234,21 +378,32 @@ function LeadCard({ lead, onClick, isDragging }: { lead: Lead; onClick?: () => v
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ color: "var(--text-muted)", flexShrink: 0 }}>
           <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
         </svg>
-        <span style={{ fontSize: 12, color: "var(--text-muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-          {lead.property}
-        </span>
+        {editable ? (
+          <EditableField value={lead.property} onSave={(v) => onUpdate!({ property: v })} placeholder="Imóvel de interesse" />
+        ) : (
+          <span style={{ fontSize: 12, color: "var(--text-muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            {lead.property}
+          </span>
+        )}
       </div>
     </div>
   );
 }
 
 // ── Draggable wrapper ─────────────────────────────────────────
-function DraggableLeadCard({ lead, onClick }: { lead: Lead; onClick: () => void }) {
+function DraggableLeadCard({
+  lead,
+  onClick,
+  onUpdate,
+}: {
+  lead: Lead;
+  onClick: () => void;
+  onUpdate: (patch: Partial<Lead>) => void;
+}) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: lead.id,
     data: { lead },
   });
-  // Clique sem arrastar abre o modal; arrastar move o card
   const [downPos, setDownPos] = React.useState<{ x: number; y: number } | null>(null);
   return (
     <div
@@ -261,11 +416,14 @@ function DraggableLeadCard({ lead, onClick }: { lead: Lead; onClick: () => void 
         if (downPos) {
           const dx = Math.abs(e.clientX - downPos.x);
           const dy = Math.abs(e.clientY - downPos.y);
-          if (dx < 5 && dy < 5) onClick();
+          // Só abre o modal se o clique não veio de um campo editável
+          const target = e.target as HTMLElement;
+          const insideEditable = target.closest("input, textarea, select, [data-editable]");
+          if (dx < 5 && dy < 5 && !insideEditable) onClick();
         }
       }}
     >
-      <LeadCard lead={lead} isDragging={isDragging} />
+      <LeadCard lead={lead} isDragging={isDragging} onUpdate={onUpdate} />
     </div>
   );
 }
@@ -302,7 +460,7 @@ function DroppableArea({
 export function KanbanBoard() {
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [activeLead, setActiveLead] = useState<Lead | null>(null);
-  const { leads: allLeads, loading, error, updateLeadStatus } = useLeads();
+  const { leads: allLeads, loading, error, updateLeadStatus, updateLead } = useLeads();
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
@@ -426,6 +584,7 @@ export function KanbanBoard() {
                       key={lead.id}
                       lead={lead}
                       onClick={() => setSelectedLead(lead)}
+                      onUpdate={(patch) => updateLead(lead.id, patch)}
                     />
                   ))
                 )}
@@ -468,6 +627,7 @@ export function KanbanBoard() {
           lead={selectedLead}
           onClose={() => setSelectedLead(null)}
           onMove={(newStatus) => updateLeadStatus(selectedLead.id, newStatus)}
+          onUpdate={(patch) => updateLead(selectedLead.id, patch)}
         />
       )}
     </div>

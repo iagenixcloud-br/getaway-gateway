@@ -143,5 +143,39 @@ export function useLeads() {
     }
   };
 
-  return { leads, loading, error, updateLeadStatus };
+  // Atualização parcial de qualquer campo do lead.
+  // Aceita campos do domínio (Lead) e converte para colunas do banco (LeadRow).
+  const updateLead = async (id: string, patch: Partial<Lead>) => {
+    // Atualiza UI otimisticamente
+    setLeads((prev) => prev.map((l) => (l.id === id ? { ...l, ...patch } : l)));
+
+    // Mapeia para colunas do banco
+    const dbPatch: Record<string, unknown> = {};
+    if (patch.name !== undefined) dbPatch.name = patch.name;
+    if (patch.phone !== undefined) dbPatch.phone = patch.phone;
+    if (patch.city !== undefined) dbPatch.city = patch.city;
+    if (patch.property !== undefined) dbPatch.interest = patch.property;
+    if (patch.status !== undefined) dbPatch.status = patch.status;
+    if (patch.budget !== undefined) {
+      // Converte string "R$ 1.5M" / "R$ 350k" / "1500000" em número
+      const raw = patch.budget.replace(/[^\d,.\-kKmM]/g, "").trim();
+      let n: number | null = null;
+      if (raw) {
+        const lower = raw.toLowerCase();
+        const num = parseFloat(lower.replace(/[^\d.,-]/g, "").replace(",", "."));
+        if (!isNaN(num)) {
+          if (lower.includes("m")) n = num * 1_000_000;
+          else if (lower.includes("k")) n = num * 1_000;
+          else n = num;
+        }
+      }
+      dbPatch.budget = n;
+    }
+
+    if (Object.keys(dbPatch).length === 0) return;
+    const { error } = await supabase.from("leads").update(dbPatch).eq("id", id);
+    if (error) setError(`Falha ao atualizar lead: ${error.message}`);
+  };
+
+  return { leads, loading, error, updateLeadStatus, updateLead };
 }
