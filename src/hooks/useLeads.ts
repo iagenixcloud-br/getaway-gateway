@@ -2,12 +2,16 @@ import { useEffect, useState } from "react";
 import { supabase, LeadRow } from "../lib/supabase";
 import { Lead, LeadStatus, LeadOrigin } from "../data/mockData";
 
-// Map raw DB status → Kanban column
+// Valores oficiais salvos no banco (coluna `status` da tabela leads):
+// 'novo' | 'atrasado' | 'visitar' | 'agendados' | 'favoritos' | 'fechado' | 'arquivados'
+//
+// O n8n deve inserir/atualizar usando EXATAMENTE esses valores.
+// Aceitamos algumas variações comuns por segurança (ex: 'novo lead' legado).
 const mapStatus = (s: string | null): LeadStatus => {
   const normalized = (s || "").toLowerCase().trim();
   switch (normalized) {
-    case "novo lead":
     case "novo":
+    case "novo lead":
     case "new":
       return "novo";
     case "atrasado":
