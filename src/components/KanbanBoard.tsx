@@ -416,10 +416,12 @@ function DraggableLeadCard({
   lead,
   onClick,
   onUpdate,
+  corretorName,
 }: {
   lead: Lead;
   onClick: () => void;
   onUpdate: (patch: Partial<Lead>) => void;
+  corretorName?: string | null;
 }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: lead.id,
@@ -444,7 +446,7 @@ function DraggableLeadCard({
         }
       }}
     >
-      <LeadCard lead={lead} isDragging={isDragging} onUpdate={onUpdate} />
+      <LeadCard lead={lead} isDragging={isDragging} onUpdate={onUpdate} corretorName={corretorName} />
     </div>
   );
 }
