@@ -438,6 +438,172 @@ export function Desempenho() {
             </div>
           </div>
 
+          {/* ───────── Desempenho por corretor ───────── */}
+          <div
+            className="glass rounded-2xl p-5 mb-6"
+            style={{ border: "1px solid rgba(212,175,55,0.2)" }}
+          >
+            <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
+              <div>
+                <h2 style={{ fontSize: 13, fontWeight: 700, color: "var(--text-primary)" }}>
+                  Desempenho por corretor
+                </h2>
+                <p style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 2 }}>
+                  Leads atribuídos a cada corretor no período
+                </p>
+              </div>
+            </div>
+
+            {porCorretorChart.length > 0 && (
+              <div style={{ width: "100%", height: 240, marginBottom: 20 }}>
+                <ResponsiveContainer>
+                  <BarChart
+                    data={porCorretorChart}
+                    margin={{ top: 5, right: 16, left: -10, bottom: 0 }}
+                  >
+                    <CartesianGrid stroke="rgba(255,255,255,0.05)" vertical={false} />
+                    <XAxis dataKey="name" stroke="rgba(255,255,255,0.4)" tick={{ fontSize: 11 }} />
+                    <YAxis stroke="rgba(255,255,255,0.4)" tick={{ fontSize: 11 }} allowDecimals={false} />
+                    <Tooltip
+                      contentStyle={{
+                        background: "rgba(15,15,25,0.95)",
+                        border: "1px solid rgba(212,175,55,0.3)",
+                        borderRadius: 8,
+                        fontSize: 12,
+                      }}
+                      cursor={{ fill: "rgba(212,175,55,0.05)" }}
+                    />
+                    <Legend wrapperStyle={{ fontSize: 11 }} />
+                    <Bar dataKey="Ativos" fill="#3b82f6" radius={[6, 6, 0, 0]} />
+                    <Bar dataKey="Fechados" fill="#22c55e" radius={[6, 6, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+
+            <div style={{ overflowX: "auto" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 720 }}>
+                <thead>
+                  <tr style={{ background: "rgba(255,255,255,0.02)" }}>
+                    <Th>Corretor</Th>
+                    <Th align="right">Total</Th>
+                    <Th align="right">Ativos</Th>
+                    <Th align="right">Fechados</Th>
+                    <Th align="right">Conversão</Th>
+                    {ALL_STATUSES.map((s) => (
+                      <Th key={s} align="right">
+                        {STATUS_META[s].label}
+                      </Th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {porCorretor.length === 0 ? (
+                    <tr>
+                      <td
+                        colSpan={5 + ALL_STATUSES.length}
+                        style={{
+                          padding: 24,
+                          textAlign: "center",
+                          fontSize: 13,
+                          color: "var(--text-muted)",
+                        }}
+                      >
+                        Nenhum corretor cadastrado ainda.
+                      </td>
+                    </tr>
+                  ) : (
+                    porCorretor.map((r) => {
+                      const isUnassigned = r.id === "__unassigned";
+                      return (
+                        <tr
+                          key={r.id}
+                          style={{
+                            borderTop: "1px solid var(--glass-border)",
+                            background: isUnassigned ? "rgba(239,68,68,0.04)" : undefined,
+                          }}
+                        >
+                          <td
+                            style={{
+                              padding: "12px 16px",
+                              fontSize: 13,
+                              color: isUnassigned ? "#ef4444" : "var(--text-primary)",
+                              fontWeight: 600,
+                            }}
+                          >
+                            {r.name}
+                          </td>
+                          <td
+                            style={{
+                              padding: "12px 16px",
+                              fontSize: 13,
+                              textAlign: "right",
+                              color: "var(--text-primary)",
+                              fontWeight: 700,
+                              fontVariantNumeric: "tabular-nums",
+                            }}
+                          >
+                            {r.total}
+                          </td>
+                          <td
+                            style={{
+                              padding: "12px 16px",
+                              fontSize: 13,
+                              textAlign: "right",
+                              color: "var(--text-muted)",
+                              fontVariantNumeric: "tabular-nums",
+                            }}
+                          >
+                            {r.ativos}
+                          </td>
+                          <td
+                            style={{
+                              padding: "12px 16px",
+                              fontSize: 13,
+                              textAlign: "right",
+                              color: "#22c55e",
+                              fontWeight: 600,
+                              fontVariantNumeric: "tabular-nums",
+                            }}
+                          >
+                            {r.fechados}
+                          </td>
+                          <td
+                            style={{
+                              padding: "12px 16px",
+                              fontSize: 13,
+                              textAlign: "right",
+                              color: "var(--gold)",
+                              fontWeight: 600,
+                              fontVariantNumeric: "tabular-nums",
+                            }}
+                          >
+                            {r.conversao.toFixed(1)}%
+                          </td>
+                          {ALL_STATUSES.map((s) => (
+                            <td
+                              key={s}
+                              style={{
+                                padding: "12px 16px",
+                                fontSize: 12,
+                                textAlign: "right",
+                                color: r.porStatus[s] > 0 ? STATUS_META[s].color : "var(--text-muted)",
+                                fontVariantNumeric: "tabular-nums",
+                                opacity: r.porStatus[s] > 0 ? 1 : 0.4,
+                              }}
+                            >
+                              {r.porStatus[s]}
+                            </td>
+                          ))}
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
           {/* Tabela detalhada */}
           <div
             className="glass rounded-2xl overflow-hidden"
@@ -557,8 +723,9 @@ export function Desempenho() {
               fontStyle: "italic",
             }}
           >
-            Dica: quando a roleta de leads estiver ativa, esta página passará a quebrar as métricas
-            por corretor.
+            Dica: atribua leads aos corretores no Kanban (clique no card → "Corretor responsável")
+            para que eles apareçam aqui. Quando a roleta automática for ativada, novos leads serão
+            distribuídos automaticamente.
           </p>
         </>
       )}
