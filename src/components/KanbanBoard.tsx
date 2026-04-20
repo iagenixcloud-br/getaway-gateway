@@ -64,11 +64,17 @@ function LeadModal({
   onClose,
   onMove,
   onUpdate,
+  isAdmin,
+  corretores,
+  onAssign,
 }: {
   lead: Lead;
   onClose: () => void;
   onMove: (status: LeadStatus) => void;
   onUpdate: (patch: Partial<Lead>) => void;
+  isAdmin: boolean;
+  corretores: CorretorOption[];
+  onAssign: (corretorId: string | null) => void;
 }) {
   // Estado local do formulário (sincroniza com prop)
   const [form, setForm] = useState<Lead>(lead);
@@ -187,6 +193,26 @@ function LeadModal({
               ))}
             </select>
           </div>
+
+          {isAdmin && (
+            <div className="col-span-2">
+              <label style={labelStyle}>Corretor responsável</label>
+              <select
+                style={inputStyle}
+                value={lead.assignedTo ?? ""}
+                onChange={(e) => onAssign(e.target.value || null)}
+              >
+                <option value="" style={{ background: "#1a1a1a" }}>
+                  — Não atribuído —
+                </option>
+                {corretores.map((c) => (
+                  <option key={c.id} value={c.id} style={{ background: "#1a1a1a" }}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
         </div>
 
         {/* Save / Cancel */}
