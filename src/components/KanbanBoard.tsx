@@ -314,11 +314,14 @@ function LeadCard({
   onClick,
   isDragging,
   onUpdate,
+  corretorName,
 }: {
   lead: Lead;
   onClick?: () => void;
   isDragging?: boolean;
   onUpdate?: (patch: Partial<Lead>) => void;
+  /** Nome do corretor responsável (string vazia/undefined = não atribuído). Quando null, escondemos o chip. */
+  corretorName?: string | null;
 }) {
   const editable = !!onUpdate;
   return (
@@ -367,7 +370,7 @@ function LeadCard({
       </div>
 
       {/* Imóvel solicitado */}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 mb-2">
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ color: "var(--text-muted)", flexShrink: 0 }}>
           <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
         </svg>
@@ -379,6 +382,31 @@ function LeadCard({
           </span>
         )}
       </div>
+
+      {/* Chip de corretor (apenas quando passado, ex: visão admin) */}
+      {corretorName !== null && corretorName !== undefined && (
+        <div
+          className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md mt-1"
+          style={{
+            background: corretorName
+              ? "rgba(212,175,55,0.12)"
+              : "rgba(239,68,68,0.10)",
+            border: `1px solid ${corretorName ? "rgba(212,175,55,0.3)" : "rgba(239,68,68,0.25)"}`,
+            fontSize: 10,
+            fontWeight: 600,
+            color: corretorName ? "var(--gold)" : "#ef4444",
+            maxWidth: "100%",
+          }}
+        >
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+            <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" />
+            <circle cx="12" cy="7" r="4" />
+          </svg>
+          <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            {corretorName || "Não atribuído"}
+          </span>
+        </div>
+      )}
     </div>
   );
 }
