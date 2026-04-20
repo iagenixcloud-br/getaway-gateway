@@ -18,12 +18,13 @@ import {
 import { useAuth } from "../contexts/AuthContext";
 import { supabase, LeadRow } from "../lib/supabase";
 import { LeadStatus } from "../data/mockData";
+import { useCorretores } from "../hooks/useCorretores";
 
 // ============================================================
 // Página /desempenho
 // ------------------------------------------------------------
-// Métricas GLOBAIS dos leads (ainda não há vínculo lead↔corretor).
-// Quando a roleta for implementada, evoluímos para "por corretor".
+// Visão geral + desempenho POR CORRETOR (com base em leads.assigned_to).
+// Leads sem corretor aparecem como "Não atribuídos".
 // ============================================================
 
 type RangeKey = "7d" | "30d" | "90d" | "all";
@@ -69,6 +70,7 @@ const normalizeStatus = (s: string | null): LeadStatus => {
 
 export function Desempenho() {
   const { isAdmin, loading: authLoading } = useAuth();
+  const { corretores } = useCorretores(isAdmin);
   const [leads, setLeads] = useState<LeadRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -150,6 +152,87 @@ export function Desempenho() {
     });
     return buckets;
   }, [filtered, range]);
+
+  // ───────── Desempenho POR CORRETOR ─────────
+  // Agrupa leads do período pelo assigned_to e cruza com a lista de profiles.
+  const porCorretor = useMemo(() => {
+    type Row = {
+      id: string; // corretor id ou "__unassigned"
+      name: string;
+      total: number;
+      ativos: number;
+      fechados: number;
+      conversao: number; // %
+      porStatus: Record<LeadStatus, number>;
+    };
+
+    const empty = (): Record<LeadStatus, number> =>
+      ALL_STATUSES.reduce(
+        (acc, s) => ({ ...acc, [s]: 0 }),
+        {} as Record<LeadStatus, number>,
+      );
+
+    const map = new Map<string, Row>();
+    // Inicializa com TODOS os corretores (mesmo os sem leads aparecem)
+    corretores.forEach((c) => {
+      map.set(c.id, {
+        id: c.id,
+        name: c.name,
+        total: 0,
+        ativos: 0,
+        fechados: 0,
+        conversao: 0,
+        porStatus: empty(),
+      });
+    });
+
+    filtered.forEach((l) => {
+      const key = l.assigned_to ?? "__unassigned";
+      let row = map.get(key);
+      if (!row) {
+        row = {
+          id: key,
+          name:
+            key === "__unassigned"
+              ? "Não atribuídos"
+              : "Corretor removido",
+          total: 0,
+          ativos: 0,
+          fechados: 0,
+          conversao: 0,
+          porStatus: empty(),
+        };
+        map.set(key, row);
+      }
+      const status = normalizeStatus(l.status);
+      row.total++;
+      row.porStatus[status]++;
+      if (status === "fechado") row.fechados++;
+      if (!["fechado", "arquivados"].includes(status)) row.ativos++;
+    });
+
+    // Calcula conversão e ordena por total desc; "Não atribuídos" sempre por último
+    return Array.from(map.values())
+      .map((r) => ({ ...r, conversao: r.total > 0 ? (r.fechados / r.total) * 100 : 0 }))
+      .sort((a, b) => {
+        if (a.id === "__unassigned") return 1;
+        if (b.id === "__unassigned") return -1;
+        return b.total - a.total;
+      });
+  }, [filtered, corretores]);
+
+  // Dados para o gráfico de barras "Leads por corretor" (esconde quem tem 0 e __unassigned vazio)
+  const porCorretorChart = useMemo(
+    () =>
+      porCorretor
+        .filter((r) => r.total > 0)
+        .map((r) => ({
+          name: r.name,
+          Ativos: r.ativos,
+          Fechados: r.fechados,
+        })),
+    [porCorretor],
+  );
 
   if (authLoading) return null;
   if (!isAdmin) return <Navigate to="/" replace />;
@@ -355,6 +438,172 @@ export function Desempenho() {
             </div>
           </div>
 
+          {/* ───────── Desempenho por corretor ───────── */}
+          <div
+            className="glass rounded-2xl p-5 mb-6"
+            style={{ border: "1px solid rgba(212,175,55,0.2)" }}
+          >
+            <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
+              <div>
+                <h2 style={{ fontSize: 13, fontWeight: 700, color: "var(--text-primary)" }}>
+                  Desempenho por corretor
+                </h2>
+                <p style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 2 }}>
+                  Leads atribuídos a cada corretor no período
+                </p>
+              </div>
+            </div>
+
+            {porCorretorChart.length > 0 && (
+              <div style={{ width: "100%", height: 240, marginBottom: 20 }}>
+                <ResponsiveContainer>
+                  <BarChart
+                    data={porCorretorChart}
+                    margin={{ top: 5, right: 16, left: -10, bottom: 0 }}
+                  >
+                    <CartesianGrid stroke="rgba(255,255,255,0.05)" vertical={false} />
+                    <XAxis dataKey="name" stroke="rgba(255,255,255,0.4)" tick={{ fontSize: 11 }} />
+                    <YAxis stroke="rgba(255,255,255,0.4)" tick={{ fontSize: 11 }} allowDecimals={false} />
+                    <Tooltip
+                      contentStyle={{
+                        background: "rgba(15,15,25,0.95)",
+                        border: "1px solid rgba(212,175,55,0.3)",
+                        borderRadius: 8,
+                        fontSize: 12,
+                      }}
+                      cursor={{ fill: "rgba(212,175,55,0.05)" }}
+                    />
+                    <Legend wrapperStyle={{ fontSize: 11 }} />
+                    <Bar dataKey="Ativos" fill="#3b82f6" radius={[6, 6, 0, 0]} />
+                    <Bar dataKey="Fechados" fill="#22c55e" radius={[6, 6, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+
+            <div style={{ overflowX: "auto" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 720 }}>
+                <thead>
+                  <tr style={{ background: "rgba(255,255,255,0.02)" }}>
+                    <Th>Corretor</Th>
+                    <Th align="right">Total</Th>
+                    <Th align="right">Ativos</Th>
+                    <Th align="right">Fechados</Th>
+                    <Th align="right">Conversão</Th>
+                    {ALL_STATUSES.map((s) => (
+                      <Th key={s} align="right">
+                        {STATUS_META[s].label}
+                      </Th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {porCorretor.length === 0 ? (
+                    <tr>
+                      <td
+                        colSpan={5 + ALL_STATUSES.length}
+                        style={{
+                          padding: 24,
+                          textAlign: "center",
+                          fontSize: 13,
+                          color: "var(--text-muted)",
+                        }}
+                      >
+                        Nenhum corretor cadastrado ainda.
+                      </td>
+                    </tr>
+                  ) : (
+                    porCorretor.map((r) => {
+                      const isUnassigned = r.id === "__unassigned";
+                      return (
+                        <tr
+                          key={r.id}
+                          style={{
+                            borderTop: "1px solid var(--glass-border)",
+                            background: isUnassigned ? "rgba(239,68,68,0.04)" : undefined,
+                          }}
+                        >
+                          <td
+                            style={{
+                              padding: "12px 16px",
+                              fontSize: 13,
+                              color: isUnassigned ? "#ef4444" : "var(--text-primary)",
+                              fontWeight: 600,
+                            }}
+                          >
+                            {r.name}
+                          </td>
+                          <td
+                            style={{
+                              padding: "12px 16px",
+                              fontSize: 13,
+                              textAlign: "right",
+                              color: "var(--text-primary)",
+                              fontWeight: 700,
+                              fontVariantNumeric: "tabular-nums",
+                            }}
+                          >
+                            {r.total}
+                          </td>
+                          <td
+                            style={{
+                              padding: "12px 16px",
+                              fontSize: 13,
+                              textAlign: "right",
+                              color: "var(--text-muted)",
+                              fontVariantNumeric: "tabular-nums",
+                            }}
+                          >
+                            {r.ativos}
+                          </td>
+                          <td
+                            style={{
+                              padding: "12px 16px",
+                              fontSize: 13,
+                              textAlign: "right",
+                              color: "#22c55e",
+                              fontWeight: 600,
+                              fontVariantNumeric: "tabular-nums",
+                            }}
+                          >
+                            {r.fechados}
+                          </td>
+                          <td
+                            style={{
+                              padding: "12px 16px",
+                              fontSize: 13,
+                              textAlign: "right",
+                              color: "var(--gold)",
+                              fontWeight: 600,
+                              fontVariantNumeric: "tabular-nums",
+                            }}
+                          >
+                            {r.conversao.toFixed(1)}%
+                          </td>
+                          {ALL_STATUSES.map((s) => (
+                            <td
+                              key={s}
+                              style={{
+                                padding: "12px 16px",
+                                fontSize: 12,
+                                textAlign: "right",
+                                color: r.porStatus[s] > 0 ? STATUS_META[s].color : "var(--text-muted)",
+                                fontVariantNumeric: "tabular-nums",
+                                opacity: r.porStatus[s] > 0 ? 1 : 0.4,
+                              }}
+                            >
+                              {r.porStatus[s]}
+                            </td>
+                          ))}
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
           {/* Tabela detalhada */}
           <div
             className="glass rounded-2xl overflow-hidden"
@@ -474,8 +723,9 @@ export function Desempenho() {
               fontStyle: "italic",
             }}
           >
-            Dica: quando a roleta de leads estiver ativa, esta página passará a quebrar as métricas
-            por corretor.
+            Dica: atribua leads aos corretores no Kanban (clique no card → "Corretor responsável")
+            para que eles apareçam aqui. Quando a roleta automática for ativada, novos leads serão
+            distribuídos automaticamente.
           </p>
         </>
       )}

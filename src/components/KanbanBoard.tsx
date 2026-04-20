@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { Lead, LeadStatus, LeadOrigin } from "../data/mockData";
 import { useLeads } from "../hooks/useLeads";
+import { useCorretores, CorretorOption } from "../hooks/useCorretores";
+import { useAuth } from "../contexts/AuthContext";
 import { EditableField } from "./EditableField";
 import {
   DndContext,
@@ -62,11 +64,17 @@ function LeadModal({
   onClose,
   onMove,
   onUpdate,
+  isAdmin,
+  corretores,
+  onAssign,
 }: {
   lead: Lead;
   onClose: () => void;
   onMove: (status: LeadStatus) => void;
   onUpdate: (patch: Partial<Lead>) => void;
+  isAdmin: boolean;
+  corretores: CorretorOption[];
+  onAssign: (corretorId: string | null) => void;
 }) {
   // Estado local do formulário (sincroniza com prop)
   const [form, setForm] = useState<Lead>(lead);
@@ -185,6 +193,26 @@ function LeadModal({
               ))}
             </select>
           </div>
+
+          {isAdmin && (
+            <div className="col-span-2">
+              <label style={labelStyle}>Corretor responsável</label>
+              <select
+                style={inputStyle}
+                value={lead.assignedTo ?? ""}
+                onChange={(e) => onAssign(e.target.value || null)}
+              >
+                <option value="" style={{ background: "#1a1a1a" }}>
+                  — Não atribuído —
+                </option>
+                {corretores.map((c) => (
+                  <option key={c.id} value={c.id} style={{ background: "#1a1a1a" }}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
         </div>
 
         {/* Save / Cancel */}
@@ -286,11 +314,14 @@ function LeadCard({
   onClick,
   isDragging,
   onUpdate,
+  corretorName,
 }: {
   lead: Lead;
   onClick?: () => void;
   isDragging?: boolean;
   onUpdate?: (patch: Partial<Lead>) => void;
+  /** Nome do corretor responsável (string vazia/undefined = não atribuído). Quando null, escondemos o chip. */
+  corretorName?: string | null;
 }) {
   const editable = !!onUpdate;
   return (
@@ -339,7 +370,7 @@ function LeadCard({
       </div>
 
       {/* Imóvel solicitado */}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 mb-2">
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ color: "var(--text-muted)", flexShrink: 0 }}>
           <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
         </svg>
@@ -351,6 +382,31 @@ function LeadCard({
           </span>
         )}
       </div>
+
+      {/* Chip de corretor (apenas quando passado, ex: visão admin) */}
+      {corretorName !== null && corretorName !== undefined && (
+        <div
+          className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md mt-1"
+          style={{
+            background: corretorName
+              ? "rgba(212,175,55,0.12)"
+              : "rgba(239,68,68,0.10)",
+            border: `1px solid ${corretorName ? "rgba(212,175,55,0.3)" : "rgba(239,68,68,0.25)"}`,
+            fontSize: 10,
+            fontWeight: 600,
+            color: corretorName ? "var(--gold)" : "#ef4444",
+            maxWidth: "100%",
+          }}
+        >
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+            <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" />
+            <circle cx="12" cy="7" r="4" />
+          </svg>
+          <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            {corretorName || "Não atribuído"}
+          </span>
+        </div>
+      )}
     </div>
   );
 }
@@ -360,10 +416,12 @@ function DraggableLeadCard({
   lead,
   onClick,
   onUpdate,
+  corretorName,
 }: {
   lead: Lead;
   onClick: () => void;
   onUpdate: (patch: Partial<Lead>) => void;
+  corretorName?: string | null;
 }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: lead.id,
@@ -388,7 +446,7 @@ function DraggableLeadCard({
         }
       }}
     >
-      <LeadCard lead={lead} isDragging={isDragging} onUpdate={onUpdate} />
+      <LeadCard lead={lead} isDragging={isDragging} onUpdate={onUpdate} corretorName={corretorName} />
     </div>
   );
 }
@@ -425,7 +483,23 @@ function DroppableArea({
 export function KanbanBoard() {
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [activeLead, setActiveLead] = useState<Lead | null>(null);
-  const { leads: allLeads, loading, error, updateLeadStatus, updateLead } = useLeads();
+  const { leads: allLeads, loading, error, updateLeadStatus, updateLead, assignLead } = useLeads();
+  const { isAdmin } = useAuth();
+  // Só carrega lista de corretores quando admin (corretor não precisa)
+  const { corretores } = useCorretores(isAdmin);
+  // Mapa id -> nome para resolver chip rapidamente
+  const corretorNameById = React.useMemo(() => {
+    const m = new Map<string, string>();
+    corretores.forEach((c) => m.set(c.id, c.name));
+    return m;
+  }, [corretores]);
+
+  // Quando o lead selecionado é atualizado na lista, refletir no modal aberto
+  React.useEffect(() => {
+    if (!selectedLead) return;
+    const fresh = allLeads.find((l) => l.id === selectedLead.id);
+    if (fresh && fresh !== selectedLead) setSelectedLead(fresh);
+  }, [allLeads, selectedLead]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
@@ -541,6 +615,13 @@ export function KanbanBoard() {
                       lead={lead}
                       onClick={() => setSelectedLead(lead)}
                       onUpdate={(patch) => updateLead(lead.id, patch)}
+                      corretorName={
+                        isAdmin
+                          ? lead.assignedTo
+                            ? corretorNameById.get(lead.assignedTo) ?? "Corretor removido"
+                            : ""
+                          : null
+                      }
                     />
                   ))
                 )}
@@ -573,6 +654,9 @@ export function KanbanBoard() {
           onClose={() => setSelectedLead(null)}
           onMove={(newStatus) => updateLeadStatus(selectedLead.id, newStatus)}
           onUpdate={(patch) => updateLead(selectedLead.id, patch)}
+          isAdmin={isAdmin}
+          corretores={corretores}
+          onAssign={(corretorId) => assignLead(selectedLead.id, corretorId)}
         />
       )}
     </div>
