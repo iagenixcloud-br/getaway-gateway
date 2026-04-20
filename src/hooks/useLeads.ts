@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase, LeadRow } from "../lib/supabase";
 import { Lead, LeadStatus, LeadOrigin } from "../data/mockData";
+import { useAuth } from "../contexts/AuthContext";
 
 // Valores oficiais salvos no banco (coluna `status` da tabela leads):
 // 'novo' | 'atrasado' | 'visitar' | 'agendados' | 'favoritos' | 'fechado' | 'arquivados'
@@ -74,21 +75,33 @@ export const rowToLead = (row: LeadRow): Lead => ({
   budget: formatBudget(row.budget),
   createdAt: row.created_at,
   healthScore: 50,
+  assignedTo: row.assigned_to ?? null,
 });
 
 export function useLeads() {
+  // Admin vê tudo; corretor vê apenas leads atribuídos a ele.
+  const { user, isAdmin, loading: authLoading } = useAuth();
   const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    // Aguarda auth resolver para saber se filtramos por corretor
+    if (authLoading) return;
     let mounted = true;
 
     const load = async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from("leads")
         .select("*")
         .order("created_at", { ascending: false });
+
+      // Corretor não-admin: filtra pelos leads dele
+      if (!isAdmin && user) {
+        query = query.eq("assigned_to", user.id);
+      }
+
+      const { data, error } = await query;
 
       if (!mounted) return;
       if (error) {
@@ -102,19 +115,36 @@ export function useLeads() {
 
     load();
 
-    // Realtime subscription
+    // Realtime: assina TODAS as mudanças e filtramos no cliente
     const channel = supabase
       .channel("leads-changes")
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "leads" },
         (payload) => {
+          // Helper: corretor só processa eventos que envolvem os leads dele
+          const belongsToMe = (row: LeadRow | null) =>
+            isAdmin || (row && row.assigned_to === user?.id);
+
           if (payload.eventType === "INSERT") {
-            const newLead = rowToLead(payload.new as LeadRow);
+            const row = payload.new as LeadRow;
+            if (!belongsToMe(row)) return;
+            const newLead = rowToLead(row);
             setLeads((prev) => [newLead, ...prev.filter((l) => l.id !== newLead.id)]);
           } else if (payload.eventType === "UPDATE") {
-            const updated = rowToLead(payload.new as LeadRow);
-            setLeads((prev) => prev.map((l) => (l.id === updated.id ? updated : l)));
+            const row = payload.new as LeadRow;
+            const updated = rowToLead(row);
+            // Se o lead saiu para outro corretor, removemos da lista local
+            if (!belongsToMe(row)) {
+              setLeads((prev) => prev.filter((l) => l.id !== updated.id));
+              return;
+            }
+            setLeads((prev) => {
+              const exists = prev.some((l) => l.id === updated.id);
+              return exists
+                ? prev.map((l) => (l.id === updated.id ? updated : l))
+                : [updated, ...prev]; // foi reatribuído PARA mim
+            });
           } else if (payload.eventType === "DELETE") {
             const oldId = (payload.old as LeadRow).id;
             setLeads((prev) => prev.filter((l) => l.id !== oldId));
@@ -127,7 +157,7 @@ export function useLeads() {
       mounted = false;
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [authLoading, isAdmin, user]);
 
   const updateLeadStatus = async (id: string, newStatus: LeadStatus) => {
     // Otimista: move o card imediatamente
