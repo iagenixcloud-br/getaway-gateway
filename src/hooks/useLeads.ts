@@ -201,11 +201,16 @@ export function useLeads() {
       }
       dbPatch.budget = n;
     }
+    if (patch.assignedTo !== undefined) dbPatch.assigned_to = patch.assignedTo;
 
     if (Object.keys(dbPatch).length === 0) return;
     const { error } = await supabase.from("leads").update(dbPatch).eq("id", id);
     if (error) setError(`Falha ao atualizar lead: ${error.message}`);
   };
 
-  return { leads, loading, error, updateLeadStatus, updateLead };
+  /** Atribui (ou desatribui passando null) um lead a um corretor. Apenas admin deve usar. */
+  const assignLead = (id: string, corretorId: string | null) =>
+    updateLead(id, { assignedTo: corretorId });
+
+  return { leads, loading, error, updateLeadStatus, updateLead, assignLead };
 }
