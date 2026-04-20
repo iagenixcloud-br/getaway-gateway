@@ -806,6 +806,7 @@ export function KanbanBoard() {
 
               {/* Add Lead Button */}
               <button
+                onClick={() => setNewLeadStatus(col.id)}
                 className="mt-2 w-full py-2.5 rounded-xl flex items-center justify-center gap-2 glass-hover"
                 style={{
                   background: "rgba(255,255,255,0.02)",
