@@ -21,4 +21,6 @@ export interface LeadRow {
   budget: number | null;
   city: string | null;
   tenant_id: string | null;
+  /** UUID do corretor responsável; null quando ainda não atribuído */
+  assigned_to: string | null;
 }

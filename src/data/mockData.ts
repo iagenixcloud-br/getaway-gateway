@@ -26,4 +26,6 @@ export interface Lead {
   budget: string;
   createdAt: string;
   healthScore: number;
+  /** UUID do corretor responsável (profiles.id no Lovable Cloud). Null = não atribuído */
+  assignedTo: string | null;
 }
