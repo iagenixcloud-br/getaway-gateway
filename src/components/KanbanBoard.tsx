@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { Lead, LeadStatus, LeadOrigin } from "../data/mockData";
 import { useLeads } from "../hooks/useLeads";
+import { useCorretores, CorretorOption } from "../hooks/useCorretores";
+import { useAuth } from "../contexts/AuthContext";
 import { EditableField } from "./EditableField";
 import {
   DndContext,
