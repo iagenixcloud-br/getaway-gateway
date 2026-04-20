@@ -212,5 +212,64 @@ export function useLeads() {
   const assignLead = (id: string, corretorId: string | null) =>
     updateLead(id, { assignedTo: corretorId });
 
-  return { leads, loading, error, updateLeadStatus, updateLead, assignLead };
+  /** Cria um lead manualmente (uso em testes/admin). Realtime cuida de inserir na lista. */
+  const createLead = async (input: {
+    name: string;
+    phone: string;
+    status?: LeadStatus;
+    property?: string;
+    budget?: string;
+    assignedTo?: string | null;
+  }) => {
+    // Converte budget string em número
+    let budgetNum: number | null = null;
+    if (input.budget) {
+      const lower = input.budget.toLowerCase();
+      const num = parseFloat(lower.replace(/[^\d.,-]/g, "").replace(",", "."));
+      if (!isNaN(num)) {
+        if (lower.includes("m")) budgetNum = num * 1_000_000;
+        else if (lower.includes("k")) budgetNum = num * 1_000;
+        else budgetNum = num;
+      }
+    }
+
+    const payload = {
+      name: input.name.trim(),
+      phone: input.phone.trim(),
+      status: input.status ?? "novo",
+      interest: input.property?.trim() || null,
+      budget: budgetNum,
+      assigned_to: input.assignedTo ?? null,
+    };
+
+    const { data, error } = await supabase
+      .from("leads")
+      .insert(payload)
+      .select()
+      .single();
+
+    if (error) {
+      setError(`Falha ao criar lead: ${error.message}`);
+      return { error: error.message, lead: null };
+    }
+    // Insere otimisticamente (caso realtime demore)
+    if (data) {
+      const newLead = rowToLead(data as LeadRow);
+      setLeads((prev) =>
+        prev.some((l) => l.id === newLead.id) ? prev : [newLead, ...prev],
+      );
+      return { error: null, lead: newLead };
+    }
+    return { error: null, lead: null };
+  };
+
+  return {
+    leads,
+    loading,
+    error,
+    updateLeadStatus,
+    updateLead,
+    assignLead,
+    createLead,
+  };
 }
