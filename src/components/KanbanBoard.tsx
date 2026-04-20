@@ -483,7 +483,23 @@ function DroppableArea({
 export function KanbanBoard() {
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [activeLead, setActiveLead] = useState<Lead | null>(null);
-  const { leads: allLeads, loading, error, updateLeadStatus, updateLead } = useLeads();
+  const { leads: allLeads, loading, error, updateLeadStatus, updateLead, assignLead } = useLeads();
+  const { isAdmin } = useAuth();
+  // Só carrega lista de corretores quando admin (corretor não precisa)
+  const { corretores } = useCorretores(isAdmin);
+  // Mapa id -> nome para resolver chip rapidamente
+  const corretorNameById = React.useMemo(() => {
+    const m = new Map<string, string>();
+    corretores.forEach((c) => m.set(c.id, c.name));
+    return m;
+  }, [corretores]);
+
+  // Quando o lead selecionado é atualizado na lista, refletir no modal aberto
+  React.useEffect(() => {
+    if (!selectedLead) return;
+    const fresh = allLeads.find((l) => l.id === selectedLead.id);
+    if (fresh && fresh !== selectedLead) setSelectedLead(fresh);
+  }, [allLeads, selectedLead]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
@@ -599,6 +615,13 @@ export function KanbanBoard() {
                       lead={lead}
                       onClick={() => setSelectedLead(lead)}
                       onUpdate={(patch) => updateLead(lead.id, patch)}
+                      corretorName={
+                        isAdmin
+                          ? lead.assignedTo
+                            ? corretorNameById.get(lead.assignedTo) ?? "Corretor removido"
+                            : ""
+                          : null
+                      }
                     />
                   ))
                 )}
@@ -631,6 +654,9 @@ export function KanbanBoard() {
           onClose={() => setSelectedLead(null)}
           onMove={(newStatus) => updateLeadStatus(selectedLead.id, newStatus)}
           onUpdate={(patch) => updateLead(selectedLead.id, patch)}
+          isAdmin={isAdmin}
+          corretores={corretores}
+          onAssign={(corretorId) => assignLead(selectedLead.id, corretorId)}
         />
       )}
     </div>
