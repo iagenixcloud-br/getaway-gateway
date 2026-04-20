@@ -18,12 +18,13 @@ import {
 import { useAuth } from "../contexts/AuthContext";
 import { supabase, LeadRow } from "../lib/supabase";
 import { LeadStatus } from "../data/mockData";
+import { useCorretores } from "../hooks/useCorretores";
 
 // ============================================================
 // Página /desempenho
 // ------------------------------------------------------------
-// Métricas GLOBAIS dos leads (ainda não há vínculo lead↔corretor).
-// Quando a roleta for implementada, evoluímos para "por corretor".
+// Visão geral + desempenho POR CORRETOR (com base em leads.assigned_to).
+// Leads sem corretor aparecem como "Não atribuídos".
 // ============================================================
 
 type RangeKey = "7d" | "30d" | "90d" | "all";
@@ -69,6 +70,7 @@ const normalizeStatus = (s: string | null): LeadStatus => {
 
 export function Desempenho() {
   const { isAdmin, loading: authLoading } = useAuth();
+  const { corretores } = useCorretores(isAdmin);
   const [leads, setLeads] = useState<LeadRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -150,6 +152,87 @@ export function Desempenho() {
     });
     return buckets;
   }, [filtered, range]);
+
+  // ───────── Desempenho POR CORRETOR ─────────
+  // Agrupa leads do período pelo assigned_to e cruza com a lista de profiles.
+  const porCorretor = useMemo(() => {
+    type Row = {
+      id: string; // corretor id ou "__unassigned"
+      name: string;
+      total: number;
+      ativos: number;
+      fechados: number;
+      conversao: number; // %
+      porStatus: Record<LeadStatus, number>;
+    };
+
+    const empty = (): Record<LeadStatus, number> =>
+      ALL_STATUSES.reduce(
+        (acc, s) => ({ ...acc, [s]: 0 }),
+        {} as Record<LeadStatus, number>,
+      );
+
+    const map = new Map<string, Row>();
+    // Inicializa com TODOS os corretores (mesmo os sem leads aparecem)
+    corretores.forEach((c) => {
+      map.set(c.id, {
+        id: c.id,
+        name: c.name,
+        total: 0,
+        ativos: 0,
+        fechados: 0,
+        conversao: 0,
+        porStatus: empty(),
+      });
+    });
+
+    filtered.forEach((l) => {
+      const key = l.assigned_to ?? "__unassigned";
+      let row = map.get(key);
+      if (!row) {
+        row = {
+          id: key,
+          name:
+            key === "__unassigned"
+              ? "Não atribuídos"
+              : "Corretor removido",
+          total: 0,
+          ativos: 0,
+          fechados: 0,
+          conversao: 0,
+          porStatus: empty(),
+        };
+        map.set(key, row);
+      }
+      const status = normalizeStatus(l.status);
+      row.total++;
+      row.porStatus[status]++;
+      if (status === "fechado") row.fechados++;
+      if (!["fechado", "arquivados"].includes(status)) row.ativos++;
+    });
+
+    // Calcula conversão e ordena por total desc; "Não atribuídos" sempre por último
+    return Array.from(map.values())
+      .map((r) => ({ ...r, conversao: r.total > 0 ? (r.fechados / r.total) * 100 : 0 }))
+      .sort((a, b) => {
+        if (a.id === "__unassigned") return 1;
+        if (b.id === "__unassigned") return -1;
+        return b.total - a.total;
+      });
+  }, [filtered, corretores]);
+
+  // Dados para o gráfico de barras "Leads por corretor" (esconde quem tem 0 e __unassigned vazio)
+  const porCorretorChart = useMemo(
+    () =>
+      porCorretor
+        .filter((r) => r.total > 0)
+        .map((r) => ({
+          name: r.name,
+          Ativos: r.ativos,
+          Fechados: r.fechados,
+        })),
+    [porCorretor],
+  );
 
   if (authLoading) return null;
   if (!isAdmin) return <Navigate to="/" replace />;
