@@ -825,7 +825,7 @@ export function KanbanBoard() {
 
       </div>
 
-      {/* Modal */}
+      {/* Modal de edição */}
       {selectedLead && (
         <LeadModal
           lead={selectedLead}
@@ -835,6 +835,20 @@ export function KanbanBoard() {
           isAdmin={isAdmin}
           corretores={corretores}
           onAssign={(corretorId) => assignLead(selectedLead.id, corretorId)}
+        />
+      )}
+
+      {/* Modal de criação manual */}
+      {newLeadStatus && (
+        <NewLeadModal
+          initialStatus={newLeadStatus}
+          onClose={() => setNewLeadStatus(null)}
+          onCreate={async (input) => {
+            const res = await createLead(input);
+            return { error: res.error };
+          }}
+          isAdmin={isAdmin}
+          corretores={corretores}
         />
       )}
     </div>
