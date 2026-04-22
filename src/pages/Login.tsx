@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate, Navigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
+import logo from "@/assets/andrade-logo.jpeg";
 
 export function Login() {
   const { signIn, session, loading } = useAuth();
