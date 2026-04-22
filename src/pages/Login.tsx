@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate, Navigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
+import logo from "@/assets/andrade-logo.jpeg";
 
 export function Login() {
   const { signIn, session, loading } = useAuth();
@@ -34,12 +35,15 @@ export function Login() {
       >
         <div className="flex items-center gap-3 mb-6">
           <div
-            className="w-12 h-12 rounded-xl flex items-center justify-center gold-glow"
-            style={{ background: "linear-gradient(135deg, #D4AF37, #b8960c)" }}
+            className="w-14 h-14 rounded-full flex items-center justify-center gold-glow overflow-hidden flex-shrink-0"
+            style={{ background: "#000", border: "1px solid var(--gold)" }}
           >
-            <span style={{ fontFamily: "Montserrat", fontWeight: 800, fontSize: 18, color: "#001f3f" }}>
-              A
-            </span>
+            <img
+              src={logo}
+              alt="Andrade Consultoria Imobiliária"
+              className="w-full h-full"
+              style={{ objectFit: "cover", objectPosition: "center 35%", transform: "scale(1.1)" }}
+            />
           </div>
           <div>
             <h1 style={{ fontFamily: "Montserrat", fontWeight: 700, fontSize: 18, color: "var(--gold)" }}>
