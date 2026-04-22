@@ -372,41 +372,287 @@ export function Corretores() {
                 <th style={{ textAlign: "left", padding: "12px 16px", fontSize: 11, color: "var(--text-muted)", fontWeight: 600 }}>
                   Perfil
                 </th>
+                <th style={{ textAlign: "right", padding: "12px 16px", fontSize: 11, color: "var(--text-muted)", fontWeight: 600 }}>
+                  Ações
+                </th>
               </tr>
             </thead>
             <tbody>
               {list.length === 0 ? (
                 <tr>
-                  <td colSpan={4} style={{ padding: 24, textAlign: "center", fontSize: 13, color: "var(--text-muted)" }}>
+                  <td colSpan={5} style={{ padding: 24, textAlign: "center", fontSize: 13, color: "var(--text-muted)" }}>
                     Nenhum corretor cadastrado.
                   </td>
                 </tr>
               ) : (
-                list.map((c) => (
-                  <tr key={c.id} style={{ borderTop: "1px solid var(--glass-border)" }}>
-                    <td style={{ padding: "12px 16px", fontSize: 13, color: "var(--text-primary)", fontWeight: 600 }}>
-                      {c.name}
-                    </td>
-                    <td style={{ padding: "12px 16px", fontSize: 13, color: "var(--text-muted)" }}>{c.email}</td>
-                    <td style={{ padding: "12px 16px", fontSize: 13, color: "var(--text-muted)" }}>
-                      {c.phone || "—"}
-                    </td>
-                    <td style={{ padding: "12px 16px" }}>
-                      <span
-                        className="badge"
-                        style={{
-                          background: c.is_admin ? "rgba(212,175,55,0.15)" : "rgba(59,130,246,0.15)",
-                          color: c.is_admin ? "var(--gold)" : "#3b82f6",
-                        }}
-                      >
-                        {c.is_admin ? "Admin" : "Corretor"}
-                      </span>
-                    </td>
-                  </tr>
-                ))
+                list.map((c) => {
+                  const isSelf = c.id === user?.id;
+                  return (
+                    <tr key={c.id} style={{ borderTop: "1px solid var(--glass-border)" }}>
+                      <td style={{ padding: "12px 16px", fontSize: 13, color: "var(--text-primary)", fontWeight: 600 }}>
+                        {c.name}
+                      </td>
+                      <td style={{ padding: "12px 16px", fontSize: 13, color: "var(--text-muted)" }}>{c.email}</td>
+                      <td style={{ padding: "12px 16px", fontSize: 13, color: "var(--text-muted)" }}>
+                        {formatPhoneDisplay(c.phone)}
+                      </td>
+                      <td style={{ padding: "12px 16px" }}>
+                        <span
+                          className="badge"
+                          style={{
+                            background: c.is_admin ? "rgba(212,175,55,0.15)" : "rgba(59,130,246,0.15)",
+                            color: c.is_admin ? "var(--gold)" : "#3b82f6",
+                          }}
+                        >
+                          {c.is_admin ? "Admin" : "Corretor"}
+                        </span>
+                      </td>
+                      <td style={{ padding: "12px 16px", textAlign: "right", whiteSpace: "nowrap" }}>
+                        <button
+                          onClick={() => openEdit(c)}
+                          style={{
+                            background: "rgba(255,255,255,0.05)",
+                            border: "1px solid var(--glass-border)",
+                            color: "var(--text-primary)",
+                            fontSize: 12,
+                            fontWeight: 600,
+                            padding: "6px 12px",
+                            borderRadius: 8,
+                            cursor: "pointer",
+                            marginRight: 8,
+                          }}
+                        >
+                          Editar
+                        </button>
+                        <button
+                          onClick={() => {
+                            setConfirmDelete(c);
+                            setDeleteMsg(null);
+                          }}
+                          disabled={isSelf}
+                          title={isSelf ? "Você não pode excluir a si mesmo" : "Excluir corretor"}
+                          style={{
+                            background: "rgba(239,68,68,0.1)",
+                            border: "1px solid rgba(239,68,68,0.3)",
+                            color: "#ef4444",
+                            fontSize: 12,
+                            fontWeight: 600,
+                            padding: "6px 12px",
+                            borderRadius: 8,
+                            cursor: isSelf ? "not-allowed" : "pointer",
+                            opacity: isSelf ? 0.4 : 1,
+                          }}
+                        >
+                          Excluir
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {/* ── Modal Editar ────────────────────────────── */}
+      {editing && (
+        <div
+          onClick={() => !editSubmitting && setEditing(null)}
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,0.6)",
+            backdropFilter: "blur(4px)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 50,
+            padding: 16,
+          }}
+        >
+          <form
+            onClick={(e) => e.stopPropagation()}
+            onSubmit={handleEditSave}
+            className="glass rounded-2xl p-6"
+            style={{ width: "100%", maxWidth: 440, border: "1px solid rgba(212,175,55,0.2)" }}
+          >
+            <h2 style={{ fontSize: 16, fontWeight: 700, marginBottom: 4, color: "var(--text-primary)" }}>
+              Editar corretor
+            </h2>
+            <p style={{ fontSize: 12, color: "var(--text-muted)", marginBottom: 16 }}>
+              {editing.email}
+            </p>
+
+            <div className="space-y-3">
+              <div>
+                <label style={{ fontSize: 11, color: "var(--text-muted)", display: "block", marginBottom: 4 }}>
+                  Nome
+                </label>
+                <input
+                  style={inputStyle}
+                  required
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                />
+              </div>
+              <div>
+                <label style={{ fontSize: 11, color: "var(--text-muted)", display: "block", marginBottom: 4 }}>
+                  Telefone
+                </label>
+                <input
+                  style={inputStyle}
+                  value={editPhone}
+                  onChange={(e) => setEditPhone(maskPhone(e.target.value))}
+                  placeholder="(11) 99999-9999"
+                  maxLength={15}
+                  inputMode="tel"
+                />
+                <small style={{ display: "block", marginTop: 4, fontSize: 10, color: "var(--text-muted)" }}>
+                  Será salvo no formato WhatsApp (55DDDNNNNNNNNN@s.whatsapp.net)
+                </small>
+              </div>
+            </div>
+
+            {editMsg && (
+              <div
+                className="rounded-lg px-3 py-2 mt-4"
+                style={{
+                  background: "rgba(239,68,68,0.1)",
+                  border: "1px solid rgba(239,68,68,0.3)",
+                  color: "#ef4444",
+                  fontSize: 12,
+                }}
+              >
+                {editMsg}
+              </div>
+            )}
+
+            <div className="flex gap-2 mt-5">
+              <button
+                type="button"
+                onClick={() => setEditing(null)}
+                disabled={editSubmitting}
+                style={{
+                  flex: 1,
+                  background: "rgba(255,255,255,0.05)",
+                  border: "1px solid var(--glass-border)",
+                  color: "var(--text-primary)",
+                  fontSize: 13,
+                  fontWeight: 600,
+                  padding: "10px",
+                  borderRadius: 10,
+                  cursor: "pointer",
+                }}
+              >
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                disabled={editSubmitting}
+                style={{
+                  flex: 1,
+                  background: "var(--gold)",
+                  border: "none",
+                  color: "#0a0a0a",
+                  fontSize: 13,
+                  fontWeight: 700,
+                  padding: "10px",
+                  borderRadius: 10,
+                  cursor: editSubmitting ? "not-allowed" : "pointer",
+                  opacity: editSubmitting ? 0.6 : 1,
+                }}
+              >
+                {editSubmitting ? "Salvando..." : "Salvar"}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* ── Modal Confirmar Exclusão ─────────────────── */}
+      {confirmDelete && (
+        <div
+          onClick={() => !deleting && setConfirmDelete(null)}
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,0.6)",
+            backdropFilter: "blur(4px)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 50,
+            padding: 16,
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="glass rounded-2xl p-6"
+            style={{ width: "100%", maxWidth: 420, border: "1px solid rgba(239,68,68,0.3)" }}
+          >
+            <h2 style={{ fontSize: 16, fontWeight: 700, marginBottom: 8, color: "var(--text-primary)" }}>
+              Excluir corretor?
+            </h2>
+            <p style={{ fontSize: 13, color: "var(--text-muted)", marginBottom: 16 }}>
+              Tem certeza que deseja excluir <strong style={{ color: "var(--text-primary)" }}>{confirmDelete.name}</strong>?
+              Esta ação remove o acesso ao sistema e desvincula os leads atribuídos. Não pode ser desfeita.
+            </p>
+
+            {deleteMsg && (
+              <div
+                className="rounded-lg px-3 py-2 mb-4"
+                style={{
+                  background: "rgba(239,68,68,0.1)",
+                  border: "1px solid rgba(239,68,68,0.3)",
+                  color: "#ef4444",
+                  fontSize: 12,
+                }}
+              >
+                {deleteMsg}
+              </div>
+            )}
+
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setConfirmDelete(null)}
+                disabled={deleting}
+                style={{
+                  flex: 1,
+                  background: "rgba(255,255,255,0.05)",
+                  border: "1px solid var(--glass-border)",
+                  color: "var(--text-primary)",
+                  fontSize: 13,
+                  fontWeight: 600,
+                  padding: "10px",
+                  borderRadius: 10,
+                  cursor: "pointer",
+                }}
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmDelete}
+                disabled={deleting}
+                style={{
+                  flex: 1,
+                  background: "#ef4444",
+                  border: "none",
+                  color: "#fff",
+                  fontSize: 13,
+                  fontWeight: 700,
+                  padding: "10px",
+                  borderRadius: 10,
+                  cursor: deleting ? "not-allowed" : "pointer",
+                  opacity: deleting ? 0.6 : 1,
+                }}
+              >
+                {deleting ? "Excluindo..." : "Excluir"}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
