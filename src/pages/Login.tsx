@@ -37,16 +37,15 @@ export function Login() {
           <div
             className="w-16 h-16 rounded-2xl flex items-center justify-center gold-glow flex-shrink-0"
             style={{
-              background: "linear-gradient(135deg, #1a1a1a 0%, #0a0a0a 100%)",
-              border: "1px solid var(--gold)",
-              boxShadow: "0 0 30px rgba(212, 175, 55, 0.35), inset 0 1px 0 rgba(212, 175, 55, 0.2)",
+              background: "linear-gradient(135deg, #e8c84a 0%, #D4AF37 50%, #b8960c 100%)",
+              boxShadow: "0 6px 20px rgba(212, 175, 55, 0.5), inset 0 1px 0 rgba(255,255,255,0.3)",
             }}
           >
             <img
               src={logo}
               alt="Andrade Consultoria Imobiliária"
-              className="w-10 h-10"
-              style={{ objectFit: "contain", filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.5))" }}
+              className="w-12 h-12"
+              style={{ objectFit: "contain" }}
             />
           </div>
           <div>
