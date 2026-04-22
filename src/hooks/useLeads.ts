@@ -75,7 +75,7 @@ export const rowToLead = (row: LeadRow): Lead => ({
   budget: formatBudget(row.budget),
   createdAt: row.created_at,
   healthScore: 50,
-  assignedTo: row.assigned_to ?? null,
+  assignedTo: row.tenant_id ?? null,
 });
 
 export function useLeads() {
