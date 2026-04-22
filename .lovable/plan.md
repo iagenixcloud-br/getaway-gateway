@@ -1,57 +1,43 @@
 
 
-## Máscara e formatação WhatsApp no cadastro de corretor
+## Substituir o "A" pelo logo da Andrade Consultoria Imobiliária
 
-Vou ajustar o formulário de novo corretor em `src/pages/Corretores.tsx` para aplicar máscara visual no telefone e normalizar o valor antes de salvar, seguindo o padrão da Evolution API.
+Vou trocar o quadradinho dourado com a letra "A" pelo **logo oficial** (prédios vermelhos dentro do círculo branco), em dois lugares: **sidebar** (`Layout.tsx`) e **tela de login** (`Login.tsx`). O resultado precisa ficar elegante, integrado ao tema dark navy + dourado existente — não apenas "colado".
 
-### O que muda na UI
+### 1. Importar o logo como asset
 
-No campo **Telefone** do formulário "Cadastrar novo corretor":
+- Copio `user-uploads://WhatsApp_Image_2026-04-22_at_14.39.41.jpeg` para `src/assets/andrade-logo.jpeg`.
+- Importo como módulo ES6: `import logo from "@/assets/andrade-logo.jpeg"`.
 
-- **Placeholder**: `(11) 99999-9999`
-- **Máscara em tempo real**: enquanto o usuário digita, o valor é formatado automaticamente como `(DD) NNNNN-NNNN`. Apaga normalmente (backspace funciona).
-- **maxLength**: 15 caracteres (tamanho do formato com máscara).
-- **inputMode="tel"**: mostra teclado numérico no mobile.
-- **Legenda de ajuda** abaixo do input, em cinza pequeno:
-  > Insira o número com DDD para habilitar a integração com o WhatsApp
+### 2. Tratamento visual do logo
 
-### Lógica de formatação
+O logo original tem **fundo preto sólido**, o que destoaria do navy translúcido do app se eu jogasse a imagem crua. Solução para ficar bonito:
 
-Duas funções auxiliares no topo do arquivo:
+- Envolver o `<img>` num **container circular** (`rounded-full`) com fundo preto puro (`#000`), que casa com o fundo natural da arte do logo e cria uma "moeda" limpa.
+- Borda fina dourada (`1px solid var(--gold)`) ao redor do círculo — costura o logo vermelho ao restante da identidade dourada do sistema.
+- Manter a classe `gold-glow` existente para preservar o brilho dourado pulsante já presente.
+- `object-cover` com leve escala (`scale-110`) e `object-position: center 35%` para cortar a parte de baixo (texto "ANDRADE / CONSULTORIA IMOBILIÁRIA"), deixando aparecer **só os prédios dentro do círculo** — o texto da marca já está escrito ao lado, repetir polui.
 
-1. **`maskPhone(value: string)`** — usada no `onChange`:
-   - Remove tudo que não é dígito.
-   - Limita a 11 dígitos (DDD + 9 dígitos).
-   - Aplica progressivamente: `(DD`, `(DD) NNNNN`, `(DD) NNNNN-NNNN`.
+Resultado: badge circular preto, borda dourada, prédios vermelhos centralizados, glow sutil.
 
-2. **`toWhatsappJid(value: string)`** — usada no `handleCreate` antes de enviar à edge function:
-   - Remove todos os caracteres não numéricos.
-   - Se não começar com `55`, prefixa `55`.
-   - Retorna `${digitos}@s.whatsapp.net`.
-   - Se o campo estiver vazio, retorna `null` (mantém comportamento atual de telefone opcional).
+### 3. Locais alterados
 
-### Fluxo no `handleCreate`
+**`src/components/Layout.tsx`** (sidebar, linhas 53-63):
+- Substituo o `<div>` quadrado dourado com o "A" por um `<div>` circular `w-10 h-10 rounded-full` com `overflow-hidden`, fundo `#000`, borda `1px solid var(--gold)`, classe `gold-glow`, contendo o `<img>` recortado.
+- Texto ao lado ("Andrade" + "Imobiliária Elite") **mantido** — funciona como wordmark complementar.
 
-Hoje o código envia `phone: phone.trim() || null` para a edge function `create-corretor`. Vou trocar por:
+**`src/pages/Login.tsx`** (linhas 36-42):
+- Mesma substituição, em tamanho maior: `w-14 h-14 rounded-full`.
+- Texto ao lado mantido.
 
-```ts
-const normalizedPhone = phone.trim() ? toWhatsappJid(phone) : null;
-// ...
-body: { name: name.trim(), email: email.trim(), password, phone: normalizedPhone }
-```
+### 4. Arquivos afetados
 
-A edge function já repassa `phone` para `profiles` via upsert, então o valor `5512992578668@s.whatsapp.net` cai direto na coluna `profiles.phone` sem precisar mexer no backend.
+- **Novo**: `src/assets/andrade-logo.jpeg` (copiado do upload)
+- **Editado**: `src/components/Layout.tsx`
+- **Editado**: `src/pages/Login.tsx`
 
-### Validação extra
+### Fora de escopo
 
-Antes de submeter, se o usuário digitou algo no telefone mas não chegou a 10 ou 11 dígitos (DDD + número), exibo `formMsg` de erro: `"Telefone incompleto. Use (DD) NNNNN-NNNN"` e cancelo o submit. Se o campo estiver vazio, segue normal (telefone é opcional).
-
-### Arquivos afetados
-
-- `src/pages/Corretores.tsx` — única alteração. Adiciono helpers, ajusto o `<input>` de telefone (onChange com máscara, placeholder, maxLength, inputMode), adiciono `<small>` de legenda, e normalizo o valor no `handleCreate`.
-
-### Fora de escopo (intencional)
-
-- Não vou aplicar a máscara nos telefones já existentes na tabela (eles continuam como estão). Se quiser, depois rodamos uma migração para normalizar o histórico.
-- A edição de telefone de corretores existentes não tem UI hoje, então também não entra agora.
+- Não vou trocar o `<title>` do `index.html` nem o favicon agora (o usuário pediu só "no lugar do A"). Se quiser depois, faço o favicon a partir do mesmo logo.
+- Não removo nem altero a tipografia "Andrade / Imobiliária Elite" ao lado — ela continua reforçando a marca em texto.
 
