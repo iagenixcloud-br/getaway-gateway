@@ -55,12 +55,15 @@ export function Layout({ children }: LayoutProps) {
           style={{ borderBottom: "1px solid var(--glass-border)" }}
         >
           <div
-            className="w-10 h-10 rounded-xl flex items-center justify-center gold-glow"
-            style={{ background: "linear-gradient(135deg, #D4AF37, #b8960c)" }}
+            className="w-10 h-10 rounded-full flex items-center justify-center gold-glow overflow-hidden flex-shrink-0"
+            style={{ background: "#000", border: "1px solid var(--gold)" }}
           >
-            <span style={{ fontFamily: "Montserrat, sans-serif", fontWeight: 800, fontSize: 14, color: "#001f3f" }}>
-              A
-            </span>
+            <img
+              src={logo}
+              alt="Andrade Consultoria Imobiliária"
+              className="w-full h-full"
+              style={{ objectFit: "cover", objectPosition: "center 35%", transform: "scale(1.1)" }}
+            />
           </div>
           <div>
             <p style={{ fontFamily: "Montserrat, sans-serif", fontWeight: 700, fontSize: 13, color: "var(--gold)", lineHeight: 1.2 }}>
