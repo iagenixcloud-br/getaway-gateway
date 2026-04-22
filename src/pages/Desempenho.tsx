@@ -187,7 +187,7 @@ export function Desempenho() {
     });
 
     filtered.forEach((l) => {
-      const key = l.assigned_to ?? "__unassigned";
+      const key = l.tenant_id ?? "__unassigned";
       let row = map.get(key);
       if (!row) {
         row = {

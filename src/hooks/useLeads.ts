@@ -75,7 +75,7 @@ export const rowToLead = (row: LeadRow): Lead => ({
   budget: formatBudget(row.budget),
   createdAt: row.created_at,
   healthScore: 50,
-  assignedTo: row.assigned_to ?? null,
+  assignedTo: row.tenant_id ?? null,
 });
 
 export function useLeads() {
@@ -98,7 +98,7 @@ export function useLeads() {
 
       // Corretor não-admin: filtra pelos leads dele
       if (!isAdmin && user) {
-        query = query.eq("assigned_to", user.id);
+        query = query.eq("tenant_id", user.id);
       }
 
       const { data, error } = await query;
@@ -124,7 +124,7 @@ export function useLeads() {
         (payload) => {
           // Helper: corretor só processa eventos que envolvem os leads dele
           const belongsToMe = (row: LeadRow | null) =>
-            isAdmin || (row && row.assigned_to === user?.id);
+            isAdmin || (row && row.tenant_id === user?.id);
 
           if (payload.eventType === "INSERT") {
             const row = payload.new as LeadRow;
@@ -201,7 +201,7 @@ export function useLeads() {
       }
       dbPatch.budget = n;
     }
-    if (patch.assignedTo !== undefined) dbPatch.assigned_to = patch.assignedTo;
+    if (patch.assignedTo !== undefined) dbPatch.tenant_id = patch.assignedTo;
 
     if (Object.keys(dbPatch).length === 0) return;
     const { error } = await supabase.from("leads").update(dbPatch).eq("id", id);
@@ -239,7 +239,7 @@ export function useLeads() {
       status: input.status ?? "novo",
       interest: input.property?.trim() || null,
       budget: budgetNum,
-      assigned_to: input.assignedTo ?? null,
+      tenant_id: input.assignedTo ?? null,
     };
 
     const { data, error } = await supabase
