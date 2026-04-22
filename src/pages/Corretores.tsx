@@ -17,6 +17,21 @@ function toWhatsappJid(value: string): string {
   return `${digits}@s.whatsapp.net`;
 }
 
+/** Pega só os dígitos BR (sem 55) a partir de um valor armazenado (JID, número cru, com máscara, etc.) */
+function extractBrDigits(value: string | null | undefined): string {
+  if (!value) return "";
+  let digits = value.replace(/\D/g, "");
+  if (digits.startsWith("55") && digits.length > 11) digits = digits.slice(2);
+  return digits.slice(0, 11);
+}
+
+/** Formata para exibição: (DD) NNNNN-NNNN */
+function formatPhoneDisplay(value: string | null | undefined): string {
+  const digits = extractBrDigits(value);
+  if (!digits) return "—";
+  return maskPhone(digits);
+}
+
 interface Corretor {
   id: string;
   name: string;
