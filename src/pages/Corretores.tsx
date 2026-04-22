@@ -42,7 +42,7 @@ interface Corretor {
 }
 
 export function Corretores() {
-  const { isAdmin, loading: authLoading } = useAuth();
+  const { isAdmin, loading: authLoading, user } = useAuth();
   const [list, setList] = useState<Corretor[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -55,6 +55,18 @@ export function Corretores() {
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [formMsg, setFormMsg] = useState<{ type: "ok" | "err"; text: string } | null>(null);
+
+  // Edit modal
+  const [editing, setEditing] = useState<Corretor | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editPhone, setEditPhone] = useState("");
+  const [editSubmitting, setEditSubmitting] = useState(false);
+  const [editMsg, setEditMsg] = useState<string | null>(null);
+
+  // Delete confirm
+  const [confirmDelete, setConfirmDelete] = useState<Corretor | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteMsg, setDeleteMsg] = useState<string | null>(null);
 
   const load = async () => {
     setLoading(true);
