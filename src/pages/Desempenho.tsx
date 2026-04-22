@@ -332,8 +332,10 @@ export function Desempenho() {
                       border: "1px solid rgba(212,175,55,0.3)",
                       borderRadius: 8,
                       fontSize: 12,
+                      color: "#f0f4f8",
                     }}
                     labelStyle={{ color: "#D4AF37" }}
+                    itemStyle={{ color: "#f0f4f8" }}
                   />
                   <Line
                     type="monotone"
@@ -376,7 +378,10 @@ export function Desempenho() {
                         border: "1px solid rgba(212,175,55,0.3)",
                         borderRadius: 8,
                         fontSize: 12,
+                        color: "#f0f4f8",
                       }}
+                      labelStyle={{ color: "#D4AF37" }}
+                      itemStyle={{ color: "#f0f4f8" }}
                       cursor={{ fill: "rgba(212,175,55,0.05)" }}
                     />
                     <Bar dataKey="value" radius={[6, 6, 0, 0]}>
@@ -426,10 +431,13 @@ export function Desempenho() {
                         border: "1px solid rgba(212,175,55,0.3)",
                         borderRadius: 8,
                         fontSize: 12,
+                        color: "#f0f4f8",
                       }}
+                      labelStyle={{ color: "#D4AF37" }}
+                      itemStyle={{ color: "#f0f4f8" }}
                     />
                     <Legend
-                      wrapperStyle={{ fontSize: 11, color: "var(--text-muted)" }}
+                      wrapperStyle={{ fontSize: 11, color: "#f0f4f8" }}
                       iconType="circle"
                     />
                   </PieChart>
@@ -470,10 +478,13 @@ export function Desempenho() {
                         border: "1px solid rgba(212,175,55,0.3)",
                         borderRadius: 8,
                         fontSize: 12,
+                        color: "#f0f4f8",
                       }}
+                      labelStyle={{ color: "#D4AF37" }}
+                      itemStyle={{ color: "#f0f4f8" }}
                       cursor={{ fill: "rgba(212,175,55,0.05)" }}
                     />
-                    <Legend wrapperStyle={{ fontSize: 11 }} />
+                    <Legend wrapperStyle={{ fontSize: 11, color: "#f0f4f8" }} />
                     <Bar dataKey="Ativos" fill="#3b82f6" radius={[6, 6, 0, 0]} />
                     <Bar dataKey="Fechados" fill="#22c55e" radius={[6, 6, 0, 0]} />
                   </BarChart>
