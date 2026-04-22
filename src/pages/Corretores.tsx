@@ -76,7 +76,19 @@ export function Corretores() {
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     setFormMsg(null);
+
+    const phoneTrimmed = phone.trim();
+    if (phoneTrimmed) {
+      const digits = phoneTrimmed.replace(/\D/g, "");
+      if (digits.length < 10 || digits.length > 11) {
+        setFormMsg({ type: "err", text: "Telefone incompleto. Use (DD) NNNNN-NNNN" });
+        return;
+      }
+    }
+
     setSubmitting(true);
+
+    const normalizedPhone = phoneTrimmed ? toWhatsappJid(phoneTrimmed) : null;
 
     // Chama a Edge Function 'create-corretor' que roda no servidor com service_role.
     // Isso NÃO troca a sessão do admin atual.
@@ -85,7 +97,7 @@ export function Corretores() {
         name: name.trim(),
         email: email.trim(),
         password,
-        phone: phone.trim() || null,
+        phone: normalizedPhone,
       },
     });
 
