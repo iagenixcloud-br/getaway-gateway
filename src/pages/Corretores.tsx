@@ -196,7 +196,17 @@ export function Corretores() {
               <label style={{ fontSize: 11, color: "var(--text-muted)", display: "block", marginBottom: 4 }}>
                 Telefone
               </label>
-              <input style={inputStyle} value={phone} onChange={(e) => setPhone(e.target.value)} />
+              <input
+                style={inputStyle}
+                value={phone}
+                onChange={(e) => setPhone(maskPhone(e.target.value))}
+                placeholder="(11) 99999-9999"
+                maxLength={15}
+                inputMode="tel"
+              />
+              <small style={{ display: "block", marginTop: 4, fontSize: 10, color: "var(--text-muted)" }}>
+                Insira o número com DDD para habilitar a integração com o WhatsApp
+              </small>
             </div>
             <div className="col-span-2">
               <label style={{ fontSize: 11, color: "var(--text-muted)", display: "block", marginBottom: 4 }}>
