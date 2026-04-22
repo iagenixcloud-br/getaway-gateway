@@ -98,7 +98,7 @@ export function useLeads() {
 
       // Corretor não-admin: filtra pelos leads dele
       if (!isAdmin && user) {
-        query = query.eq("assigned_to", user.id);
+        query = query.eq("tenant_id", user.id);
       }
 
       const { data, error } = await query;
