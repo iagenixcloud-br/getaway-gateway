@@ -239,7 +239,7 @@ export function useLeads() {
       status: input.status ?? "novo",
       interest: input.property?.trim() || null,
       budget: budgetNum,
-      assigned_to: input.assignedTo ?? null,
+      tenant_id: input.assignedTo ?? null,
     };
 
     const { data, error } = await supabase
