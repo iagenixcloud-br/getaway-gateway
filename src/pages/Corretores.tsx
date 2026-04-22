@@ -3,6 +3,20 @@ import { Navigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { supabase } from "../lib/supabase";
 
+function maskPhone(value: string): string {
+  const digits = value.replace(/\D/g, "").slice(0, 11);
+  if (digits.length === 0) return "";
+  if (digits.length <= 2) return `(${digits}`;
+  if (digits.length <= 7) return `(${digits.slice(0, 2)}) ${digits.slice(2)}`;
+  return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
+}
+
+function toWhatsappJid(value: string): string {
+  let digits = value.replace(/\D/g, "");
+  if (!digits.startsWith("55")) digits = `55${digits}`;
+  return `${digits}@s.whatsapp.net`;
+}
+
 interface Corretor {
   id: string;
   name: string;
@@ -62,7 +76,19 @@ export function Corretores() {
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     setFormMsg(null);
+
+    const phoneTrimmed = phone.trim();
+    if (phoneTrimmed) {
+      const digits = phoneTrimmed.replace(/\D/g, "");
+      if (digits.length < 10 || digits.length > 11) {
+        setFormMsg({ type: "err", text: "Telefone incompleto. Use (DD) NNNNN-NNNN" });
+        return;
+      }
+    }
+
     setSubmitting(true);
+
+    const normalizedPhone = phoneTrimmed ? toWhatsappJid(phoneTrimmed) : null;
 
     // Chama a Edge Function 'create-corretor' que roda no servidor com service_role.
     // Isso NÃO troca a sessão do admin atual.
@@ -71,7 +97,7 @@ export function Corretores() {
         name: name.trim(),
         email: email.trim(),
         password,
-        phone: phone.trim() || null,
+        phone: normalizedPhone,
       },
     });
 
@@ -170,7 +196,17 @@ export function Corretores() {
               <label style={{ fontSize: 11, color: "var(--text-muted)", display: "block", marginBottom: 4 }}>
                 Telefone
               </label>
-              <input style={inputStyle} value={phone} onChange={(e) => setPhone(e.target.value)} />
+              <input
+                style={inputStyle}
+                value={phone}
+                onChange={(e) => setPhone(maskPhone(e.target.value))}
+                placeholder="(11) 99999-9999"
+                maxLength={15}
+                inputMode="tel"
+              />
+              <small style={{ display: "block", marginTop: 4, fontSize: 10, color: "var(--text-muted)" }}>
+                Insira o número com DDD para habilitar a integração com o WhatsApp
+              </small>
             </div>
             <div className="col-span-2">
               <label style={{ fontSize: 11, color: "var(--text-muted)", display: "block", marginBottom: 4 }}>
