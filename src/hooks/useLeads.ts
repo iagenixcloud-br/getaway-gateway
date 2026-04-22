@@ -124,7 +124,7 @@ export function useLeads() {
         (payload) => {
           // Helper: corretor só processa eventos que envolvem os leads dele
           const belongsToMe = (row: LeadRow | null) =>
-            isAdmin || (row && row.assigned_to === user?.id);
+            isAdmin || (row && row.tenant_id === user?.id);
 
           if (payload.eventType === "INSERT") {
             const row = payload.new as LeadRow;
