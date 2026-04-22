@@ -57,16 +57,15 @@ export function Layout({ children }: LayoutProps) {
           <div
             className="w-11 h-11 rounded-xl flex items-center justify-center gold-glow flex-shrink-0"
             style={{
-              background: "linear-gradient(135deg, #1a1a1a 0%, #0a0a0a 100%)",
-              border: "1px solid var(--gold)",
-              boxShadow: "0 0 20px rgba(212, 175, 55, 0.25), inset 0 1px 0 rgba(212, 175, 55, 0.15)",
+              background: "linear-gradient(135deg, #e8c84a 0%, #D4AF37 50%, #b8960c 100%)",
+              boxShadow: "0 4px 14px rgba(212, 175, 55, 0.4), inset 0 1px 0 rgba(255,255,255,0.3)",
             }}
           >
             <img
               src={logo}
               alt="Andrade Consultoria Imobiliária"
-              className="w-7 h-7"
-              style={{ objectFit: "contain", filter: "drop-shadow(0 1px 2px rgba(0,0,0,0.4))" }}
+              className="w-8 h-8"
+              style={{ objectFit: "contain" }}
             />
           </div>
           <div>
