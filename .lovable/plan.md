@@ -1,41 +1,57 @@
 
 
-# Análise do Projeto: Andrade Imobiliária CRM Elite
+## Máscara e formatação WhatsApp no cadastro de corretor
 
-## Status Atual
+Vou ajustar o formulário de novo corretor em `src/pages/Corretores.tsx` para aplicar máscara visual no telefone e normalizar o valor antes de salvar, seguindo o padrão da Evolution API.
 
-O projeto já está **100% implementado** conforme o `LOVABLE_SETUP.md`. Todos os arquivos e funcionalidades descritos existem e estão funcionais:
+### O que muda na UI
 
-| Arquivo | Status | Funcionalidades |
-|---------|--------|-----------------|
-| `App.tsx` | ✅ Completo | Navegação entre 5 views |
-| `Layout.tsx` | ✅ Completo | Sidebar glassmorphism + TopBar com busca, notificações e VGV |
-| `Dashboard.tsx` | ✅ Completo | 6 KPIs com animação, funil de vendas, origens de leads, atividade recente, top corretores |
-| `KanbanBoard.tsx` | ✅ Completo | 5 colunas, cards com urgência, health score, modal de detalhes, VGV por coluna |
-| `PropertyGallery.tsx` | ✅ Completo | Filtros, grid/lista, modal com detalhes e Tour 360° |
-| `BrokerRanking.tsx` | ✅ Completo | Pódio top-3, tabela com barras, modal com medalhas |
-| `WhatsAppConfig.tsx` | ✅ Completo | Formulário, toggles, preview no celular, botão enviar teste |
-| `mockData.ts` | ✅ Completo | 10 leads, 5 imóveis, 5 corretores, KPIs |
-| `index.css` | ✅ Completo | Variáveis CSS, glassmorphism, animações, scrollbar customizada |
+No campo **Telefone** do formulário "Cadastrar novo corretor":
 
-## Design System Aplicado
+- **Placeholder**: `(11) 99999-9999`
+- **Máscara em tempo real**: enquanto o usuário digita, o valor é formatado automaticamente como `(DD) NNNNN-NNNN`. Apaga normalmente (backspace funciona).
+- **maxLength**: 15 caracteres (tamanho do formato com máscara).
+- **inputMode="tel"**: mostra teclado numérico no mobile.
+- **Legenda de ajuda** abaixo do input, em cinza pequeno:
+  > Insira o número com DDD para habilitar a integração com o WhatsApp
 
-- **Paleta**: Navy (#001f3f) + Gold (#D4AF37) + Glassmorphism
-- **Fontes**: Inter (corpo) + Montserrat (títulos/números)
-- **Estilo**: Cards com backdrop-filter blur, bordas semi-transparentes, gold glow effects
+### Lógica de formatação
 
-## Observações
+Duas funções auxiliares no topo do arquivo:
 
-O código não usa nenhuma dependência externa além de React + Tailwind (conforme especificado no LOVABLE_SETUP.md). Tudo é feito com CSS puro e SVGs inline.
+1. **`maskPhone(value: string)`** — usada no `onChange`:
+   - Remove tudo que não é dígito.
+   - Limita a 11 dígitos (DDD + 9 dígitos).
+   - Aplica progressivamente: `(DD`, `(DD) NNNNN`, `(DD) NNNNN-NNNN`.
 
-O projeto está pronto para uso. Não há arquivos faltando nem funcionalidades pendentes em relação ao setup document.
+2. **`toWhatsappJid(value: string)`** — usada no `handleCreate` antes de enviar à edge function:
+   - Remove todos os caracteres não numéricos.
+   - Se não começar com `55`, prefixa `55`.
+   - Retorna `${digitos}@s.whatsapp.net`.
+   - Se o campo estiver vazio, retorna `null` (mantém comportamento atual de telefone opcional).
 
-## Próximos Passos Possíveis
+### Fluxo no `handleCreate`
 
-Se quiser evoluir o projeto, algumas direções:
-1. **Conectar a um backend real** (Supabase) para persistir leads, imóveis e corretores
-2. **Adicionar drag-and-drop** no Kanban para mover leads entre colunas
-3. **Responsividade mobile** — sidebar colapsável em telas menores
-4. **Autenticação** — login/logout real com controle de acesso
-5. **Integração WhatsApp real** via API (Twilio, Z-API, etc.)
+Hoje o código envia `phone: phone.trim() || null` para a edge function `create-corretor`. Vou trocar por:
+
+```ts
+const normalizedPhone = phone.trim() ? toWhatsappJid(phone) : null;
+// ...
+body: { name: name.trim(), email: email.trim(), password, phone: normalizedPhone }
+```
+
+A edge function já repassa `phone` para `profiles` via upsert, então o valor `5512992578668@s.whatsapp.net` cai direto na coluna `profiles.phone` sem precisar mexer no backend.
+
+### Validação extra
+
+Antes de submeter, se o usuário digitou algo no telefone mas não chegou a 10 ou 11 dígitos (DDD + número), exibo `formMsg` de erro: `"Telefone incompleto. Use (DD) NNNNN-NNNN"` e cancelo o submit. Se o campo estiver vazio, segue normal (telefone é opcional).
+
+### Arquivos afetados
+
+- `src/pages/Corretores.tsx` — única alteração. Adiciono helpers, ajusto o `<input>` de telefone (onChange com máscara, placeholder, maxLength, inputMode), adiciono `<small>` de legenda, e normalizo o valor no `handleCreate`.
+
+### Fora de escopo (intencional)
+
+- Não vou aplicar a máscara nos telefones já existentes na tabela (eles continuam como estão). Se quiser, depois rodamos uma migração para normalizar o histórico.
+- A edição de telefone de corretores existentes não tem UI hoje, então também não entra agora.
 
