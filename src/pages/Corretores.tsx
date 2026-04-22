@@ -152,6 +152,73 @@ export function Corretores() {
     load();
   };
 
+  const openEdit = (c: Corretor) => {
+    setEditing(c);
+    setEditName(c.name);
+    setEditPhone(maskPhone(extractBrDigits(c.phone)));
+    setEditMsg(null);
+  };
+
+  const handleEditSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editing) return;
+    setEditMsg(null);
+
+    const phoneTrimmed = editPhone.trim();
+    if (phoneTrimmed) {
+      const digits = phoneTrimmed.replace(/\D/g, "");
+      if (digits.length < 10 || digits.length > 11) {
+        setEditMsg("Telefone incompleto. Use (DD) NNNNN-NNNN");
+        return;
+      }
+    }
+
+    setEditSubmitting(true);
+    const normalizedPhone = phoneTrimmed ? toWhatsappJid(phoneTrimmed) : null;
+
+    const { data, error } = await supabase.functions.invoke("update-corretor", {
+      body: { user_id: editing.id, name: editName.trim(), phone: normalizedPhone },
+    });
+    setEditSubmitting(false);
+
+    if (error) {
+      const ctx = (error as { context?: { error?: string } }).context;
+      setEditMsg(ctx?.error || error.message || "Falha ao atualizar");
+      return;
+    }
+    if (data?.error) {
+      setEditMsg(data.error);
+      return;
+    }
+
+    setEditing(null);
+    load();
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!confirmDelete) return;
+    setDeleting(true);
+    setDeleteMsg(null);
+
+    const { data, error } = await supabase.functions.invoke("delete-corretor", {
+      body: { user_id: confirmDelete.id },
+    });
+    setDeleting(false);
+
+    if (error) {
+      const ctx = (error as { context?: { error?: string } }).context;
+      setDeleteMsg(ctx?.error || error.message || "Falha ao excluir");
+      return;
+    }
+    if (data?.error) {
+      setDeleteMsg(data.error);
+      return;
+    }
+
+    setConfirmDelete(null);
+    load();
+  };
+
   const inputStyle: React.CSSProperties = {
     width: "100%",
     background: "rgba(255,255,255,0.04)",
