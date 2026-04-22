@@ -201,7 +201,7 @@ export function useLeads() {
       }
       dbPatch.budget = n;
     }
-    if (patch.assignedTo !== undefined) dbPatch.assigned_to = patch.assignedTo;
+    if (patch.assignedTo !== undefined) dbPatch.tenant_id = patch.assignedTo;
 
     if (Object.keys(dbPatch).length === 0) return;
     const { error } = await supabase.from("leads").update(dbPatch).eq("id", id);
