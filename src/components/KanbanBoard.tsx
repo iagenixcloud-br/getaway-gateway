@@ -803,22 +803,36 @@ export function KanbanBoard() {
                 )}
               </DroppableArea>
 
-              {/* Add Lead Button */}
-              <button
-                onClick={() => setNewLeadStatus(col.id)}
-                className="mt-2 w-full py-2.5 rounded-xl flex items-center justify-center gap-2 glass-hover"
-                style={{
-                  background: "rgba(255,255,255,0.02)",
-                  border: `1px dashed ${col.color}30`,
-                  color: "var(--text-muted)",
-                  fontSize: 12,
-                  cursor: "pointer",
-                }}
-              >
-                <span style={{ fontSize: 16, color: col.color }}>+</span>
-                Adicionar Lead
-              </button>
             </div>
+          );
+        })}
+
+      </div>
+
+      {/* Modal de edição */}
+      {selectedLead && (
+        <LeadModal
+          lead={selectedLead}
+          onClose={() => setSelectedLead(null)}
+          onMove={(newStatus) => updateLeadStatus(selectedLead.id, newStatus)}
+          onUpdate={(patch) => updateLead(selectedLead.id, patch)}
+          isAdmin={isAdmin}
+          corretores={corretores}
+          onAssign={(corretorId) => assignLead(selectedLead.id, corretorId)}
+        />
+      )}
+    </div>
+
+    <DragOverlay dropAnimation={null}>
+      {activeLead ? (
+        <div style={{ width: 280, transform: "rotate(2deg)" }}>
+          <LeadCard lead={activeLead} />
+        </div>
+      ) : null}
+    </DragOverlay>
+    </DndContext>
+  );
+}
           );
         })}
 
