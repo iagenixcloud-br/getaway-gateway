@@ -8,6 +8,7 @@ import { ProtectedRoute } from "./components/ProtectedRoute";
 import { Login } from "./pages/Login";
 import { Corretores } from "./pages/Corretores";
 import { Desempenho } from "./pages/Desempenho";
+import { Roleta } from "./pages/Roleta";
 
 export default function App() {
   return (
@@ -41,6 +42,16 @@ export default function App() {
               <ProtectedRoute requireAdmin>
                 <Layout>
                   <Desempenho />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/roleta"
+            element={
+              <ProtectedRoute requireAdmin>
+                <Layout>
+                  <Roleta />
                 </Layout>
               </ProtectedRoute>
             }
