@@ -38,6 +38,8 @@ export function Layout({ children }: LayoutProps) {
       ? { title: "Desempenho", subtitle: "Métricas e indicadores do pipeline" }
       : location.pathname === "/roleta"
       ? { title: "Roleta de Leads", subtitle: "Distribuição automática round-robin" }
+      : location.pathname === "/relatorios"
+      ? { title: "Relatórios WhatsApp", subtitle: "Envio diário do resumo do pipeline" }
       : { title: "Pipeline de Leads", subtitle: "Gerencie seus leads em tempo real" };
 
   return (
