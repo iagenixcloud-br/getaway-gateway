@@ -659,8 +659,7 @@ function DroppableArea({
 export function KanbanBoard() {
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [activeLead, setActiveLead] = useState<Lead | null>(null);
-  const [newLeadStatus, setNewLeadStatus] = useState<LeadStatus | null>(null);
-  const { leads: allLeads, loading, error, updateLeadStatus, updateLead, assignLead, createLead } = useLeads();
+  const { leads: allLeads, loading, error, updateLeadStatus, updateLead, assignLead } = useLeads();
   const { isAdmin } = useAuth();
   // Só carrega lista de corretores quando admin (corretor não precisa)
   const { corretores } = useCorretores(isAdmin);
