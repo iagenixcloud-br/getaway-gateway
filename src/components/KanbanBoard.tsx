@@ -308,181 +308,6 @@ function LeadModal({
   );
 }
 
-// ── New Lead Modal (cadastro manual) ──────────────────────────
-function NewLeadModal({
-  initialStatus,
-  onClose,
-  onCreate,
-  isAdmin,
-  corretores,
-}: {
-  initialStatus: LeadStatus;
-  onClose: () => void;
-  onCreate: (input: {
-    name: string;
-    phone: string;
-    status: LeadStatus;
-    property?: string;
-    budget?: string;
-    assignedTo?: string | null;
-  }) => Promise<{ error: string | null }>;
-  isAdmin: boolean;
-  corretores: CorretorOption[];
-}) {
-  const [name, setName] = useState("");
-  const [phone, setPhone] = useState("");
-  const [property, setProperty] = useState("");
-  const [budget, setBudget] = useState("");
-  const [status, setStatus] = useState<LeadStatus>(initialStatus);
-  const [assignedTo, setAssignedTo] = useState<string>("");
-  const [saving, setSaving] = useState(false);
-  const [err, setErr] = useState<string | null>(null);
-
-  const valid = name.trim().length > 1 && phone.trim().length >= 8;
-
-  const handleSubmit = async () => {
-    if (!valid || saving) return;
-    setSaving(true);
-    setErr(null);
-    const { error } = await onCreate({
-      name,
-      phone,
-      status,
-      property: property || undefined,
-      budget: budget || undefined,
-      assignedTo: assignedTo || null,
-    });
-    setSaving(false);
-    if (error) setErr(error);
-    else onClose();
-  };
-
-  const inputStyle: React.CSSProperties = {
-    width: "100%",
-    background: "rgba(255,255,255,0.04)",
-    border: "1px solid var(--glass-border)",
-    borderRadius: 8,
-    padding: "8px 10px",
-    fontSize: 13,
-    color: "var(--text-primary)",
-    fontFamily: "inherit",
-    outline: "none",
-  };
-  const labelStyle: React.CSSProperties = {
-    fontSize: 11,
-    color: "var(--text-muted)",
-    marginBottom: 4,
-    display: "block",
-    fontWeight: 500,
-  };
-
-  return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div
-        className="modal-content glass rounded-2xl p-8 w-full"
-        style={{ maxWidth: 520, border: "1px solid rgba(212,175,55,0.2)", maxHeight: "90vh", overflowY: "auto" }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-start justify-between mb-6">
-          <div>
-            <h2 style={{ fontFamily: "Montserrat, sans-serif", fontWeight: 700, fontSize: 20 }}>
-              Novo Lead
-            </h2>
-            <p style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 2 }}>
-              Cadastro manual para teste
-            </p>
-          </div>
-          <button
-            onClick={onClose}
-            className="w-8 h-8 rounded-xl flex items-center justify-center"
-            style={{ background: "rgba(255,255,255,0.05)", color: "var(--text-muted)", cursor: "pointer" }}
-          >
-            ✕
-          </button>
-        </div>
-
-        <div className="grid grid-cols-2 gap-3 mb-4">
-          <div className="col-span-2">
-            <label style={labelStyle}>Nome *</label>
-            <input style={inputStyle} value={name} onChange={(e) => setName(e.target.value)} placeholder="Ex: João Silva" autoFocus />
-          </div>
-          <div className="col-span-2">
-            <label style={labelStyle}>Telefone *</label>
-            <input style={inputStyle} value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="11999998888" />
-          </div>
-          <div className="col-span-2">
-            <label style={labelStyle}>Imóvel de interesse</label>
-            <input style={inputStyle} value={property} onChange={(e) => setProperty(e.target.value)} placeholder="Ex: Apto 2 dorm Mooca" />
-          </div>
-          <div>
-            <label style={labelStyle}>Orçamento</label>
-            <input style={inputStyle} value={budget} onChange={(e) => setBudget(e.target.value)} placeholder="Ex: 450k ou 1.2M" />
-          </div>
-          <div>
-            <label style={labelStyle}>Etapa</label>
-            <select style={inputStyle} value={status} onChange={(e) => setStatus(e.target.value as LeadStatus)}>
-              {columns.map((c) => (
-                <option key={c.id} value={c.id} style={{ background: "#1a1a1a" }}>{c.label}</option>
-              ))}
-            </select>
-          </div>
-          {isAdmin && (
-            <div className="col-span-2">
-              <label style={labelStyle}>Corretor responsável</label>
-              <select style={inputStyle} value={assignedTo} onChange={(e) => setAssignedTo(e.target.value)}>
-                <option value="" style={{ background: "#1a1a1a" }}>— Não atribuído —</option>
-                {corretores.map((c) => (
-                  <option key={c.id} value={c.id} style={{ background: "#1a1a1a" }}>{c.name}</option>
-                ))}
-              </select>
-            </div>
-          )}
-        </div>
-
-        {err && (
-          <div
-            className="rounded-lg px-3 py-2 mb-3"
-            style={{ background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.3)", color: "#ef4444", fontSize: 12 }}
-          >
-            {err}
-          </div>
-        )}
-
-        <div className="flex gap-2">
-          <button
-            onClick={handleSubmit}
-            disabled={!valid || saving}
-            className="flex-1 py-2.5 rounded-xl"
-            style={{
-              background: valid && !saving ? "var(--gold)" : "rgba(212,175,55,0.2)",
-              color: valid && !saving ? "#0a0a0a" : "var(--text-muted)",
-              fontSize: 13,
-              fontWeight: 700,
-              cursor: valid && !saving ? "pointer" : "not-allowed",
-              border: "none",
-            }}
-          >
-            {saving ? "Salvando..." : "Criar lead"}
-          </button>
-          <button
-            onClick={onClose}
-            className="px-4 py-2.5 rounded-xl"
-            style={{
-              background: "rgba(255,255,255,0.05)",
-              color: "var(--text-muted)",
-              fontSize: 13,
-              fontWeight: 600,
-              cursor: "pointer",
-              border: "1px solid var(--glass-border)",
-            }}
-          >
-            Cancelar
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 // ── Lead Card ─────────────────────────────────────────────────
 function LeadCard({
@@ -659,8 +484,7 @@ function DroppableArea({
 export function KanbanBoard() {
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [activeLead, setActiveLead] = useState<Lead | null>(null);
-  const [newLeadStatus, setNewLeadStatus] = useState<LeadStatus | null>(null);
-  const { leads: allLeads, loading, error, updateLeadStatus, updateLead, assignLead, createLead } = useLeads();
+  const { leads: allLeads, loading, error, updateLeadStatus, updateLead, assignLead } = useLeads();
   const { isAdmin } = useAuth();
   // Só carrega lista de corretores quando admin (corretor não precisa)
   const { corretores } = useCorretores(isAdmin);
@@ -804,21 +628,6 @@ export function KanbanBoard() {
                 )}
               </DroppableArea>
 
-              {/* Add Lead Button */}
-              <button
-                onClick={() => setNewLeadStatus(col.id)}
-                className="mt-2 w-full py-2.5 rounded-xl flex items-center justify-center gap-2 glass-hover"
-                style={{
-                  background: "rgba(255,255,255,0.02)",
-                  border: `1px dashed ${col.color}30`,
-                  color: "var(--text-muted)",
-                  fontSize: 12,
-                  cursor: "pointer",
-                }}
-              >
-                <span style={{ fontSize: 16, color: col.color }}>+</span>
-                Adicionar Lead
-              </button>
             </div>
           );
         })}
@@ -835,20 +644,6 @@ export function KanbanBoard() {
           isAdmin={isAdmin}
           corretores={corretores}
           onAssign={(corretorId) => assignLead(selectedLead.id, corretorId)}
-        />
-      )}
-
-      {/* Modal de criação manual */}
-      {newLeadStatus && (
-        <NewLeadModal
-          initialStatus={newLeadStatus}
-          onClose={() => setNewLeadStatus(null)}
-          onCreate={async (input) => {
-            const res = await createLead(input);
-            return { error: res.error };
-          }}
-          isAdmin={isAdmin}
-          corretores={corretores}
         />
       )}
     </div>
