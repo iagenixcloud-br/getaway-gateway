@@ -37,13 +37,13 @@ export function Roleta() {
   const { leads } = useLeads();
   const [redistributingId, setRedistributingId] = useState<string | null>(null);
 
-  if (!authLoading && !isAdmin) return <Navigate to="/" replace />;
-
   const proximo = fila[0];
   const totalDistribuidos = useMemo(
     () => corretores.reduce((s, c) => s + (c.total_received || 0), 0),
     [corretores],
   );
+
+  if (!authLoading && !isAdmin) return <Navigate to="/" replace />;
 
   // Leads sem corretor (pool) — para redistribuir
   const leadsSemCorretor = leads.filter((l) => !l.assignedTo);
