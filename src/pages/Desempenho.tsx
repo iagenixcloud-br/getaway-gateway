@@ -188,21 +188,22 @@ export function Desempenho() {
 
     filtered.forEach((l) => {
       const key = l.tenant_id ?? "__unassigned";
-      let row = map.get(key);
+      // Se tenant_id aponta pra um corretor que não existe mais (deletado),
+      // joga esses leads no bucket "Não atribuídos" em vez de criar um fantasma.
+      const exists = key === "__unassigned" || map.has(key);
+      const bucket = exists ? key : "__unassigned";
+      let row = map.get(bucket);
       if (!row) {
         row = {
-          id: key,
-          name:
-            key === "__unassigned"
-              ? "Não atribuídos"
-              : "Corretor removido",
+          id: bucket,
+          name: "Não atribuídos",
           total: 0,
           ativos: 0,
           fechados: 0,
           conversao: 0,
           porStatus: empty(),
         };
-        map.set(key, row);
+        map.set(bucket, row);
       }
       const status = normalizeStatus(l.status);
       row.total++;
