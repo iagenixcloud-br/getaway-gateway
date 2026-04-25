@@ -3,13 +3,13 @@
 // ============================================================
 
 export type LeadStatus =
-  | "novo"
-  | "atrasado"
-  | "visitar"
-  | "agendados"
-  | "favoritos"
-  | "fechado"
-  | "arquivados";
+  | "lead_novo"
+  | "curioso"
+  | "negocio"
+  | "agendamento"
+  | "visita"
+  | "proposta"
+  | "venda";
 
 export type LeadOrigin = "FB" | "IG" | "WA" | "Site" | "Indicação";
 

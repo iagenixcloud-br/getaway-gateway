@@ -49,13 +49,13 @@ const waitingUrgency = (hours: number): string => {
 
 // ── Column Config ─────────────────────────────────────────────
 const columns: { id: LeadStatus; label: string; color: string; icon: string }[] = [
-  { id: "novo", label: "Novo Lead", color: "#06b6d4", icon: "✦" },
-  { id: "atrasado", label: "Atrasado", color: "#f59e0b", icon: "⏱" },
-  { id: "visitar", label: "Visitar", color: "#3b82f6", icon: "⌂" },
-  { id: "agendados", label: "Agendados", color: "#8b5cf6", icon: "◈" },
-  { id: "favoritos", label: "Favoritos", color: "#D4AF37", icon: "★" },
-  { id: "fechado", label: "Negócio Fechado", color: "#22c55e", icon: "✓" },
-  { id: "arquivados", label: "Arquivados", color: "#64748b", icon: "▣" },
+  { id: "lead_novo", label: "Lead Novo", color: "#06b6d4", icon: "✦" },
+  { id: "curioso", label: "Curioso", color: "#f59e0b", icon: "?" },
+  { id: "negocio", label: "Negócio", color: "#8b5cf6", icon: "◈" },
+  { id: "agendamento", label: "Agendamento", color: "#3b82f6", icon: "◷" },
+  { id: "visita", label: "Visita", color: "#ec4899", icon: "⌂" },
+  { id: "proposta", label: "Proposta", color: "#D4AF37", icon: "★" },
+  { id: "venda", label: "Venda", color: "#22c55e", icon: "✓" },
 ];
 
 // ── Lead Detail Modal ─────────────────────────────────────────
