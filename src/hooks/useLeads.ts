@@ -223,6 +223,33 @@ export function useLeads() {
     }
     if (patch.assignedTo !== undefined) dbPatch.tenant_id = patch.assignedTo;
 
+    // Perfil do lead
+    const toNum = (s: string | undefined): number | null => {
+      if (s === undefined) return undefined as unknown as number | null; // sinaliza "não mexer"
+      const trimmed = s.trim();
+      if (!trimmed) return null;
+      const n = parseFloat(trimmed.replace(/[^\d.,-]/g, "").replace(",", "."));
+      return isNaN(n) ? null : n;
+    };
+    const toStr = (s: string | undefined): string | null =>
+      s === undefined ? (undefined as unknown as string | null) : (s.trim() || null);
+
+    if (patch.email !== undefined) dbPatch.email = toStr(patch.email);
+    if (patch.age !== undefined) dbPatch.age = toNum(patch.age);
+    if (patch.gender !== undefined) dbPatch.gender = toStr(patch.gender);
+    if (patch.occupation !== undefined) dbPatch.occupation = toStr(patch.occupation);
+    if (patch.monthlyIncome !== undefined) dbPatch.monthly_income = toNum(patch.monthlyIncome);
+    if (patch.downPayment !== undefined) dbPatch.down_payment = toNum(patch.downPayment);
+    if (patch.installment !== undefined) dbPatch.installment = toNum(patch.installment);
+    if (patch.purpose !== undefined) dbPatch.purpose = toStr(patch.purpose);
+    if (patch.areaSqm !== undefined) dbPatch.area_sqm = toStr(patch.areaSqm);
+    if (patch.region !== undefined) dbPatch.region = toStr(patch.region);
+
+    // Remove chaves marcadas como "não mexer" (undefined)
+    Object.keys(dbPatch).forEach((k) => {
+      if (dbPatch[k] === undefined) delete dbPatch[k];
+    });
+
     if (Object.keys(dbPatch).length === 0) return;
     const { error } = await supabase.from("leads").update(dbPatch).eq("id", id);
     if (error) setError(`Falha ao atualizar lead: ${error.message}`);
