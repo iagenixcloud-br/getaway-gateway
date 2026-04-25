@@ -86,15 +86,35 @@ function LeadModal({
   const dirty =
     form.name !== lead.name ||
     form.phone !== lead.phone ||
+    form.email !== lead.email ||
     form.property !== lead.property ||
-    form.origin !== lead.origin;
+    form.origin !== lead.origin ||
+    form.age !== lead.age ||
+    form.gender !== lead.gender ||
+    form.occupation !== lead.occupation ||
+    form.monthlyIncome !== lead.monthlyIncome ||
+    form.downPayment !== lead.downPayment ||
+    form.installment !== lead.installment ||
+    form.purpose !== lead.purpose ||
+    form.areaSqm !== lead.areaSqm ||
+    form.region !== lead.region;
 
   const handleSave = () => {
     onUpdate({
       name: form.name,
       phone: form.phone,
+      email: form.email,
       property: form.property,
       origin: form.origin,
+      age: form.age,
+      gender: form.gender,
+      occupation: form.occupation,
+      monthlyIncome: form.monthlyIncome,
+      downPayment: form.downPayment,
+      installment: form.installment,
+      purpose: form.purpose,
+      areaSqm: form.areaSqm,
+      region: form.region,
     });
     onClose();
   };
