@@ -191,6 +191,112 @@ function LeadModal({
               onChange={(e) => set("phone", e.target.value)}
             />
           </div>
+          <div>
+            <label style={labelStyle}>E-mail</label>
+            <input
+              style={inputStyle}
+              type="email"
+              value={form.email}
+              onChange={(e) => set("email", e.target.value)}
+            />
+          </div>
+
+          <div>
+            <label style={labelStyle}>Idade</label>
+            <input
+              style={inputStyle}
+              type="number"
+              min={0}
+              value={form.age}
+              onChange={(e) => set("age", e.target.value)}
+            />
+          </div>
+          <div>
+            <label style={labelStyle}>Gênero</label>
+            <select
+              style={inputStyle}
+              value={form.gender}
+              onChange={(e) => set("gender", e.target.value)}
+            >
+              <option value="" style={{ background: "#1a1a1a" }}>—</option>
+              <option value="Masculino" style={{ background: "#1a1a1a" }}>Masculino</option>
+              <option value="Feminino" style={{ background: "#1a1a1a" }}>Feminino</option>
+              <option value="Outro" style={{ background: "#1a1a1a" }}>Outro</option>
+            </select>
+          </div>
+
+          <div className="col-span-2">
+            <label style={labelStyle}>Profissão</label>
+            <input
+              style={inputStyle}
+              value={form.occupation}
+              onChange={(e) => set("occupation", e.target.value)}
+            />
+          </div>
+
+          <div>
+            <label style={labelStyle}>Renda mensal (R$)</label>
+            <input
+              style={inputStyle}
+              inputMode="decimal"
+              value={form.monthlyIncome}
+              onChange={(e) => set("monthlyIncome", e.target.value)}
+              placeholder="Ex.: 8500"
+            />
+          </div>
+          <div>
+            <label style={labelStyle}>Investimento ou moradia</label>
+            <select
+              style={inputStyle}
+              value={form.purpose}
+              onChange={(e) => set("purpose", e.target.value as Lead["purpose"])}
+            >
+              <option value="" style={{ background: "#1a1a1a" }}>—</option>
+              <option value="moradia" style={{ background: "#1a1a1a" }}>Moradia</option>
+              <option value="investimento" style={{ background: "#1a1a1a" }}>Investimento</option>
+            </select>
+          </div>
+
+          <div>
+            <label style={labelStyle}>Entrada ideal (R$)</label>
+            <input
+              style={inputStyle}
+              inputMode="decimal"
+              value={form.downPayment}
+              onChange={(e) => set("downPayment", e.target.value)}
+              placeholder="Ex.: 60000"
+            />
+          </div>
+          <div>
+            <label style={labelStyle}>Parcela ideal (R$)</label>
+            <input
+              style={inputStyle}
+              inputMode="decimal"
+              value={form.installment}
+              onChange={(e) => set("installment", e.target.value)}
+              placeholder="Ex.: 2500"
+            />
+          </div>
+
+          <div>
+            <label style={labelStyle}>Metragem desejada</label>
+            <input
+              style={inputStyle}
+              value={form.areaSqm}
+              onChange={(e) => set("areaSqm", e.target.value)}
+              placeholder="Ex.: 70-90m²"
+            />
+          </div>
+          <div>
+            <label style={labelStyle}>Região desejada</label>
+            <input
+              style={inputStyle}
+              value={form.region}
+              onChange={(e) => set("region", e.target.value)}
+              placeholder="Ex.: Zona Sul"
+            />
+          </div>
+
           <div className="col-span-2">
             <label style={labelStyle}>Imóvel de Interesse</label>
             <input
