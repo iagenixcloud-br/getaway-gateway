@@ -67,10 +67,15 @@ const hoursSince = (iso: string): number => {
   return Math.max(0, Math.floor(ms / (1000 * 60 * 60)));
 };
 
+// Helper: número -> string (vazio se null)
+const numStr = (n: number | null): string =>
+  n === null || n === undefined ? "" : String(n);
+
 export const rowToLead = (row: LeadRow): Lead => ({
   id: row.id,
   name: row.name,
   phone: row.phone,
+  email: row.email ?? "",
   city: row.city || "—",
   origin: "WA" as LeadOrigin,
   status: mapStatus(row.status),
@@ -81,6 +86,16 @@ export const rowToLead = (row: LeadRow): Lead => ({
   createdAt: row.created_at,
   healthScore: 50,
   assignedTo: row.tenant_id ?? null,
+
+  age: numStr(row.age),
+  gender: row.gender ?? "",
+  occupation: row.occupation ?? "",
+  monthlyIncome: numStr(row.monthly_income),
+  downPayment: numStr(row.down_payment),
+  installment: numStr(row.installment),
+  purpose: (row.purpose as LeadPurpose) ?? "",
+  areaSqm: row.area_sqm ?? "",
+  region: row.region ?? "",
 });
 
 export function useLeads() {
