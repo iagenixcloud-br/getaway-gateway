@@ -210,8 +210,8 @@ export function Desempenho() {
       const status = normalizeStatus(l.status);
       row.total++;
       row.porStatus[status]++;
-      if (status === "fechado") row.fechados++;
-      if (!["fechado", "arquivados"].includes(status)) row.ativos++;
+      if (status === "venda") row.fechados++;
+      if (status !== "venda") row.ativos++;
     });
 
     // Calcula conversão e ordena por total desc; "Não atribuídos" sempre por último
