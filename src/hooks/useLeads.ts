@@ -101,7 +101,7 @@ export const rowToLead = (row: LeadRow): Lead => ({
   monthlyIncome: numStr(row.monthly_income),
   downPayment: numStr(row.down_payment),
   installment: numStr(row.installment),
-  purpose: (row.purpose as LeadPurpose) ?? "",
+  purpose: normalizePurpose(row.purpose),
   areaSqm: row.area_sqm ?? "",
   region: row.region ?? "",
 });
