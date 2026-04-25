@@ -38,34 +38,36 @@ const RANGES: { key: RangeKey; label: string; days: number | null }[] = [
 
 // Cores por status (alinhadas ao tema dark/gold do app)
 const STATUS_META: Record<LeadStatus, { label: string; color: string }> = {
-  novo: { label: "Novo", color: "#3b82f6" },
-  atrasado: { label: "Atrasado", color: "#ef4444" },
-  visitar: { label: "Visitar", color: "#f59e0b" },
-  agendados: { label: "Agendados", color: "#8b5cf6" },
-  favoritos: { label: "Favoritos", color: "#ec4899" },
-  fechado: { label: "Fechado", color: "#22c55e" },
-  arquivados: { label: "Arquivados", color: "#6b7280" },
+  lead_novo: { label: "Lead Novo", color: "#06b6d4" },
+  curioso: { label: "Curioso", color: "#f59e0b" },
+  negocio: { label: "Negócio", color: "#8b5cf6" },
+  agendamento: { label: "Agendamento", color: "#3b82f6" },
+  visita: { label: "Visita", color: "#ec4899" },
+  proposta: { label: "Proposta", color: "#D4AF37" },
+  venda: { label: "Venda", color: "#22c55e" },
 };
 
 const ALL_STATUSES: LeadStatus[] = [
-  "novo",
-  "atrasado",
-  "visitar",
-  "agendados",
-  "favoritos",
-  "fechado",
-  "arquivados",
+  "lead_novo",
+  "curioso",
+  "negocio",
+  "agendamento",
+  "visita",
+  "proposta",
+  "venda",
 ];
 
 const normalizeStatus = (s: string | null): LeadStatus => {
   const n = (s || "").toLowerCase().trim();
-  if (n === "novo lead" || n === "new") return "novo";
-  if (n === "agendado") return "agendados";
-  if (n === "favorito") return "favoritos";
-  if (n === "negocio fechado" || n === "negócio fechado") return "fechado";
-  if (n === "arquivado") return "arquivados";
+  if (n === "novo" || n === "novo lead" || n === "new" || n === "lead novo") return "lead_novo";
+  if (n === "curioso") return "curioso";
+  if (n === "negocio" || n === "negócio") return "negocio";
+  if (n === "agendamento" || n === "agendado" || n === "agendados") return "agendamento";
+  if (n === "visita" || n === "visitar") return "visita";
+  if (n === "proposta") return "proposta";
+  if (n === "venda" || n === "vendido" || n === "fechado" || n === "negocio fechado" || n === "negócio fechado") return "venda";
   if ((ALL_STATUSES as string[]).includes(n)) return n as LeadStatus;
-  return "novo";
+  return "lead_novo";
 };
 
 export function Desempenho() {
