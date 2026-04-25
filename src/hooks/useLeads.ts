@@ -4,36 +4,41 @@ import { Lead, LeadStatus, LeadOrigin } from "../data/mockData";
 import { useAuth } from "../contexts/AuthContext";
 
 // Valores oficiais salvos no banco (coluna `status` da tabela leads):
-// 'novo' | 'atrasado' | 'visitar' | 'agendados' | 'favoritos' | 'fechado' | 'arquivados'
+// 'lead_novo' | 'curioso' | 'negocio' | 'agendamento' | 'visita' | 'proposta' | 'venda'
 //
 // O n8n deve inserir/atualizar usando EXATAMENTE esses valores.
-// Aceitamos algumas variações comuns por segurança (ex: 'novo lead' legado).
+// Aceitamos algumas variações comuns por segurança.
 const mapStatus = (s: string | null): LeadStatus => {
   const normalized = (s || "").toLowerCase().trim();
   switch (normalized) {
+    case "lead_novo":
+    case "lead novo":
     case "novo":
     case "novo lead":
     case "new":
-      return "novo";
-    case "atrasado":
-      return "atrasado";
-    case "visitar":
-      return "visitar";
-    case "agendados":
+      return "lead_novo";
+    case "curioso":
+      return "curioso";
+    case "negocio":
+    case "negócio":
+      return "negocio";
+    case "agendamento":
     case "agendado":
-      return "agendados";
-    case "favoritos":
-    case "favorito":
-      return "favoritos";
+    case "agendados":
+      return "agendamento";
+    case "visita":
+    case "visitar":
+      return "visita";
+    case "proposta":
+      return "proposta";
+    case "venda":
+    case "vendido":
     case "fechado":
     case "negocio fechado":
     case "negócio fechado":
-      return "fechado";
-    case "arquivados":
-    case "arquivado":
-      return "arquivados";
+      return "venda";
     default:
-      return "novo";
+      return "lead_novo";
   }
 };
 
