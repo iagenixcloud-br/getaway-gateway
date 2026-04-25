@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase, LeadRow } from "../lib/supabase";
-import { Lead, LeadStatus, LeadOrigin } from "../data/mockData";
+import { Lead, LeadStatus, LeadOrigin, LeadPurpose } from "../data/mockData";
 import { useAuth } from "../contexts/AuthContext";
 
 // Valores oficiais salvos no banco (coluna `status` da tabela leads):
@@ -67,10 +67,15 @@ const hoursSince = (iso: string): number => {
   return Math.max(0, Math.floor(ms / (1000 * 60 * 60)));
 };
 
+// Helper: número -> string (vazio se null)
+const numStr = (n: number | null): string =>
+  n === null || n === undefined ? "" : String(n);
+
 export const rowToLead = (row: LeadRow): Lead => ({
   id: row.id,
   name: row.name,
   phone: row.phone,
+  email: row.email ?? "",
   city: row.city || "—",
   origin: "WA" as LeadOrigin,
   status: mapStatus(row.status),
@@ -81,6 +86,16 @@ export const rowToLead = (row: LeadRow): Lead => ({
   createdAt: row.created_at,
   healthScore: 50,
   assignedTo: row.tenant_id ?? null,
+
+  age: numStr(row.age),
+  gender: row.gender ?? "",
+  occupation: row.occupation ?? "",
+  monthlyIncome: numStr(row.monthly_income),
+  downPayment: numStr(row.down_payment),
+  installment: numStr(row.installment),
+  purpose: (row.purpose as LeadPurpose) ?? "",
+  areaSqm: row.area_sqm ?? "",
+  region: row.region ?? "",
 });
 
 export function useLeads() {
@@ -207,6 +222,33 @@ export function useLeads() {
       dbPatch.budget = n;
     }
     if (patch.assignedTo !== undefined) dbPatch.tenant_id = patch.assignedTo;
+
+    // Perfil do lead
+    const toNum = (s: string | undefined): number | null => {
+      if (s === undefined) return undefined as unknown as number | null; // sinaliza "não mexer"
+      const trimmed = s.trim();
+      if (!trimmed) return null;
+      const n = parseFloat(trimmed.replace(/[^\d.,-]/g, "").replace(",", "."));
+      return isNaN(n) ? null : n;
+    };
+    const toStr = (s: string | undefined): string | null =>
+      s === undefined ? (undefined as unknown as string | null) : (s.trim() || null);
+
+    if (patch.email !== undefined) dbPatch.email = toStr(patch.email);
+    if (patch.age !== undefined) dbPatch.age = toNum(patch.age);
+    if (patch.gender !== undefined) dbPatch.gender = toStr(patch.gender);
+    if (patch.occupation !== undefined) dbPatch.occupation = toStr(patch.occupation);
+    if (patch.monthlyIncome !== undefined) dbPatch.monthly_income = toNum(patch.monthlyIncome);
+    if (patch.downPayment !== undefined) dbPatch.down_payment = toNum(patch.downPayment);
+    if (patch.installment !== undefined) dbPatch.installment = toNum(patch.installment);
+    if (patch.purpose !== undefined) dbPatch.purpose = toStr(patch.purpose);
+    if (patch.areaSqm !== undefined) dbPatch.area_sqm = toStr(patch.areaSqm);
+    if (patch.region !== undefined) dbPatch.region = toStr(patch.region);
+
+    // Remove chaves marcadas como "não mexer" (undefined)
+    Object.keys(dbPatch).forEach((k) => {
+      if (dbPatch[k] === undefined) delete dbPatch[k];
+    });
 
     if (Object.keys(dbPatch).length === 0) return;
     const { error } = await supabase.from("leads").update(dbPatch).eq("id", id);

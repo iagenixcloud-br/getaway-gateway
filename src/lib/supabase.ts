@@ -27,4 +27,15 @@ export interface LeadRow {
   city: string | null;
   /** UUID do corretor responsável (profiles.id). Coluna no banco: `tenant_id`. */
   tenant_id: string | null;
+
+  // Perfil do lead (opcionais)
+  age: number | null;
+  gender: string | null;
+  occupation: string | null;
+  monthly_income: number | null;
+  down_payment: number | null;
+  installment: number | null;
+  purpose: string | null;
+  area_sqm: string | null;
+  region: string | null;
 }
