@@ -110,9 +110,9 @@ export function Desempenho() {
 
   // KPIs
   const total = filtered.length;
-  const fechados = filtered.filter((l) => normalizeStatus(l.status) === "fechado").length;
+  const fechados = filtered.filter((l) => normalizeStatus(l.status) === "venda").length;
   const ativos = filtered.filter(
-    (l) => !["fechado", "arquivados"].includes(normalizeStatus(l.status)),
+    (l) => normalizeStatus(l.status) !== "venda",
   ).length;
   const conversao = total > 0 ? (fechados / total) * 100 : 0;
 
