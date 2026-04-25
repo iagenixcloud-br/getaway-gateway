@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase, LeadRow } from "../lib/supabase";
-import { Lead, LeadStatus, LeadOrigin } from "../data/mockData";
+import { Lead, LeadStatus, LeadOrigin, LeadPurpose } from "../data/mockData";
 import { useAuth } from "../contexts/AuthContext";
 
 // Valores oficiais salvos no banco (coluna `status` da tabela leads):
