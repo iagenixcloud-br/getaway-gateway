@@ -71,6 +71,14 @@ const hoursSince = (iso: string): number => {
 const numStr = (n: number | null): string =>
   n === null || n === undefined ? "" : String(n);
 
+// Normaliza `purpose` para lowercase para casar com o tipo LeadPurpose
+// e com os <option value="..."> do select (que estão em lowercase).
+const normalizePurpose = (p: string | null): LeadPurpose => {
+  const v = (p || "").toLowerCase().trim();
+  if (v === "moradia" || v === "investimento") return v;
+  return "";
+};
+
 export const rowToLead = (row: LeadRow): Lead => ({
   id: row.id,
   name: row.name,
