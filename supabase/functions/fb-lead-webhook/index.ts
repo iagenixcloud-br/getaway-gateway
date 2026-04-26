@@ -19,7 +19,7 @@
 //   - FB_PAGE_TOKEN    (Page Access Token p/ buscar dados do lead via Graph API)
 // ============================================================
 
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { createClient } from "npm:@supabase/supabase-js@2.45.0";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
