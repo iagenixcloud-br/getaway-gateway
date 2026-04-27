@@ -38,4 +38,6 @@ export interface LeadRow {
   purpose: string | null;
   area_sqm: string | null;
   region: string | null;
+  /** Preenchido por trigger BEFORE UPDATE quando o status muda */
+  previous_status: string | null;
 }
