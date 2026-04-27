@@ -748,7 +748,11 @@ function DraggableLeadCard({
         }
       }}
     >
-      <LeadCard lead={lead} isDragging={isDragging} onUpdate={onUpdate} corretorName={corretorName} />
+      {lead.status === "follow_up" ? (
+        <FollowUpCard lead={lead} isDragging={isDragging} corretorName={corretorName} />
+      ) : (
+        <LeadCard lead={lead} isDragging={isDragging} onUpdate={onUpdate} corretorName={corretorName} />
+      )}
     </div>
   );
 }
