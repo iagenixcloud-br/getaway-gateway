@@ -51,12 +51,16 @@ const waitingUrgency = (hours: number): string => {
 const columns: { id: LeadStatus; label: string; color: string; icon: string }[] = [
   { id: "lead_novo", label: "Lead Novo", color: "#06b6d4", icon: "✦" },
   { id: "curioso", label: "Curioso", color: "#f59e0b", icon: "?" },
+  { id: "follow_up", label: "Follow-up", color: "#f97316", icon: "⏰" },
   { id: "negocio", label: "Negócio", color: "#8b5cf6", icon: "◈" },
   { id: "agendamento", label: "Agendamento", color: "#3b82f6", icon: "◷" },
   { id: "visita", label: "Visita", color: "#ec4899", icon: "⌂" },
   { id: "proposta", label: "Proposta", color: "#D4AF37", icon: "★" },
   { id: "venda", label: "Venda", color: "#22c55e", icon: "✓" },
 ];
+
+// Threshold (em horas) acima do qual um lead em Follow-up é considerado urgente
+const FOLLOWUP_URGENT_HOURS = 72;
 
 // ── Lead Detail Modal ─────────────────────────────────────────
 function LeadModal({
@@ -435,6 +439,177 @@ function LeadModal({
 }
 
 
+// ── Follow-up Card (layout dedicado) ──────────────────────────
+function FollowUpCard({
+  lead,
+  onClick,
+  isDragging,
+  corretorName,
+}: {
+  lead: Lead;
+  onClick?: () => void;
+  isDragging?: boolean;
+  corretorName?: string | null;
+}) {
+  const FOLLOWUP_COLOR = "#f97316";
+  const isUrgent = lead.waitingHours > FOLLOWUP_URGENT_HOURS;
+  const prevCol = lead.previousStatus
+    ? columns.find((c) => c.id === lead.previousStatus)
+    : null;
+
+  return (
+    <div
+      onClick={onClick}
+      style={{
+        marginBottom: 8,
+        opacity: isDragging ? 0.4 : 1,
+        cursor: "grab",
+        position: "relative",
+        background: "rgba(249,115,22,0.06)",
+        border: "1px solid rgba(249,115,22,0.25)",
+        borderLeft: `4px solid ${FOLLOWUP_COLOR}`,
+        borderRadius: 12,
+        padding: "14px 14px 12px 14px",
+        backdropFilter: "blur(10px)",
+      }}
+    >
+      {/* Ícone de alerta (urgente) */}
+      {isUrgent && (
+        <div
+          title={`Parado há mais de ${FOLLOWUP_URGENT_HOURS}h`}
+          style={{
+            position: "absolute",
+            top: 10,
+            right: 10,
+            width: 22,
+            height: 22,
+            borderRadius: "50%",
+            background: "rgba(239,68,68,0.15)",
+            border: "1px solid rgba(239,68,68,0.4)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            color: "#ef4444",
+            animation: "pulse 1.8s ease-in-out infinite",
+          }}
+        >
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+            <circle cx="12" cy="12" r="10" />
+            <polyline points="12 6 12 12 16 14" />
+          </svg>
+        </div>
+      )}
+
+      {/* Cabeçalho: Nome + Telefone */}
+      <div style={{ marginBottom: 8, paddingRight: isUrgent ? 28 : 0 }}>
+        <p
+          style={{
+            fontSize: 15,
+            fontWeight: 700,
+            color: "var(--text-primary)",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
+            marginBottom: 2,
+          }}
+        >
+          {lead.name}
+        </p>
+        <div className="flex items-center gap-1.5">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ color: FOLLOWUP_COLOR, flexShrink: 0 }}>
+            <path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 014.8 11.5a19.79 19.79 0 01-3.07-8.67A2 2 0 013.7 1h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L7.91 8.2a16 16 0 006.29 6.29l1.46-1.46a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 15.24v1.68z" />
+          </svg>
+          <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text-primary)", letterSpacing: 0.2 }}>
+            {lead.phone}
+          </span>
+        </div>
+      </div>
+
+      {/* Imóvel (interest) */}
+      <div className="flex items-center gap-2 mb-2" style={{ paddingTop: 6, borderTop: "1px dashed rgba(249,115,22,0.2)" }}>
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ color: "var(--text-muted)", flexShrink: 0 }}>
+          <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
+        </svg>
+        <span style={{ fontSize: 12, color: "var(--text-secondary, var(--text-muted))", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+          {lead.property}
+        </span>
+      </div>
+
+      {/* Status anterior */}
+      {prevCol ? (
+        <div
+          className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md"
+          style={{
+            background: `${prevCol.color}18`,
+            border: `1px solid ${prevCol.color}55`,
+            fontSize: 10.5,
+            fontWeight: 600,
+            color: prevCol.color,
+            marginTop: 2,
+            marginBottom: 8,
+          }}
+        >
+          <span style={{ opacity: 0.8 }}>{prevCol.icon}</span>
+          <span>Vindo de: {prevCol.label}</span>
+        </div>
+      ) : (
+        <div
+          className="inline-flex items-center px-2 py-1 rounded-md"
+          style={{
+            background: "rgba(255,255,255,0.04)",
+            border: "1px solid rgba(255,255,255,0.08)",
+            fontSize: 10.5,
+            color: "var(--text-muted)",
+            marginTop: 2,
+            marginBottom: 8,
+          }}
+        >
+          Sem histórico anterior
+        </div>
+      )}
+
+      {/* Rodapé: corretor + tempo parado */}
+      <div
+        className="flex items-center justify-between gap-2"
+        style={{ paddingTop: 8, borderTop: "1px solid rgba(249,115,22,0.18)" }}
+      >
+        <div className="flex items-center gap-1.5" style={{ minWidth: 0, flex: 1 }}>
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ color: "var(--text-muted)", flexShrink: 0 }}>
+            <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" />
+            <circle cx="12" cy="7" r="4" />
+          </svg>
+          <span
+            style={{
+              fontSize: 10.5,
+              color: "var(--text-muted)",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+            }}
+          >
+            {corretorName === null
+              ? "Você"
+              : corretorName || "Não atribuído"}
+          </span>
+        </div>
+        <span
+          style={{
+            fontSize: 10,
+            fontWeight: 700,
+            color: isUrgent ? "#ef4444" : FOLLOWUP_COLOR,
+            background: isUrgent ? "rgba(239,68,68,0.1)" : "rgba(249,115,22,0.1)",
+            padding: "2px 6px",
+            borderRadius: 6,
+            whiteSpace: "nowrap",
+          }}
+        >
+          {waitingLabel(lead.waitingHours) ?? "agora"}
+        </span>
+      </div>
+    </div>
+  );
+}
+
 // ── Lead Card ─────────────────────────────────────────────────
 function LeadCard({
   lead,
@@ -573,7 +748,11 @@ function DraggableLeadCard({
         }
       }}
     >
-      <LeadCard lead={lead} isDragging={isDragging} onUpdate={onUpdate} corretorName={corretorName} />
+      {lead.status === "follow_up" ? (
+        <FollowUpCard lead={lead} isDragging={isDragging} corretorName={corretorName} />
+      ) : (
+        <LeadCard lead={lead} isDragging={isDragging} onUpdate={onUpdate} corretorName={corretorName} />
+      )}
     </div>
   );
 }
@@ -777,7 +956,11 @@ export function KanbanBoard() {
     <DragOverlay dropAnimation={null}>
       {activeLead ? (
         <div style={{ width: 280, transform: "rotate(2deg)" }}>
-          <LeadCard lead={activeLead} />
+          {activeLead.status === "follow_up" ? (
+            <FollowUpCard lead={activeLead} />
+          ) : (
+            <LeadCard lead={activeLead} />
+          )}
         </div>
       ) : null}
     </DragOverlay>

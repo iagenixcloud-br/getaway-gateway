@@ -9,7 +9,8 @@ export type LeadStatus =
   | "agendamento"
   | "visita"
   | "proposta"
-  | "venda";
+  | "venda"
+  | "follow_up";
 
 export type LeadOrigin = "FB" | "IG" | "WA" | "Site" | "Indicação";
 
@@ -31,6 +32,8 @@ export interface Lead {
   healthScore: number;
   /** UUID do corretor responsável (profiles.id no Lovable Cloud). Null = não atribuído */
   assignedTo: string | null;
+  /** Status anterior (preenchido por trigger no banco quando status muda) */
+  previousStatus: LeadStatus | null;
 
   // Perfil do lead (todos opcionais)
   age: string;            // mantemos como string no form; convertemos para INT no banco

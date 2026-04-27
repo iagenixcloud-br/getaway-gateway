@@ -31,6 +31,11 @@ const mapStatus = (s: string | null): LeadStatus => {
       return "visita";
     case "proposta":
       return "proposta";
+    case "follow_up":
+    case "follow-up":
+    case "followup":
+    case "follow up":
+      return "follow_up";
     case "venda":
     case "vendido":
     case "fechado":
@@ -94,6 +99,7 @@ export const rowToLead = (row: LeadRow): Lead => ({
   createdAt: row.created_at,
   healthScore: 50,
   assignedTo: row.tenant_id ?? null,
+  previousStatus: row.previous_status ? mapStatus(row.previous_status) : null,
 
   age: numStr(row.age),
   gender: row.gender ?? "",

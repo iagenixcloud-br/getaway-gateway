@@ -45,11 +45,13 @@ const STATUS_META: Record<LeadStatus, { label: string; color: string }> = {
   visita: { label: "Visita", color: "#ec4899" },
   proposta: { label: "Proposta", color: "#D4AF37" },
   venda: { label: "Venda", color: "#22c55e" },
+  follow_up: { label: "Follow-up", color: "#f97316" },
 };
 
 const ALL_STATUSES: LeadStatus[] = [
   "lead_novo",
   "curioso",
+  "follow_up",
   "negocio",
   "agendamento",
   "visita",
@@ -65,6 +67,7 @@ const normalizeStatus = (s: string | null): LeadStatus => {
   if (n === "agendamento" || n === "agendado" || n === "agendados") return "agendamento";
   if (n === "visita" || n === "visitar") return "visita";
   if (n === "proposta") return "proposta";
+  if (n === "follow_up" || n === "follow-up" || n === "followup" || n === "follow up") return "follow_up";
   if (n === "venda" || n === "vendido" || n === "fechado" || n === "negocio fechado" || n === "negócio fechado") return "venda";
   if ((ALL_STATUSES as string[]).includes(n)) return n as LeadStatus;
   return "lead_novo";
