@@ -570,40 +570,28 @@ function FollowUpCard({
 
       {/* Rodapé: corretor + tempo parado */}
       <div
-        className="flex items-center justify-between gap-2"
+        className="flex items-center gap-2"
         style={{ paddingTop: 8, borderTop: "1px solid rgba(249,115,22,0.18)" }}
       >
-        <div className="flex items-center gap-1.5" style={{ minWidth: 0, flex: 1 }}>
-          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ color: "var(--text-muted)", flexShrink: 0 }}>
-            <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" />
-            <circle cx="12" cy="7" r="4" />
-          </svg>
-          <span
-            style={{
-              fontSize: 10.5,
-              color: "var(--text-muted)",
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              whiteSpace: "nowrap",
-            }}
-          >
-            {corretorName === null
-              ? "Você"
-              : corretorName || "Não atribuído"}
-          </span>
-        </div>
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ color: "var(--gold, #D4AF37)", flexShrink: 0 }}>
+          <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" />
+          <circle cx="12" cy="7" r="4" />
+        </svg>
         <span
           style={{
-            fontSize: 10,
-            fontWeight: 700,
-            color: isUrgent ? "#ef4444" : FOLLOWUP_COLOR,
-            background: isUrgent ? "rgba(239,68,68,0.1)" : "rgba(249,115,22,0.1)",
-            padding: "2px 6px",
-            borderRadius: 6,
+            fontSize: 13,
+            fontWeight: 600,
+            color: "var(--text-primary)",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
             whiteSpace: "nowrap",
+            minWidth: 0,
+            flex: 1,
           }}
         >
-          {waitingLabel(lead.waitingHours) ?? "agora"}
+          {corretorName === null
+            ? "Você"
+            : corretorName || "Não atribuído"}
         </span>
       </div>
     </div>
