@@ -51,12 +51,16 @@ const waitingUrgency = (hours: number): string => {
 const columns: { id: LeadStatus; label: string; color: string; icon: string }[] = [
   { id: "lead_novo", label: "Lead Novo", color: "#06b6d4", icon: "✦" },
   { id: "curioso", label: "Curioso", color: "#f59e0b", icon: "?" },
+  { id: "follow_up", label: "Follow-up", color: "#f97316", icon: "⏰" },
   { id: "negocio", label: "Negócio", color: "#8b5cf6", icon: "◈" },
   { id: "agendamento", label: "Agendamento", color: "#3b82f6", icon: "◷" },
   { id: "visita", label: "Visita", color: "#ec4899", icon: "⌂" },
   { id: "proposta", label: "Proposta", color: "#D4AF37", icon: "★" },
   { id: "venda", label: "Venda", color: "#22c55e", icon: "✓" },
 ];
+
+// Threshold (em horas) acima do qual um lead em Follow-up é considerado urgente
+const FOLLOWUP_URGENT_HOURS = 72;
 
 // ── Lead Detail Modal ─────────────────────────────────────────
 function LeadModal({
