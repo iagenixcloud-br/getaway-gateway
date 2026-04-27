@@ -45,11 +45,13 @@ const STATUS_META: Record<LeadStatus, { label: string; color: string }> = {
   visita: { label: "Visita", color: "#ec4899" },
   proposta: { label: "Proposta", color: "#D4AF37" },
   venda: { label: "Venda", color: "#22c55e" },
+  follow_up: { label: "Follow-up", color: "#f97316" },
 };
 
 const ALL_STATUSES: LeadStatus[] = [
   "lead_novo",
   "curioso",
+  "follow_up",
   "negocio",
   "agendamento",
   "visita",
