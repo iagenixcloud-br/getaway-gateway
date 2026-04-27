@@ -956,7 +956,11 @@ export function KanbanBoard() {
     <DragOverlay dropAnimation={null}>
       {activeLead ? (
         <div style={{ width: 280, transform: "rotate(2deg)" }}>
-          <LeadCard lead={activeLead} />
+          {activeLead.status === "follow_up" ? (
+            <FollowUpCard lead={activeLead} />
+          ) : (
+            <LeadCard lead={activeLead} />
+          )}
         </div>
       ) : null}
     </DragOverlay>
