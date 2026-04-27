@@ -210,6 +210,11 @@ body {
 }
 .pulse-dot { animation: pulse-dot 2s infinite; }
 
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.55; }
+}
+
 /* ── WhatsApp Preview ──────────────────────────────────── */
 .whatsapp-bubble {
   background: #1a3c2b;
