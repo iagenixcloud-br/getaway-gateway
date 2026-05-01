@@ -68,6 +68,32 @@ export function Integracao() {
   useEffect(() => {
     invokeCloudFunction<{ fb_app_id: string | null }>("fb-public-config", { method: "GET" })
       .then(({ data }) => setFbAppId(data?.fb_app_id ?? null));
+
+    // Verifica se já existe conexão salva ao carregar a página
+    invokeCloudFunction("fb-token-check", { method: "GET" }).then(({ data, error }) => {
+      if (error || !data) return;
+      const info = data?.debug_token?.data || {};
+      const granted: string[] = info.scopes || [];
+      const missing = REQUIRED.filter((p) => !granted.includes(p));
+      const isOk = missing.length === 0 && info.is_valid === true;
+      setCheck({
+        ok: isOk,
+        page_name: data?.me?.name,
+        page_id: data?.me?.id,
+        token_type: info.type,
+        is_permanent: info.expires_at === 0,
+        expires_in_days:
+          info.expires_at && info.expires_at > 0
+            ? Math.round((info.expires_at - Date.now() / 1000) / 86400)
+            : null,
+        scopes: granted,
+        missing,
+        raw: data,
+      });
+      if (isOk) {
+        setSaveMsg({ type: "ok", text: "Facebook já conectado ✅" });
+      }
+    });
   }, []);
 
   useEffect(() => {
