@@ -8,6 +8,8 @@ Deno.serve(async (req) => {
   const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
   const SUPABASE_ACCESS_TOKEN = Deno.env.get("SB_DEPLOY_ACCESS_TOKEN");
   const PROJECT_REF = "lzgdvvapzmuogtlivzxa";
+  const APP_AUTH_URL = "https://gycrprnkuwlzntqvpoxl.supabase.co";
+  const APP_AUTH_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd5Y3Jwcm5rdXdsem50cXZwb3hsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcwNzEyMzQsImV4cCI6MjA5MjY0NzIzNH0.w7RiS6L4gir4KIKWAZxdmXutyp7EDxIu9z62n0QUoRM";
 
   // ── Auth: requer usuário logado e admin ─────────────────────
   const authHeader = req.headers.get("Authorization");
@@ -15,7 +17,7 @@ Deno.serve(async (req) => {
     return json({ ok: false, error: "Não autenticado" }, 401);
   }
 
-  const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+  const supabase = createClient(APP_AUTH_URL, APP_AUTH_ANON_KEY || SUPABASE_ANON_KEY, {
     global: { headers: { Authorization: authHeader } },
   });
 

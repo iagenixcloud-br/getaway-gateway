@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "../lib/supabase";
 
 type CheckResult = {
   ok: boolean;
@@ -19,6 +19,44 @@ const REQUIRED = [
   "pages_show_list",
   "pages_read_engagement",
 ];
+
+const CLOUD_FUNCTIONS_URL = `https://${import.meta.env.VITE_SUPABASE_PROJECT_ID || "lzgdvvapzmuogtlivzxa"}.supabase.co/functions/v1`;
+const CLOUD_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || "";
+
+async function invokeCloudFunction<T = any>(
+  name: string,
+  options: { method?: "GET" | "POST"; body?: unknown; authToken?: string } = {},
+): Promise<{ data: T | null; error: string | null; status: number }> {
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+  };
+  if (CLOUD_PUBLISHABLE_KEY) headers.apikey = CLOUD_PUBLISHABLE_KEY;
+  if (options.authToken) headers.Authorization = `Bearer ${options.authToken}`;
+
+  const response = await fetch(`${CLOUD_FUNCTIONS_URL}/${name}`, {
+    method: options.method || "POST",
+    headers,
+    body: options.body === undefined ? undefined : JSON.stringify(options.body),
+  });
+
+  const text = await response.text();
+  let data: any = null;
+  try {
+    data = text ? JSON.parse(text) : null;
+  } catch {
+    data = text ? { raw: text } : null;
+  }
+
+  if (!response.ok) {
+    return {
+      data,
+      error: data?.error || data?.message || `Erro ${response.status} ao chamar ${name}`,
+      status: response.status,
+    };
+  }
+
+  return { data, error: null, status: response.status };
+}
 
 export function Integracao() {
   const [token, setToken] = useState("");
@@ -40,12 +78,12 @@ export function Integracao() {
         setDebug({ ok: false, step: "session", error: "Nenhuma sessão ativa no navegador" });
         return;
       }
-      const { data, error } = await supabase.functions.invoke("fb-save-token", {
+      const { data, error } = await invokeCloudFunction("fb-save-token", {
         body: { dry_run: true, token: token.trim() || undefined },
-        headers: { Authorization: `Bearer ${accessToken}` },
+        authToken: accessToken,
       });
       if (error) {
-        setDebug({ ok: false, step: "invoke", error: error.message, raw: data });
+        setDebug({ ok: false, step: "invoke", error, raw: data });
       } else {
         setDebug(data);
       }
@@ -75,14 +113,14 @@ export function Integracao() {
         setSaving(false);
         return;
       }
-      const { data, error } = await supabase.functions.invoke("fb-save-token", {
+      const { data, error } = await invokeCloudFunction("fb-save-token", {
         body: { token: token.trim() },
-        headers: { Authorization: `Bearer ${accessToken}` },
+        authToken: accessToken,
       });
       if (error || !data?.ok) {
         setSaveMsg({
           type: "err",
-          text: data?.error || error?.message || "Erro ao salvar o token.",
+          text: data?.error || error || "Erro ao salvar o token.",
         });
         setSaving(false);
         return;
@@ -100,11 +138,11 @@ export function Integracao() {
     try {
       // Pequeno delay para o secret propagar
       await new Promise((r) => setTimeout(r, 1500));
-      const { data, error } = await supabase.functions.invoke("fb-token-check", {
+      const { data, error } = await invokeCloudFunction("fb-token-check", {
         method: "GET",
       });
       if (error) {
-        setCheck({ ok: false, raw: { error: error.message } });
+        setCheck({ ok: false, raw: { error } });
         return;
       }
       const info = data?.debug_token?.data || {};
@@ -137,11 +175,11 @@ export function Integracao() {
     setCheck(null);
     setChecking(true);
     try {
-      const { data, error } = await supabase.functions.invoke("fb-token-extend", {
+      const { data, error } = await invokeCloudFunction("fb-token-extend", {
         method: "POST",
       });
       if (error) {
-        setSaveMsg({ type: "err", text: error.message });
+        setSaveMsg({ type: "err", text: error });
         return;
       }
       if (data?.new_token) {
