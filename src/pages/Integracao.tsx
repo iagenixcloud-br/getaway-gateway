@@ -59,9 +59,6 @@ async function invokeCloudFunction<T = any>(
 }
 
 export function Integracao() {
-  const [token, setToken] = useState("");
-  const [saving, setSaving] = useState(false);
-  const [checking, setChecking] = useState(false);
   const [debugging, setDebugging] = useState(false);
   const [saveMsg, setSaveMsg] = useState<{ type: "ok" | "err"; text: string } | null>(null);
   const [check, setCheck] = useState<CheckResult | null>(null);
