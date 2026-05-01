@@ -138,11 +138,11 @@ export function Integracao() {
     try {
       // Pequeno delay para o secret propagar
       await new Promise((r) => setTimeout(r, 1500));
-      const { data, error } = await supabase.functions.invoke("fb-token-check", {
+      const { data, error } = await invokeCloudFunction("fb-token-check", {
         method: "GET",
       });
       if (error) {
-        setCheck({ ok: false, raw: { error: error.message } });
+        setCheck({ ok: false, raw: { error } });
         return;
       }
       const info = data?.debug_token?.data || {};
@@ -175,11 +175,11 @@ export function Integracao() {
     setCheck(null);
     setChecking(true);
     try {
-      const { data, error } = await supabase.functions.invoke("fb-token-extend", {
+      const { data, error } = await invokeCloudFunction("fb-token-extend", {
         method: "POST",
       });
       if (error) {
-        setSaveMsg({ type: "err", text: error.message });
+        setSaveMsg({ type: "err", text: error });
         return;
       }
       if (data?.new_token) {
