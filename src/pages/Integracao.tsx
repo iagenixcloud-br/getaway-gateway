@@ -83,7 +83,7 @@ export function Integracao() {
         authToken: accessToken,
       });
       if (error) {
-        setDebug({ ok: false, step: "invoke", error: error.message, raw: data });
+        setDebug({ ok: false, step: "invoke", error, raw: data });
       } else {
         setDebug(data);
       }
@@ -120,7 +120,7 @@ export function Integracao() {
       if (error || !data?.ok) {
         setSaveMsg({
           type: "err",
-          text: data?.error || error?.message || "Erro ao salvar o token.",
+          text: data?.error || error || "Erro ao salvar o token.",
         });
         setSaving(false);
         return;
