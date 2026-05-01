@@ -66,6 +66,12 @@ export function Integracao() {
   const [saveMsg, setSaveMsg] = useState<{ type: "ok" | "err"; text: string } | null>(null);
   const [check, setCheck] = useState<CheckResult | null>(null);
   const [debug, setDebug] = useState<any>(null);
+  const [fbAppId, setFbAppId] = useState<string | null>(null);
+
+  useEffect(() => {
+    invokeCloudFunction<{ fb_app_id: string | null }>("fb-public-config", { method: "GET" })
+      .then(({ data }) => setFbAppId(data?.fb_app_id ?? null));
+  }, []);
 
   async function handleDebug() {
     setSaveMsg(null);
