@@ -240,41 +240,98 @@ export function Integracao() {
       "fb-oauth",
       `width=${w},height=${h},left=${left},top=${top}`,
     );
-    if (!popup) {
-      setSaveMsg({ type: "err", text: "Pop-up bloqueado. Permita pop-ups e tente de novo." });
+
+    // Detecta popup bloqueado: oferece abrir na mesma aba
+    if (!popup || popup.closed || typeof popup.closed === "undefined") {
+      setSaveMsg({
+        type: "err",
+        text: "Pop-up bloqueado pelo navegador. Liberando e abrindo na mesma aba…",
+      });
+      setTimeout(() => {
+        window.location.href = authUrl;
+      }, 1200);
       return;
     }
 
-    const onMsg = (ev: MessageEvent) => {
-      if (ev.data?.source !== "fb-oauth") return;
+    setSaveMsg({ type: "ok", text: "Janela do Facebook aberta. Autorize a página Salles Imóveis para continuar…" });
+
+    let resolved = false;
+    let pollTimer: number | null = null;
+    let watchdogTimer: number | null = null;
+
+    function cleanup() {
       window.removeEventListener("message", onMsg);
+      if (pollTimer) window.clearInterval(pollTimer);
+      if (watchdogTimer) window.clearTimeout(watchdogTimer);
+    }
+
+    async function refreshCheck() {
+      const { data } = await invokeCloudFunction("fb-token-check", { method: "GET" });
+      const info = data?.debug_token?.data || {};
+      const granted: string[] = info.scopes || [];
+      const missing = REQUIRED.filter((p) => !granted.includes(p));
+      setCheck({
+        ok: missing.length === 0 && info.is_valid === true,
+        page_name: data?.me?.name,
+        page_id: data?.me?.id,
+        token_type: info.type,
+        is_permanent: info.expires_at === 0,
+        expires_in_days:
+          info.expires_at && info.expires_at > 0
+            ? Math.round((info.expires_at - Date.now() / 1000) / 86400)
+            : null,
+        scopes: granted,
+        missing,
+        raw: data,
+      });
+      return missing.length === 0 && info.is_valid === true;
+    }
+
+    const onMsg = async (ev: MessageEvent) => {
+      if (ev.data?.source !== "fb-oauth") return;
+      resolved = true;
+      cleanup();
+      try { popup.close(); } catch {}
       if (ev.data.ok) {
-        setSaveMsg({ type: "ok", text: ev.data.message || "Facebook conectado!" });
-        // valida o token salvo
-        invokeCloudFunction("fb-token-check", { method: "GET" }).then(({ data }) => {
-          const info = data?.debug_token?.data || {};
-          const granted: string[] = info.scopes || [];
-          const missing = REQUIRED.filter((p) => !granted.includes(p));
-          setCheck({
-            ok: missing.length === 0 && info.is_valid === true,
-            page_name: data?.me?.name,
-            page_id: data?.me?.id,
-            token_type: info.type,
-            is_permanent: info.expires_at === 0,
-            expires_in_days:
-              info.expires_at && info.expires_at > 0
-                ? Math.round((info.expires_at - Date.now() / 1000) / 86400)
-                : null,
-            scopes: granted,
-            missing,
-            raw: data,
-          });
-        });
+        setSaveMsg({ type: "ok", text: ev.data.message || "Facebook conectado! Validando…" });
+        await refreshCheck();
       } else {
         setSaveMsg({ type: "err", text: ev.data.message || "Falha ao conectar." });
       }
     };
     window.addEventListener("message", onMsg);
+
+    // Fallback 1: usuário fechou o popup manualmente sem completar (ou o callback não conseguiu postMessage)
+    pollTimer = window.setInterval(async () => {
+      if (resolved) return;
+      let isClosed = false;
+      try { isClosed = popup.closed; } catch { isClosed = true; }
+      if (isClosed) {
+        cleanup();
+        // Tenta validar mesmo assim — pode ter salvo o token antes de fechar
+        setSaveMsg({ type: "ok", text: "Janela fechada. Verificando se a conexão foi salva…" });
+        const ok = await refreshCheck();
+        if (!ok) {
+          setSaveMsg({
+            type: "err",
+            text: "A janela foi fechada antes de concluir. Tente novamente ou cole o token manualmente abaixo.",
+          });
+        } else {
+          setSaveMsg({ type: "ok", text: "Conexão confirmada! ✅" });
+        }
+      }
+    }, 800);
+
+    // Fallback 2: travou por mais de 3 minutos — pergunta ao usuário
+    watchdogTimer = window.setTimeout(() => {
+      if (resolved) return;
+      cleanup();
+      try { popup.close(); } catch {}
+      setSaveMsg({
+        type: "err",
+        text: "A autorização demorou demais. Verifique se concluiu no Facebook e clique em '🐞 Diagnóstico' para confirmar, ou tente de novo.",
+      });
+    }, 180_000);
   }
 
   return (
