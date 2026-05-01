@@ -36,11 +36,19 @@ export function Integracao() {
       return;
     }
 
-    // 1) Salvar via edge function
+    // 1) Salvar via edge function (passa o JWT do usuário explicitamente)
     setSaving(true);
     try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const accessToken = sessionData.session?.access_token;
+      if (!accessToken) {
+        setSaveMsg({ type: "err", text: "Sessão expirada. Faça login novamente." });
+        setSaving(false);
+        return;
+      }
       const { data, error } = await supabase.functions.invoke("fb-save-token", {
         body: { token: token.trim() },
+        headers: { Authorization: `Bearer ${accessToken}` },
       });
       if (error || !data?.ok) {
         setSaveMsg({
