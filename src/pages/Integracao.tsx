@@ -20,6 +20,44 @@ const REQUIRED = [
   "pages_read_engagement",
 ];
 
+const CLOUD_FUNCTIONS_URL = `https://${import.meta.env.VITE_SUPABASE_PROJECT_ID || "lzgdvvapzmuogtlivzxa"}.supabase.co/functions/v1`;
+const CLOUD_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || "";
+
+async function invokeCloudFunction<T = any>(
+  name: string,
+  options: { method?: "GET" | "POST"; body?: unknown; authToken?: string } = {},
+): Promise<{ data: T | null; error: string | null; status: number }> {
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+  };
+  if (CLOUD_PUBLISHABLE_KEY) headers.apikey = CLOUD_PUBLISHABLE_KEY;
+  if (options.authToken) headers.Authorization = `Bearer ${options.authToken}`;
+
+  const response = await fetch(`${CLOUD_FUNCTIONS_URL}/${name}`, {
+    method: options.method || "POST",
+    headers,
+    body: options.body === undefined ? undefined : JSON.stringify(options.body),
+  });
+
+  const text = await response.text();
+  let data: any = null;
+  try {
+    data = text ? JSON.parse(text) : null;
+  } catch {
+    data = text ? { raw: text } : null;
+  }
+
+  if (!response.ok) {
+    return {
+      data,
+      error: data?.error || data?.message || `Erro ${response.status} ao chamar ${name}`,
+      status: response.status,
+    };
+  }
+
+  return { data, error: null, status: response.status };
+}
+
 export function Integracao() {
   const [token, setToken] = useState("");
   const [saving, setSaving] = useState(false);
