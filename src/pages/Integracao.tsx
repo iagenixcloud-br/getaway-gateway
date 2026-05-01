@@ -223,6 +223,21 @@ export function Integracao() {
             >
               🔄 Gerar Token Permanente
             </button>
+
+            <button
+              onClick={handleDebug}
+              disabled={debugging}
+              className="px-5 py-2.5 rounded-xl font-semibold text-sm transition-all"
+              style={{
+                background: "rgba(59,130,246,0.12)",
+                border: "1px solid rgba(59,130,246,0.4)",
+                color: "#93c5fd",
+                cursor: debugging ? "not-allowed" : "pointer",
+              }}
+              title="Testa auth + role + Facebook sem gravar nada"
+            >
+              {debugging ? "Diagnosticando..." : "🐞 Diagnóstico"}
+            </button>
           </div>
 
           {saveMsg && (
