@@ -48,8 +48,8 @@ Deno.serve(async (req) => {
     const isPermanent = expiresAt === 0;
     const expiresInDays = expiresAt ? Math.round((expiresAt - Date.now() / 1000) / 86400) : null;
 
-    // 3. Atualizar o secret via Supabase Management API
-    if (SUPABASE_ACCESS_TOKEN) {
+    // 3. Devolve o token completo (atualização do secret é feita pelo usuário no formulário)
+    if (false && SUPABASE_ACCESS_TOKEN) {
       const updateRes = await fetch(
         `https://api.supabase.com/v1/projects/${PROJECT_REF}/secrets`,
         {
