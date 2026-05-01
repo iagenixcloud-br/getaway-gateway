@@ -1,9 +1,23 @@
 import { corsHeaders } from "https://esm.sh/@supabase/supabase-js@2.95.0/cors";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.95.0";
+
+async function getFbToken(): Promise<string | null> {
+  try {
+    const url = Deno.env.get("SUPABASE_URL");
+    const key = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    if (url && key) {
+      const admin = createClient(url, key);
+      const { data } = await admin.from("integration_secrets").select("value").eq("name", "FB_PAGE_TOKEN").maybeSingle();
+      if (data?.value) return data.value;
+    }
+  } catch (_) { /* fallback */ }
+  return Deno.env.get("FB_PAGE_TOKEN") ?? null;
+}
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
-  const token = Deno.env.get("FB_PAGE_TOKEN");
+  const token = await getFbToken();
   if (!token) {
     return new Response(JSON.stringify({ ok: false, error: "FB_PAGE_TOKEN não configurado" }), {
       status: 500,

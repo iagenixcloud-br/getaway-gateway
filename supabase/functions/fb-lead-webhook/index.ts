@@ -30,11 +30,19 @@ const corsHeaders = {
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const FB_VERIFY_TOKEN = Deno.env.get("FB_VERIFY_TOKEN") || "";
-const FB_PAGE_TOKEN = Deno.env.get("FB_PAGE_TOKEN") || "";
+const FB_PAGE_TOKEN_ENV = Deno.env.get("FB_PAGE_TOKEN") || "";
 
 const admin = createClient(SUPABASE_URL, SERVICE_ROLE, {
   auth: { autoRefreshToken: false, persistSession: false },
 });
+
+async function getFbToken(): Promise<string> {
+  try {
+    const { data } = await admin.from("integration_secrets").select("value").eq("name", "FB_PAGE_TOKEN").maybeSingle();
+    if (data?.value) return data.value;
+  } catch (_) { /* fallback */ }
+  return FB_PAGE_TOKEN_ENV;
+}
 
 interface LeadFieldData {
   name: string;
@@ -42,8 +50,9 @@ interface LeadFieldData {
 }
 
 async function fetchLeadDetails(leadgenId: string) {
-  if (!FB_PAGE_TOKEN) return null;
-  const url = `https://graph.facebook.com/v19.0/${leadgenId}?access_token=${FB_PAGE_TOKEN}`;
+  const token = await getFbToken();
+  if (!token) return null;
+  const url = `https://graph.facebook.com/v19.0/${leadgenId}?access_token=${token}`;
   const res = await fetch(url);
   if (!res.ok) return null;
   return await res.json();
