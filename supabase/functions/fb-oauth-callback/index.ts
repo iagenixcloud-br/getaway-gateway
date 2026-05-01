@@ -79,7 +79,7 @@ Deno.serve(async (req) => {
     const tokenRes = await fetch(tokenUrl.toString());
     const tokenData = await tokenRes.json();
     if (!tokenRes.ok || tokenData.error) {
-      return htmlResponse({ ok: false, message: "Falha ao trocar code por token", details: tokenData });
+      return redirectResponse(url, { ok: false, message: "Falha ao trocar code por token" });
     }
     const userToken = tokenData.access_token as string;
 
@@ -92,7 +92,7 @@ Deno.serve(async (req) => {
     const longRes = await fetch(longUrl.toString());
     const longData = await longRes.json();
     if (!longRes.ok || longData.error) {
-      return htmlResponse({ ok: false, message: "Falha ao gerar long-lived token", details: longData });
+      return redirectResponse(url, { ok: false, message: "Falha ao gerar long-lived token" });
     }
     const longUserToken = longData.access_token as string;
 
@@ -102,14 +102,13 @@ Deno.serve(async (req) => {
     );
     const pagesData = await pagesRes.json();
     if (!pagesRes.ok || pagesData.error) {
-      return htmlResponse({ ok: false, message: "Falha ao listar páginas", details: pagesData });
+      return redirectResponse(url, { ok: false, message: "Falha ao listar páginas" });
     }
     const page = (pagesData.data || []).find((p: any) => p.id === PAGE_ID);
     if (!page) {
-      return htmlResponse({
+      return redirectResponse(url, {
         ok: false,
-        message: `Você não tem acesso à página ${PAGE_ID} (Salles Imóveis). Páginas disponíveis na sua conta:`,
-        details: (pagesData.data || []).map((p: any) => ({ id: p.id, name: p.name })),
+        message: `Você não tem acesso à página ${PAGE_ID} (Salles Imóveis).`,
       });
     }
     // Page tokens vindos de um long-lived user token NÃO expiram (permanentes)
@@ -124,7 +123,7 @@ Deno.serve(async (req) => {
         { onConflict: "name" },
       );
     if (upErr) {
-      return htmlResponse({ ok: false, message: "Falha ao salvar token no banco", details: upErr.message });
+      return redirectResponse(url, { ok: false, message: "Falha ao salvar token no banco" });
     }
 
     // 5) Inscrever no webhook de leads (não falhar se já estiver inscrito)
@@ -146,18 +145,11 @@ Deno.serve(async (req) => {
     const debugData = await debugRes.json();
     const info = debugData.data || {};
 
-    return htmlResponse({
+    return redirectResponse(url, {
       ok: true,
       message: `Página "${page.name}" conectada com sucesso! Token permanente salvo e webhook ativo.`,
-      details: {
-        page_name: page.name,
-        page_id: page.id,
-        is_permanent: info.expires_at === 0,
-        scopes: info.scopes,
-        subscribe: subscribeResult,
-      },
     });
   } catch (e) {
-    return htmlResponse({ ok: false, message: "Erro inesperado", details: String(e) });
+    return redirectResponse(url, { ok: false, message: "Erro inesperado ao conectar com o Facebook." });
   }
 });
