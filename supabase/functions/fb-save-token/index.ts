@@ -1,0 +1,96 @@
+import { corsHeaders } from "https://esm.sh/@supabase/supabase-js@2.95.0/cors";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.95.0";
+
+Deno.serve(async (req) => {
+  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+
+  const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
+  const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
+  const SUPABASE_ACCESS_TOKEN = Deno.env.get("SB_DEPLOY_ACCESS_TOKEN");
+  const PROJECT_REF = "lzgdvvapzmuogtlivzxa";
+
+  // ── Auth: requer usuário logado e admin ─────────────────────
+  const authHeader = req.headers.get("Authorization");
+  if (!authHeader) {
+    return json({ ok: false, error: "Não autenticado" }, 401);
+  }
+
+  const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    global: { headers: { Authorization: authHeader } },
+  });
+
+  const { data: userData, error: userErr } = await supabase.auth.getUser();
+  if (userErr || !userData?.user) {
+    return json({ ok: false, error: "Sessão inválida" }, 401);
+  }
+
+  // Checa se é admin (tabela user_roles)
+  const { data: roleRow } = await supabase
+    .from("user_roles")
+    .select("role")
+    .eq("user_id", userData.user.id)
+    .eq("role", "admin")
+    .maybeSingle();
+
+  if (!roleRow) {
+    return json({ ok: false, error: "Apenas administradores podem alterar o token" }, 403);
+  }
+
+  // ── Body ─────────────────────────────────────────────────────
+  let body: { token?: string };
+  try {
+    body = await req.json();
+  } catch {
+    return json({ ok: false, error: "JSON inválido" }, 400);
+  }
+
+  const token = (body.token || "").trim();
+  if (!token || token.length < 50) {
+    return json({ ok: false, error: "Token muito curto ou ausente" }, 400);
+  }
+
+  // ── Validação prévia: o token bate no Facebook? ──────────────
+  try {
+    const meRes = await fetch(`https://graph.facebook.com/v21.0/me?access_token=${encodeURIComponent(token)}`);
+    const meData = await meRes.json();
+    if (!meRes.ok || meData.error) {
+      return json({ ok: false, error: `Token rejeitado pelo Facebook: ${meData.error?.message || "desconhecido"}` }, 400);
+    }
+  } catch (e) {
+    return json({ ok: false, error: `Erro ao validar no Facebook: ${String(e)}` }, 500);
+  }
+
+  // ── Atualiza o secret via Management API ─────────────────────
+  if (!SUPABASE_ACCESS_TOKEN) {
+    return json({
+      ok: false,
+      error: "SB_DEPLOY_ACCESS_TOKEN não configurado. Atualize FB_PAGE_TOKEN manualmente.",
+    }, 500);
+  }
+
+  const updRes = await fetch(
+    `https://api.supabase.com/v1/projects/${PROJECT_REF}/secrets`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${SUPABASE_ACCESS_TOKEN}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify([{ name: "FB_PAGE_TOKEN", value: token }]),
+    },
+  );
+
+  if (!updRes.ok) {
+    const txt = await updRes.text();
+    return json({ ok: false, error: `Falha ao salvar secret (${updRes.status}): ${txt}` }, 500);
+  }
+
+  return json({ ok: true, message: "FB_PAGE_TOKEN atualizado com sucesso" });
+
+  function json(payload: unknown, status = 200) {
+    return new Response(JSON.stringify(payload), {
+      status,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+});
