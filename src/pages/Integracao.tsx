@@ -24,8 +24,37 @@ export function Integracao() {
   const [token, setToken] = useState("");
   const [saving, setSaving] = useState(false);
   const [checking, setChecking] = useState(false);
+  const [debugging, setDebugging] = useState(false);
   const [saveMsg, setSaveMsg] = useState<{ type: "ok" | "err"; text: string } | null>(null);
   const [check, setCheck] = useState<CheckResult | null>(null);
+  const [debug, setDebug] = useState<any>(null);
+
+  async function handleDebug() {
+    setSaveMsg(null);
+    setDebug(null);
+    setDebugging(true);
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const accessToken = sessionData.session?.access_token;
+      if (!accessToken) {
+        setDebug({ ok: false, step: "session", error: "Nenhuma sessão ativa no navegador" });
+        return;
+      }
+      const { data, error } = await supabase.functions.invoke("fb-save-token", {
+        body: { dry_run: true, token: token.trim() || undefined },
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+      if (error) {
+        setDebug({ ok: false, step: "invoke", error: error.message, raw: data });
+      } else {
+        setDebug(data);
+      }
+    } catch (e: any) {
+      setDebug({ ok: false, step: "exception", error: String(e?.message || e) });
+    } finally {
+      setDebugging(false);
+    }
+  }
 
   async function handleSaveAndValidate() {
     setSaveMsg(null);
@@ -194,6 +223,21 @@ export function Integracao() {
             >
               🔄 Gerar Token Permanente
             </button>
+
+            <button
+              onClick={handleDebug}
+              disabled={debugging}
+              className="px-5 py-2.5 rounded-xl font-semibold text-sm transition-all"
+              style={{
+                background: "rgba(59,130,246,0.12)",
+                border: "1px solid rgba(59,130,246,0.4)",
+                color: "#93c5fd",
+                cursor: debugging ? "not-allowed" : "pointer",
+              }}
+              title="Testa auth + role + Facebook sem gravar nada"
+            >
+              {debugging ? "Diagnosticando..." : "🐞 Diagnóstico"}
+            </button>
           </div>
 
           {saveMsg && (
@@ -206,6 +250,28 @@ export function Integracao() {
               }}
             >
               {saveMsg.text}
+            </div>
+          )}
+
+          {debug && (
+            <div
+              className="rounded-lg px-4 py-3 text-xs space-y-2"
+              style={{
+                background: "rgba(0,0,0,0.4)",
+                border: `1px solid ${debug.ok ? "rgba(34,197,94,0.4)" : "rgba(239,68,68,0.4)"}`,
+              }}
+            >
+              <p style={{ color: debug.ok ? "#86efac" : "#fca5a5", fontWeight: 600, fontSize: 13 }}>
+                {debug.ok ? "✅ Diagnóstico OK" : `❌ Falhou${debug.step ? ` na etapa: ${debug.step}` : ""}`}
+              </p>
+              {debug.message && <p style={{ color: "var(--text-muted)" }}>{debug.message}</p>}
+              {debug.error && <p style={{ color: "#fca5a5" }}>Erro: {debug.error}</p>}
+              <pre
+                className="overflow-auto rounded p-2 mt-2"
+                style={{ background: "rgba(0,0,0,0.4)", color: "var(--text-muted)", fontSize: 10, maxHeight: 240 }}
+              >
+                {JSON.stringify(debug, null, 2)}
+              </pre>
             </div>
           )}
         </div>

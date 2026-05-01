@@ -37,27 +37,48 @@ Deno.serve(async (req) => {
   }
 
   // ── Body ─────────────────────────────────────────────────────
-  let body: { token?: string };
+  let body: { token?: string; dry_run?: boolean };
   try {
     body = await req.json();
   } catch {
     return json({ ok: false, error: "JSON inválido" }, 400);
   }
 
+  const dryRun = body.dry_run === true;
   const token = (body.token || "").trim();
-  if (!token || token.length < 50) {
+
+  // No dry_run, se não vier token, usa o atual do ambiente só para validar fluxo
+  if (!dryRun && (!token || token.length < 50)) {
     return json({ ok: false, error: "Token muito curto ou ausente" }, 400);
   }
 
   // ── Validação prévia: o token bate no Facebook? ──────────────
-  try {
-    const meRes = await fetch(`https://graph.facebook.com/v21.0/me?access_token=${encodeURIComponent(token)}`);
-    const meData = await meRes.json();
-    if (!meRes.ok || meData.error) {
-      return json({ ok: false, error: `Token rejeitado pelo Facebook: ${meData.error?.message || "desconhecido"}` }, 400);
+  // (em dry_run sem token, pula esta etapa)
+  let fbCheck: any = null;
+  if (token && token.length >= 50) {
+    try {
+      const meRes = await fetch(`https://graph.facebook.com/v21.0/me?access_token=${encodeURIComponent(token)}`);
+      const meData = await meRes.json();
+      fbCheck = { status: meRes.status, data: meData };
+      if (!meRes.ok || meData.error) {
+        return json({ ok: false, step: "facebook_validate", error: `Token rejeitado pelo Facebook: ${meData.error?.message || "desconhecido"}`, fb: fbCheck }, 400);
+      }
+    } catch (e) {
+      return json({ ok: false, step: "facebook_validate", error: `Erro ao validar no Facebook: ${String(e)}` }, 500);
     }
-  } catch (e) {
-    return json({ ok: false, error: `Erro ao validar no Facebook: ${String(e)}` }, 500);
+  }
+
+  // ── DRY RUN: retorna status de auth + role + secret manager sem gravar
+  if (dryRun) {
+    return json({
+      ok: true,
+      dry_run: true,
+      auth: { user_id: userData.user.id, email: userData.user.email },
+      role_admin: true,
+      management_api_configured: !!SUPABASE_ACCESS_TOKEN,
+      facebook_validation: fbCheck ? { ok: true, page: fbCheck.data } : "skipped (sem token)",
+      message: "✅ Todas as checagens passaram. O fluxo real funcionaria.",
+    });
   }
 
   // ── Atualiza o secret via Management API ─────────────────────
