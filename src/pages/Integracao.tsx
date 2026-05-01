@@ -24,8 +24,37 @@ export function Integracao() {
   const [token, setToken] = useState("");
   const [saving, setSaving] = useState(false);
   const [checking, setChecking] = useState(false);
+  const [debugging, setDebugging] = useState(false);
   const [saveMsg, setSaveMsg] = useState<{ type: "ok" | "err"; text: string } | null>(null);
   const [check, setCheck] = useState<CheckResult | null>(null);
+  const [debug, setDebug] = useState<any>(null);
+
+  async function handleDebug() {
+    setSaveMsg(null);
+    setDebug(null);
+    setDebugging(true);
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const accessToken = sessionData.session?.access_token;
+      if (!accessToken) {
+        setDebug({ ok: false, step: "session", error: "Nenhuma sessão ativa no navegador" });
+        return;
+      }
+      const { data, error } = await supabase.functions.invoke("fb-save-token", {
+        body: { dry_run: true, token: token.trim() || undefined },
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+      if (error) {
+        setDebug({ ok: false, step: "invoke", error: error.message, raw: data });
+      } else {
+        setDebug(data);
+      }
+    } catch (e: any) {
+      setDebug({ ok: false, step: "exception", error: String(e?.message || e) });
+    } finally {
+      setDebugging(false);
+    }
+  }
 
   async function handleSaveAndValidate() {
     setSaveMsg(null);
