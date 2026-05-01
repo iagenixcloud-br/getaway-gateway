@@ -123,7 +123,7 @@ export function Integracao() {
         return;
       }
       const { data, error } = await invokeCloudFunction("fb-save-token", {
-        body: { dry_run: true, token: token.trim() || undefined },
+        body: { dry_run: true },
         authToken: accessToken,
       });
       if (error) {
