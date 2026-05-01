@@ -64,16 +64,19 @@ Deno.serve(async (req) => {
       const updateBody = await updateRes.text();
 
       return new Response(JSON.stringify({
-        ok: true,
+        ok: updateRes.ok,
         secret_updated: updateRes.ok,
         secret_update_status: updateRes.status,
-        secret_update_response: updateBody,
+        secret_update_response: updateRes.ok ? "FB_PAGE_TOKEN atualizado com sucesso" : updateBody,
         token_type: tokenInfo.type,
         is_permanent: isPermanent,
         expires_in_days: expiresInDays,
         page_id: tokenInfo.profile_id,
         scopes: tokenInfo.scopes,
         new_token_preview: longLivedToken.slice(0, 12) + "...",
+        message: isPermanent
+          ? "✅ Token permanente gerado e salvo. Não expira mais!"
+          : `⚠️ Token gerado expira em ~${expiresInDays} dias.`,
       }, null, 2), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
