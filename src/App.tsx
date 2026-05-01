@@ -10,6 +10,7 @@ import { Corretores } from "./pages/Corretores";
 import { Desempenho } from "./pages/Desempenho";
 import { Roleta } from "./pages/Roleta";
 import { Relatorios } from "./pages/Relatorios";
+import { Integracao } from "./pages/Integracao";
 
 export default function App() {
   return (
@@ -63,6 +64,16 @@ export default function App() {
               <ProtectedRoute requireAdmin>
                 <Layout>
                   <Relatorios />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/integracao"
+            element={
+              <ProtectedRoute requireAdmin>
+                <Layout>
+                  <Integracao />
                 </Layout>
               </ProtectedRoute>
             }

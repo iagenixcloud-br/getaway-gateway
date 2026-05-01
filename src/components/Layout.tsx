@@ -139,6 +139,15 @@ export function Layout({ children }: LayoutProps) {
               </svg>,
             )}
 
+          {isAdmin &&
+            navItem(
+              "/integracao",
+              "Integração Facebook",
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M18 2h-3a5 5 0 00-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 011-1h3z" />
+              </svg>,
+            )}
+
           <div style={{ borderTop: "1px solid var(--glass-border)", marginTop: 16, paddingTop: 16 }}>
             <p style={{ fontSize: 10, color: "var(--text-muted)", letterSpacing: "0.15em", textTransform: "uppercase", padding: "0 12px 6px" }}>
               Sistema
