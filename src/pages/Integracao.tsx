@@ -78,9 +78,9 @@ export function Integracao() {
         setDebug({ ok: false, step: "session", error: "Nenhuma sessão ativa no navegador" });
         return;
       }
-      const { data, error } = await supabase.functions.invoke("fb-save-token", {
+      const { data, error } = await invokeCloudFunction("fb-save-token", {
         body: { dry_run: true, token: token.trim() || undefined },
-        headers: { Authorization: `Bearer ${accessToken}` },
+        authToken: accessToken,
       });
       if (error) {
         setDebug({ ok: false, step: "invoke", error: error.message, raw: data });
@@ -113,9 +113,9 @@ export function Integracao() {
         setSaving(false);
         return;
       }
-      const { data, error } = await supabase.functions.invoke("fb-save-token", {
+      const { data, error } = await invokeCloudFunction("fb-save-token", {
         body: { token: token.trim() },
-        headers: { Authorization: `Bearer ${accessToken}` },
+        authToken: accessToken,
       });
       if (error || !data?.ok) {
         setSaveMsg({
