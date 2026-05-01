@@ -138,7 +138,7 @@ export function Integracao() {
     }
   }
 
-  const busy = debugging;
+  
 
   const FB_REDIRECT_URI = `${CLOUD_FUNCTIONS_URL}/fb-oauth-callback`;
   const FB_SCOPES = [
