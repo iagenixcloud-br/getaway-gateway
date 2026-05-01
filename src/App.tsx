@@ -11,6 +11,7 @@ import { Desempenho } from "./pages/Desempenho";
 import { Roleta } from "./pages/Roleta";
 import { Relatorios } from "./pages/Relatorios";
 import { Integracao } from "./pages/Integracao";
+import { Dashboard } from "./pages/Dashboard";
 
 export default function App() {
   return (
@@ -74,6 +75,16 @@ export default function App() {
               <ProtectedRoute requireAdmin>
                 <Layout>
                   <Integracao />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/dashboard"
+            element={
+              <ProtectedRoute requireAdmin>
+                <Layout>
+                  <Dashboard />
                 </Layout>
               </ProtectedRoute>
             }
