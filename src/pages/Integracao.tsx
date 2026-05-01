@@ -208,7 +208,6 @@ export function Integracao() {
 
   const busy = saving || checking;
 
-  const FB_APP_ID = "1819628152222104"; // mesmo do backend; pode ficar exposto (é público)
   const FB_REDIRECT_URI = `${CLOUD_FUNCTIONS_URL}/fb-oauth-callback`;
   const FB_SCOPES = [
     "pages_show_list",
@@ -221,9 +220,13 @@ export function Integracao() {
   function handleConnectFacebook() {
     setSaveMsg(null);
     setCheck(null);
+    if (!fbAppId) {
+      setSaveMsg({ type: "err", text: "FB_APP_ID não configurado no backend." });
+      return;
+    }
     const authUrl =
       `https://www.facebook.com/v21.0/dialog/oauth?` +
-      `client_id=${FB_APP_ID}` +
+      `client_id=${fbAppId}` +
       `&redirect_uri=${encodeURIComponent(FB_REDIRECT_URI)}` +
       `&scope=${encodeURIComponent(FB_SCOPES)}` +
       `&response_type=code` +
