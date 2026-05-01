@@ -252,6 +252,28 @@ export function Integracao() {
               {saveMsg.text}
             </div>
           )}
+
+          {debug && (
+            <div
+              className="rounded-lg px-4 py-3 text-xs space-y-2"
+              style={{
+                background: "rgba(0,0,0,0.4)",
+                border: `1px solid ${debug.ok ? "rgba(34,197,94,0.4)" : "rgba(239,68,68,0.4)"}`,
+              }}
+            >
+              <p style={{ color: debug.ok ? "#86efac" : "#fca5a5", fontWeight: 600, fontSize: 13 }}>
+                {debug.ok ? "✅ Diagnóstico OK" : `❌ Falhou${debug.step ? ` na etapa: ${debug.step}` : ""}`}
+              </p>
+              {debug.message && <p style={{ color: "var(--text-muted)" }}>{debug.message}</p>}
+              {debug.error && <p style={{ color: "#fca5a5" }}>Erro: {debug.error}</p>}
+              <pre
+                className="overflow-auto rounded p-2 mt-2"
+                style={{ background: "rgba(0,0,0,0.4)", color: "var(--text-muted)", fontSize: 10, maxHeight: 240 }}
+              >
+                {JSON.stringify(debug, null, 2)}
+              </pre>
+            </div>
+          )}
         </div>
       </div>
 
