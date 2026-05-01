@@ -30,15 +30,44 @@ function htmlResponse(payload: { ok: boolean; message: string; details?: any }) 
   <h1>${payload.ok ? "Facebook conectado!" : "Falha na conexão"}</h1>
   <p>${payload.message}</p>
   ${payload.details ? `<pre>${JSON.stringify(payload.details, null, 2)}</pre>` : ""}
-  <button onclick="window.close()">Fechar janela</button>
+  <p id="countdown" style="color:#888;font-size:12px;margin-top:16px"></p>
+  <button onclick="closeOrRedirect()">${payload.ok ? "Voltar ao CRM agora" : "Fechar"}</button>
 </div>
 <script>
+  const isOk = ${payload.ok};
+  const msg = ${JSON.stringify(payload.message)};
+  const FALLBACK_URL = "https://id-preview--563e940b-5fd2-4d9a-9d39-ab91d2e3e24b.lovable.app/integracao";
+  const delay = isOk ? 1500 : 4000;
+
+  function closeOrRedirect() {
+    try {
+      if (window.opener && !window.opener.closed) {
+        window.opener.postMessage({ source: "fb-oauth", ok: isOk, message: msg }, "*");
+      }
+    } catch(e) {}
+    // Tenta fechar; se o navegador bloquear (janela não foi aberta por script), redireciona
+    window.close();
+    setTimeout(() => {
+      if (!window.closed) window.location.href = FALLBACK_URL;
+    }, 200);
+  }
+
+  // Notifica o opener imediatamente (se houver) para a UI já reagir
   try {
-    if (window.opener) {
-      window.opener.postMessage({ source: "fb-oauth", ok: ${payload.ok}, message: ${JSON.stringify(payload.message)} }, "*");
-      setTimeout(() => window.close(), ${payload.ok ? 1500 : 0});
+    if (window.opener && !window.opener.closed) {
+      window.opener.postMessage({ source: "fb-oauth", ok: isOk, message: msg }, "*");
     }
   } catch(e) {}
+
+  // Countdown visual e auto-close/redirect
+  let remaining = Math.ceil(delay / 1000);
+  const el = document.getElementById("countdown");
+  el.textContent = (isOk ? "Voltando ao CRM em " : "Fechando em ") + remaining + "s...";
+  const tick = setInterval(() => {
+    remaining -= 1;
+    if (remaining <= 0) { clearInterval(tick); closeOrRedirect(); }
+    else el.textContent = (isOk ? "Voltando ao CRM em " : "Fechando em ") + remaining + "s...";
+  }, 1000);
 </script>
 </body></html>`;
   return new Response(html, {
