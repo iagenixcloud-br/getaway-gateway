@@ -73,6 +73,47 @@ export function Integracao() {
       .then(({ data }) => setFbAppId(data?.fb_app_id ?? null));
   }, []);
 
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const oauthStatus = params.get("fb_oauth");
+    if (!oauthStatus) return;
+
+    const ok = oauthStatus === "success";
+    const message = params.get("message") || (ok ? "Facebook conectado com sucesso!" : "Falha ao conectar com o Facebook.");
+    setSaveMsg({ type: ok ? "ok" : "err", text: ok ? `${message} Validando conexão…` : message });
+    window.history.replaceState({}, "", window.location.pathname);
+
+    try {
+      if (window.opener && !window.opener.closed) {
+        window.opener.postMessage({ source: "fb-oauth", ok, message }, window.location.origin);
+        window.close();
+      }
+    } catch {}
+
+    if (ok) {
+      invokeCloudFunction("fb-token-check", { method: "GET" }).then(({ data }) => {
+        const info = data?.debug_token?.data || {};
+        const granted: string[] = info.scopes || [];
+        const missing = REQUIRED.filter((p) => !granted.includes(p));
+        setCheck({
+          ok: missing.length === 0 && info.is_valid === true,
+          page_name: data?.me?.name,
+          page_id: data?.me?.id,
+          token_type: info.type,
+          is_permanent: info.expires_at === 0,
+          expires_in_days:
+            info.expires_at && info.expires_at > 0
+              ? Math.round((info.expires_at - Date.now() / 1000) / 86400)
+              : null,
+          scopes: granted,
+          missing,
+          raw: data,
+        });
+        setSaveMsg({ type: missing.length === 0 && info.is_valid === true ? "ok" : "err", text: missing.length === 0 && info.is_valid === true ? "Conexão confirmada! ✅" : "Facebook salvou o retorno, mas a validação ainda não confirmou o token." });
+      });
+    }
+  }, []);
+
   async function handleDebug() {
     setSaveMsg(null);
     setDebug(null);
@@ -230,7 +271,8 @@ export function Integracao() {
       `&redirect_uri=${encodeURIComponent(FB_REDIRECT_URI)}` +
       `&scope=${encodeURIComponent(FB_SCOPES)}` +
       `&response_type=code` +
-      `&auth_type=rerequest`;
+      `&auth_type=rerequest` +
+      `&state=${encodeURIComponent(btoa(JSON.stringify({ return_to: `${window.location.origin}/integracao` })).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, ""))}`;
 
     const w = 600, h = 720;
     const left = window.screen.width / 2 - w / 2;
