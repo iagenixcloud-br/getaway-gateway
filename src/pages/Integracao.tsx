@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
 
 type CheckResult = {
@@ -66,6 +66,12 @@ export function Integracao() {
   const [saveMsg, setSaveMsg] = useState<{ type: "ok" | "err"; text: string } | null>(null);
   const [check, setCheck] = useState<CheckResult | null>(null);
   const [debug, setDebug] = useState<any>(null);
+  const [fbAppId, setFbAppId] = useState<string | null>(null);
+
+  useEffect(() => {
+    invokeCloudFunction<{ fb_app_id: string | null }>("fb-public-config", { method: "GET" })
+      .then(({ data }) => setFbAppId(data?.fb_app_id ?? null));
+  }, []);
 
   async function handleDebug() {
     setSaveMsg(null);
@@ -202,15 +208,105 @@ export function Integracao() {
 
   const busy = saving || checking;
 
+  const FB_REDIRECT_URI = `${CLOUD_FUNCTIONS_URL}/fb-oauth-callback`;
+  const FB_SCOPES = [
+    "pages_show_list",
+    "pages_read_engagement",
+    "pages_manage_metadata",
+    "leads_retrieval",
+    "pages_manage_ads",
+  ].join(",");
+
+  function handleConnectFacebook() {
+    setSaveMsg(null);
+    setCheck(null);
+    if (!fbAppId) {
+      setSaveMsg({ type: "err", text: "FB_APP_ID não configurado no backend." });
+      return;
+    }
+    const authUrl =
+      `https://www.facebook.com/v21.0/dialog/oauth?` +
+      `client_id=${fbAppId}` +
+      `&redirect_uri=${encodeURIComponent(FB_REDIRECT_URI)}` +
+      `&scope=${encodeURIComponent(FB_SCOPES)}` +
+      `&response_type=code` +
+      `&auth_type=rerequest`;
+
+    const w = 600, h = 720;
+    const left = window.screen.width / 2 - w / 2;
+    const top = window.screen.height / 2 - h / 2;
+    const popup = window.open(
+      authUrl,
+      "fb-oauth",
+      `width=${w},height=${h},left=${left},top=${top}`,
+    );
+    if (!popup) {
+      setSaveMsg({ type: "err", text: "Pop-up bloqueado. Permita pop-ups e tente de novo." });
+      return;
+    }
+
+    const onMsg = (ev: MessageEvent) => {
+      if (ev.data?.source !== "fb-oauth") return;
+      window.removeEventListener("message", onMsg);
+      if (ev.data.ok) {
+        setSaveMsg({ type: "ok", text: ev.data.message || "Facebook conectado!" });
+        // valida o token salvo
+        invokeCloudFunction("fb-token-check", { method: "GET" }).then(({ data }) => {
+          const info = data?.debug_token?.data || {};
+          const granted: string[] = info.scopes || [];
+          const missing = REQUIRED.filter((p) => !granted.includes(p));
+          setCheck({
+            ok: missing.length === 0 && info.is_valid === true,
+            page_name: data?.me?.name,
+            page_id: data?.me?.id,
+            token_type: info.type,
+            is_permanent: info.expires_at === 0,
+            expires_in_days:
+              info.expires_at && info.expires_at > 0
+                ? Math.round((info.expires_at - Date.now() / 1000) / 86400)
+                : null,
+            scopes: granted,
+            missing,
+            raw: data,
+          });
+        });
+      } else {
+        setSaveMsg({ type: "err", text: ev.data.message || "Falha ao conectar." });
+      }
+    };
+    window.addEventListener("message", onMsg);
+  }
+
   return (
     <div className="max-w-3xl mx-auto space-y-6">
+      {/* Botão OAuth - método recomendado */}
       <div className="glass rounded-2xl p-6" style={{ border: "1px solid var(--glass-border)" }}>
         <h2 style={{ fontFamily: "Montserrat, sans-serif", fontWeight: 700, fontSize: 18, color: "var(--gold)" }}>
-          Token do Facebook (Página)
+          Conectar com Facebook
         </h2>
         <p style={{ fontSize: 13, color: "var(--text-muted)", marginTop: 6 }}>
-          Cole o Page Access Token gerado no Graph API Explorer. O sistema salva e valida
-          automaticamente as permissões necessárias.
+          Autorize a página Salles Imóveis em um clique. O token permanente é salvo automaticamente
+          e o webhook de leads é ativado.
+        </p>
+        <button
+          onClick={handleConnectFacebook}
+          className="mt-4 px-5 py-2.5 rounded-xl font-semibold text-sm transition-all inline-flex items-center gap-2"
+          style={{
+            background: "#1877F2",
+            color: "#fff",
+            boxShadow: "0 4px 14px rgba(24,119,242,0.35)",
+          }}
+        >
+          <span style={{ fontSize: 16 }}>🔗</span> Conectar com Facebook
+        </button>
+      </div>
+
+      <div className="glass rounded-2xl p-6" style={{ border: "1px solid var(--glass-border)" }}>
+        <h2 style={{ fontFamily: "Montserrat, sans-serif", fontWeight: 700, fontSize: 18, color: "var(--gold)" }}>
+          Ou cole um token manualmente
+        </h2>
+        <p style={{ fontSize: 13, color: "var(--text-muted)", marginTop: 6 }}>
+          Use só se o botão acima não funcionar. Cole o Page Access Token gerado no Graph API Explorer.
         </p>
 
         <div className="mt-5 space-y-3">

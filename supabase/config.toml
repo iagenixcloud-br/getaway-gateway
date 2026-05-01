@@ -1,1 +1,10 @@
 project_id = "lzgdvvapzmuogtlivzxa"
+
+[functions.fb-oauth-callback]
+verify_jwt = false
+
+[functions.fb-lead-webhook]
+verify_jwt = false
+
+[functions.fb-public-config]
+verify_jwt = false
