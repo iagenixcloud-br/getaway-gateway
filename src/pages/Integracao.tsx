@@ -290,14 +290,17 @@ export function Integracao() {
         </p>
         <button
           onClick={handleConnectFacebook}
+          disabled={!fbAppId}
           className="mt-4 px-5 py-2.5 rounded-xl font-semibold text-sm transition-all inline-flex items-center gap-2"
           style={{
-            background: "#1877F2",
+            background: !fbAppId ? "rgba(24,119,242,0.4)" : "#1877F2",
             color: "#fff",
             boxShadow: "0 4px 14px rgba(24,119,242,0.35)",
+            cursor: !fbAppId ? "wait" : "pointer",
           }}
         >
-          <span style={{ fontSize: 16 }}>🔗</span> Conectar com Facebook
+          <span style={{ fontSize: 16 }}>🔗</span>
+          {fbAppId ? "Conectar com Facebook" : "Carregando..."}
         </button>
       </div>
 
