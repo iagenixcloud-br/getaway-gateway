@@ -48,8 +48,8 @@ Deno.serve(async (req) => {
     const isPermanent = expiresAt === 0;
     const expiresInDays = expiresAt ? Math.round((expiresAt - Date.now() / 1000) / 86400) : null;
 
-    // 3. Devolve o token completo (atualização do secret é feita pelo usuário no formulário)
-    if (false && SUPABASE_ACCESS_TOKEN) {
+    // 3. Atualiza o secret FB_PAGE_TOKEN automaticamente via Supabase Management API
+    if (SUPABASE_ACCESS_TOKEN) {
       const updateRes = await fetch(
         `https://api.supabase.com/v1/projects/${PROJECT_REF}/secrets`,
         {
@@ -64,16 +64,20 @@ Deno.serve(async (req) => {
       const updateBody = await updateRes.text();
 
       return new Response(JSON.stringify({
-        ok: true,
+        ok: updateRes.ok,
         secret_updated: updateRes.ok,
         secret_update_status: updateRes.status,
-        secret_update_response: updateBody,
+        secret_update_response: updateRes.ok ? "FB_PAGE_TOKEN atualizado com sucesso" : updateBody,
+        new_token: updateRes.ok ? undefined : longLivedToken,
         token_type: tokenInfo.type,
         is_permanent: isPermanent,
         expires_in_days: expiresInDays,
         page_id: tokenInfo.profile_id,
         scopes: tokenInfo.scopes,
         new_token_preview: longLivedToken.slice(0, 12) + "...",
+        message: isPermanent
+          ? "✅ Token permanente gerado. Salve no FB_PAGE_TOKEN!"
+          : `⚠️ Token gerado expira em ~${expiresInDays} dias.`,
       }, null, 2), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
