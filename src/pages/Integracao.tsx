@@ -59,9 +59,6 @@ async function invokeCloudFunction<T = any>(
 }
 
 export function Integracao() {
-  const [token, setToken] = useState("");
-  const [saving, setSaving] = useState(false);
-  const [checking, setChecking] = useState(false);
   const [debugging, setDebugging] = useState(false);
   const [saveMsg, setSaveMsg] = useState<{ type: "ok" | "err"; text: string } | null>(null);
   const [check, setCheck] = useState<CheckResult | null>(null);
@@ -126,7 +123,7 @@ export function Integracao() {
         return;
       }
       const { data, error } = await invokeCloudFunction("fb-save-token", {
-        body: { dry_run: true, token: token.trim() || undefined },
+        body: { dry_run: true },
         authToken: accessToken,
       });
       if (error) {
@@ -141,113 +138,7 @@ export function Integracao() {
     }
   }
 
-  async function handleSaveAndValidate() {
-    setSaveMsg(null);
-    setCheck(null);
-
-    if (!token.trim() || token.trim().length < 50) {
-      setSaveMsg({ type: "err", text: "Cole um token válido (muito curto)." });
-      return;
-    }
-
-    // 1) Salvar via edge function (passa o JWT do usuário explicitamente)
-    setSaving(true);
-    try {
-      const { data: sessionData } = await supabase.auth.getSession();
-      const accessToken = sessionData.session?.access_token;
-      if (!accessToken) {
-        setSaveMsg({ type: "err", text: "Sessão expirada. Faça login novamente." });
-        setSaving(false);
-        return;
-      }
-      const { data, error } = await invokeCloudFunction("fb-save-token", {
-        body: { token: token.trim() },
-        authToken: accessToken,
-      });
-      if (error || !data?.ok) {
-        setSaveMsg({
-          type: "err",
-          text: data?.error || error || "Erro ao salvar o token.",
-        });
-        setSaving(false);
-        return;
-      }
-      setSaveMsg({ type: "ok", text: "Token salvo com sucesso! Validando..." });
-    } catch (e: any) {
-      setSaveMsg({ type: "err", text: String(e?.message || e) });
-      setSaving(false);
-      return;
-    }
-    setSaving(false);
-
-    // 2) Validar chamando fb-token-check
-    setChecking(true);
-    try {
-      // Pequeno delay para o secret propagar
-      await new Promise((r) => setTimeout(r, 1500));
-      const { data, error } = await invokeCloudFunction("fb-token-check", {
-        method: "GET",
-      });
-      if (error) {
-        setCheck({ ok: false, raw: { error } });
-        return;
-      }
-      const info = data?.debug_token?.data || {};
-      const granted: string[] = info.scopes || [];
-      const missing = REQUIRED.filter((p) => !granted.includes(p));
-      setCheck({
-        ok: missing.length === 0 && info.is_valid === true,
-        page_name: data?.me?.name,
-        page_id: data?.me?.id,
-        token_type: info.type,
-        is_permanent: info.expires_at === 0,
-        expires_in_days:
-          info.expires_at && info.expires_at > 0
-            ? Math.round((info.expires_at - Date.now() / 1000) / 86400)
-            : null,
-        scopes: granted,
-        missing,
-        raw: data,
-      });
-      setToken(""); // limpa o campo após sucesso
-    } catch (e: any) {
-      setCheck({ ok: false, raw: { error: String(e?.message || e) } });
-    } finally {
-      setChecking(false);
-    }
-  }
-
-  async function handleGenerateLongLived() {
-    setSaveMsg(null);
-    setCheck(null);
-    setChecking(true);
-    try {
-      const { data, error } = await invokeCloudFunction("fb-token-extend", {
-        method: "POST",
-      });
-      if (error) {
-        setSaveMsg({ type: "err", text: error });
-        return;
-      }
-      if (data?.new_token) {
-        setToken(data.new_token);
-        setSaveMsg({
-          type: "ok",
-          text: data.is_permanent
-            ? "✅ Token permanente gerado! Clique em 'Salvar e Validar' abaixo."
-            : `⚠️ Token gerado (expira em ${data.expires_in_days} dias). Salve abaixo.`,
-        });
-      } else {
-        setSaveMsg({ type: "err", text: "Não foi possível gerar o token. Verifique o FB_PAGE_TOKEN atual." });
-      }
-    } catch (e: any) {
-      setSaveMsg({ type: "err", text: String(e?.message || e) });
-    } finally {
-      setChecking(false);
-    }
-  }
-
-  const busy = saving || checking;
+  
 
   const FB_REDIRECT_URI = `${CLOUD_FUNCTIONS_URL}/fb-oauth-callback`;
   const FB_SCOPES = [
@@ -401,81 +292,25 @@ export function Integracao() {
           <span style={{ fontSize: 16 }}>🔗</span>
           {fbAppId ? "Conectar com Facebook" : "Carregando..."}
         </button>
-      </div>
 
-      <div className="glass rounded-2xl p-6" style={{ border: "1px solid var(--glass-border)" }}>
-        <h2 style={{ fontFamily: "Montserrat, sans-serif", fontWeight: 700, fontSize: 18, color: "var(--gold)" }}>
-          Ou cole um token manualmente
-        </h2>
-        <p style={{ fontSize: 13, color: "var(--text-muted)", marginTop: 6 }}>
-          Use só se o botão acima não funcionar. Cole o Page Access Token gerado no Graph API Explorer.
-        </p>
-
-        <div className="mt-5 space-y-3">
-          <textarea
-            value={token}
-            onChange={(e) => setToken(e.target.value)}
-            placeholder="EAA... (cole o token aqui)"
-            rows={4}
-            className="w-full rounded-xl px-4 py-3 font-mono text-xs"
+        <div className="mt-4 flex flex-wrap gap-3">
+          <button
+            onClick={handleDebug}
+            disabled={debugging}
+            className="px-4 py-2 rounded-xl font-semibold text-xs transition-all"
             style={{
-              background: "rgba(0,0,0,0.35)",
-              border: "1px solid var(--glass-border)",
-              color: "var(--text-primary)",
-              outline: "none",
-              resize: "vertical",
+              background: "rgba(59,130,246,0.12)",
+              border: "1px solid rgba(59,130,246,0.4)",
+              color: "#93c5fd",
+              cursor: debugging ? "not-allowed" : "pointer",
             }}
-          />
+            title="Testa auth + role + Facebook sem gravar nada"
+          >
+            {debugging ? "Diagnosticando..." : "🐞 Diagnóstico"}
+          </button>
+        </div>
 
-          <div className="flex flex-wrap gap-3">
-            <button
-              onClick={handleSaveAndValidate}
-              disabled={busy || !token.trim()}
-              className="px-5 py-2.5 rounded-xl font-semibold text-sm transition-all"
-              style={{
-                background: busy
-                  ? "rgba(212,175,55,0.3)"
-                  : "linear-gradient(135deg, #e8c84a 0%, #D4AF37 50%, #b8960c 100%)",
-                color: "#0a0a0a",
-                cursor: busy || !token.trim() ? "not-allowed" : "pointer",
-                opacity: !token.trim() ? 0.5 : 1,
-                boxShadow: "0 4px 14px rgba(212,175,55,0.3)",
-              }}
-            >
-              {saving ? "Salvando..." : checking ? "Validando..." : "💾 Salvar e Validar"}
-            </button>
-
-            <button
-              onClick={handleGenerateLongLived}
-              disabled={busy}
-              className="px-5 py-2.5 rounded-xl font-semibold text-sm transition-all"
-              style={{
-                background: "rgba(255,255,255,0.06)",
-                border: "1px solid var(--glass-border)",
-                color: "var(--text-primary)",
-                cursor: busy ? "not-allowed" : "pointer",
-              }}
-              title="Converte o FB_PAGE_TOKEN atual em um token permanente"
-            >
-              🔄 Gerar Token Permanente
-            </button>
-
-            <button
-              onClick={handleDebug}
-              disabled={debugging}
-              className="px-5 py-2.5 rounded-xl font-semibold text-sm transition-all"
-              style={{
-                background: "rgba(59,130,246,0.12)",
-                border: "1px solid rgba(59,130,246,0.4)",
-                color: "#93c5fd",
-                cursor: debugging ? "not-allowed" : "pointer",
-              }}
-              title="Testa auth + role + Facebook sem gravar nada"
-            >
-              {debugging ? "Diagnosticando..." : "🐞 Diagnóstico"}
-            </button>
-          </div>
-
+        <div className="mt-4 space-y-3">
           {saveMsg && (
             <div
               className="rounded-lg px-4 py-3 text-sm"
