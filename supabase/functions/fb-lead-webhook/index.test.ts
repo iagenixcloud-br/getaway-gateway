@@ -1,6 +1,6 @@
 import "https://deno.land/std@0.224.0/dotenv/load.ts";
 import { assertEquals } from "https://deno.land/std@0.224.0/assert/mod.ts";
-import { createClient } from "npm:@supabase/supabase-js@2.45.0";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
 const PROJECT_REF = "lzgdvvapzmuogtlivzxa";
 const WEBHOOK_URL = `https://${PROJECT_REF}.supabase.co/functions/v1/fb-lead-webhook`;
