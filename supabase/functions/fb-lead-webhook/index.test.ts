@@ -72,9 +72,8 @@ Deno.test("E2E: webhook receives lead and saves to DB", async () => {
   console.log(`Lead ${leadId} tenant_id: ${lead.tenant_id ?? "(not assigned)"}`);
 
   // 4) Cleanup: remove test lead
-  await crm.from("leads").delete().eq("id", leadId);
-  const text = await (await fetch("about:blank").catch(() => ({ text: async () => "" }))).text?.() ?? "";
-  void text;
+  const { error: delErr } = await crm.from("leads").delete().eq("id", leadId);
+  if (delErr) console.warn("Cleanup failed:", delErr.message);
 
   console.log(`✅ E2E passed: lead ${leadId} created and verified`);
 });
