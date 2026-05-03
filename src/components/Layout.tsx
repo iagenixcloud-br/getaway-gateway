@@ -44,6 +44,8 @@ export function Layout({ children }: LayoutProps) {
       ? { title: "Integração Facebook", subtitle: "Configure o token de acesso da página" }
       : location.pathname === "/dashboard"
       ? { title: "Dashboard", subtitle: "Visão geral do pipeline em tempo real" }
+      : location.pathname === "/leads"
+      ? { title: "Lista de Leads", subtitle: "Busque, filtre e ordene todos os leads" }
       : { title: "Pipeline de Leads", subtitle: "Gerencie seus leads em tempo real" };
 
   return (
