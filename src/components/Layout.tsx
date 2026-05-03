@@ -46,6 +46,8 @@ export function Layout({ children }: LayoutProps) {
       ? { title: "Dashboard", subtitle: "Visão geral do pipeline em tempo real" }
       : location.pathname === "/leads"
       ? { title: "Lista de Leads", subtitle: "Busque, filtre e ordene todos os leads" }
+      : location.pathname === "/webhook-logs"
+      ? { title: "Logs do Webhook", subtitle: "Monitore leads recebidos do Facebook em tempo real" }
       : { title: "Pipeline de Leads", subtitle: "Gerencie seus leads em tempo real" };
 
   return (
