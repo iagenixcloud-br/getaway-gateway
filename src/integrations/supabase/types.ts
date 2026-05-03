@@ -38,6 +38,45 @@ export type Database = {
         }
         Relationships: []
       }
+      webhook_logs: {
+        Row: {
+          created_at: string
+          error_message: string | null
+          event_type: string
+          form_id: string | null
+          id: string
+          lead_id: string | null
+          leadgen_id: string | null
+          page_id: string | null
+          payload: Json | null
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          error_message?: string | null
+          event_type?: string
+          form_id?: string | null
+          id?: string
+          lead_id?: string | null
+          leadgen_id?: string | null
+          page_id?: string | null
+          payload?: Json | null
+          status?: string
+        }
+        Update: {
+          created_at?: string
+          error_message?: string | null
+          event_type?: string
+          form_id?: string | null
+          id?: string
+          lead_id?: string | null
+          leadgen_id?: string | null
+          page_id?: string | null
+          payload?: Json | null
+          status?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
