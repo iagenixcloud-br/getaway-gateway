@@ -1,0 +1,1 @@
+CREATE POLICY "Anyone can view webhook logs" ON public.webhook_logs FOR SELECT TO anon USING (true);
