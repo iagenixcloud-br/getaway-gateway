@@ -1,14 +1,7 @@
 // ============================================================
 // Edge Function: fb-lead-webhook
-// ------------------------------------------------------------
 // Recebe leads do Facebook Lead Ads (webhook) e grava no
-// Supabase PRINCIPAL do CRM (projeto externo gycrprnkuwlzntqvpoxl)
-// usando as variáveis EXTERNAL_SUPABASE_URL e
-// EXTERNAL_SUPABASE_SERVICE_ROLE_KEY.
-//
-// Endpoints:
-//  GET  → verificação do webhook (hub.challenge)
-//  POST → recebe payload de leadgen
+// Supabase PRINCIPAL do CRM + loga em webhook_logs no Cloud.
 // ============================================================
 
 import { createClient } from "npm:@supabase/supabase-js@2.45.0";
@@ -22,14 +15,12 @@ const corsHeaders = {
 const FB_VERIFY_TOKEN = Deno.env.get("FB_VERIFY_TOKEN") || "";
 const FB_PAGE_TOKEN_ENV = Deno.env.get("FB_PAGE_TOKEN") || "";
 
-// Supabase do Lovable Cloud (apenas para ler o FB_PAGE_TOKEN salvo em integration_secrets)
 const CLOUD_URL = Deno.env.get("SUPABASE_URL")!;
 const CLOUD_SERVICE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const cloudAdmin = createClient(CLOUD_URL, CLOUD_SERVICE, {
   auth: { autoRefreshToken: false, persistSession: false },
 });
 
-// Supabase PRINCIPAL (CRM) — onde gravamos os leads
 const EXT_URL = Deno.env.get("EXTERNAL_SUPABASE_URL");
 const EXT_SERVICE = Deno.env.get("EXTERNAL_SUPABASE_SERVICE_ROLE_KEY");
 const crmAdmin = (EXT_URL && EXT_SERVICE)
@@ -81,6 +72,32 @@ function parseFields(fieldData: LeadFieldData[]) {
   };
 }
 
+async function logWebhook(log: {
+  event_type: string;
+  page_id?: string;
+  leadgen_id?: string;
+  form_id?: string;
+  status: string;
+  error_message?: string;
+  payload?: unknown;
+  lead_id?: string;
+}) {
+  try {
+    await cloudAdmin.from("webhook_logs").insert({
+      event_type: log.event_type,
+      page_id: log.page_id || null,
+      leadgen_id: log.leadgen_id || null,
+      form_id: log.form_id || null,
+      status: log.status,
+      error_message: log.error_message || null,
+      payload: log.payload || null,
+      lead_id: log.lead_id || null,
+    });
+  } catch (e) {
+    console.error("Failed to log webhook:", e);
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -104,6 +121,11 @@ Deno.serve(async (req) => {
 
   if (!crmAdmin) {
     console.error("EXTERNAL_SUPABASE_URL/KEY não configurados");
+    await logWebhook({
+      event_type: "system",
+      status: "error",
+      error_message: "EXTERNAL_SUPABASE_URL/KEY não configurados",
+    });
     return new Response(
       JSON.stringify({ error: "CRM database not configured" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
@@ -121,6 +143,8 @@ Deno.serve(async (req) => {
       for (const change of changes) {
         if (change.field !== "leadgen") continue;
         const leadgenId = change.value?.leadgen_id;
+        const formId = change.value?.form_id || null;
+        const pageId = entry.id || change.value?.page_id || null;
         if (!leadgenId) continue;
 
         // Tenta buscar dados completos do lead na Graph API
@@ -130,7 +154,6 @@ Deno.serve(async (req) => {
         if (details?.field_data) {
           fields = parseFields(details.field_data);
         } else if (change.value?._test_data) {
-          // Fallback para leads de teste enviados pela função fb-test-lead
           const t = change.value._test_data;
           fields = {
             name: t.name || "Lead Teste",
@@ -160,10 +183,20 @@ Deno.serve(async (req) => {
         if (insertErr || !lead) {
           console.error("insert lead failed:", insertErr);
           errors.push(insertErr?.message || "insert failed");
+
+          await logWebhook({
+            event_type: "leadgen",
+            page_id: pageId,
+            leadgen_id: leadgenId,
+            form_id: formId,
+            status: "error",
+            error_message: insertErr?.message || "insert failed",
+            payload: { fields, change_value: change.value },
+          });
           continue;
         }
 
-        // Round-robin: pega próximo corretor ativo (se a função existir no CRM)
+        // Round-robin
         try {
           const { error: distErr } = await crmAdmin.rpc("distribute_lead", {
             _lead_id: lead.id,
@@ -175,6 +208,17 @@ Deno.serve(async (req) => {
 
         created.push(lead.id);
         console.log(`Lead ${lead.id} criado no CRM (${fields.name})`);
+
+        // Log de sucesso
+        await logWebhook({
+          event_type: "leadgen",
+          page_id: pageId,
+          leadgen_id: leadgenId,
+          form_id: formId,
+          status: "success",
+          lead_id: lead.id,
+          payload: { fields, form_id: formId },
+        });
       }
     }
 
@@ -184,6 +228,11 @@ Deno.serve(async (req) => {
     });
   } catch (e) {
     console.error("webhook error:", e);
+    await logWebhook({
+      event_type: "unknown",
+      status: "error",
+      error_message: e instanceof Error ? e.message : "unknown",
+    });
     return new Response(
       JSON.stringify({ error: e instanceof Error ? e.message : "unknown" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
