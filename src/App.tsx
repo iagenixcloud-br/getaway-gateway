@@ -90,6 +90,16 @@ export default function App() {
               </ProtectedRoute>
             }
           />
+          <Route
+            path="/leads"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <Leads />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
         </Routes>
       </AuthProvider>
     </BrowserRouter>
