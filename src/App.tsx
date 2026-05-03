@@ -12,6 +12,7 @@ import { Roleta } from "./pages/Roleta";
 import { Relatorios } from "./pages/Relatorios";
 import { Integracao } from "./pages/Integracao";
 import { Dashboard } from "./pages/Dashboard";
+import { Leads } from "./pages/Leads";
 
 export default function App() {
   return (
