@@ -11,6 +11,7 @@ export function Login() {
   const [password, setPassword] = useState("");
   const [err, setErr] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   if (loading) return null;
   if (session) return <Navigate to="/" replace />;
