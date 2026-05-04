@@ -166,6 +166,41 @@ export function Integracao() {
       setDebugging(false);
     }
   }
+  async function pollJobStatus(jobId: string) {
+    const maxAttempts = 60; // poll for up to 5 min
+    for (let i = 0; i < maxAttempts; i++) {
+      await new Promise((r) => setTimeout(r, 5000));
+      try {
+        const res = await fetch(
+          `${CLOUD_FUNCTIONS_URL}/fb-sync-leads?job_id=${jobId}`,
+          { headers: { "Content-Type": "application/json", ...(CLOUD_PUBLISHABLE_KEY ? { apikey: CLOUD_PUBLISHABLE_KEY } : {}) } },
+        );
+        const data = await res.json();
+        setSyncResult(data);
+
+        if (data.status === "completed") {
+          setSyncing(false);
+          if (data.created > 0) {
+            toast.success(`${data.created} lead(s) importado(s) com sucesso!`);
+          } else {
+            toast(`Nenhum lead novo. ${data.skipped || 0} já existente(s).`);
+          }
+          return;
+        }
+        if (data.status === "failed") {
+          setSyncing(false);
+          toast.error(data.error || "Falha na sincronização");
+          return;
+        }
+        // still processing — continue polling
+      } catch {
+        // network blip, keep polling
+      }
+    }
+    setSyncing(false);
+    toast.error("Timeout — verifique os logs de webhook.");
+  }
+
   async function handleSyncLeads() {
     setSyncing(true);
     setSyncResult(null);
@@ -174,6 +209,7 @@ export function Integracao() {
       const accessToken = sessionData.session?.access_token;
       if (!accessToken) {
         toast.error("Você precisa estar logado para sincronizar.");
+        setSyncing(false);
         return;
       }
       const { data, error } = await invokeCloudFunction("fb-sync-leads", {
@@ -184,18 +220,18 @@ export function Integracao() {
       if (error) {
         toast.error(error);
         setSyncResult({ ok: false, error });
+        setSyncing(false);
+      } else if (data?.job_id) {
+        toast("Sincronização iniciada! Acompanhando progresso…");
+        setSyncResult({ status: "processing", message: "Processando leads…" });
+        pollJobStatus(data.job_id);
       } else {
         setSyncResult(data);
-        if (data?.created > 0) {
-          toast.success(`${data.created} lead(s) importado(s) com sucesso!`);
-        } else {
-          toast(`Nenhum lead novo encontrado. ${data?.skipped || 0} já existente(s).`);
-        }
+        setSyncing(false);
       }
     } catch (e: any) {
       toast.error(String(e?.message || e));
       setSyncResult({ ok: false, error: String(e?.message || e) });
-    } finally {
       setSyncing(false);
     }
   }
@@ -509,12 +545,22 @@ export function Integracao() {
           <div
             className="mt-4 rounded-lg px-4 py-3 text-sm space-y-1"
             style={{
-              background: syncResult.ok !== false ? "rgba(34,197,94,0.12)" : "rgba(239,68,68,0.12)",
-              border: `1px solid ${syncResult.ok !== false ? "rgba(34,197,94,0.4)" : "rgba(239,68,68,0.4)"}`,
-              color: syncResult.ok !== false ? "#86efac" : "#fca5a5",
+              background: syncResult.status === "processing" ? "rgba(59,130,246,0.12)"
+                : syncResult.status === "completed" ? "rgba(34,197,94,0.12)"
+                : syncResult.status === "failed" || syncResult.ok === false ? "rgba(239,68,68,0.12)"
+                : "rgba(34,197,94,0.12)",
+              border: `1px solid ${syncResult.status === "processing" ? "rgba(59,130,246,0.4)"
+                : syncResult.status === "failed" || syncResult.ok === false ? "rgba(239,68,68,0.4)"
+                : "rgba(34,197,94,0.4)"}`,
+              color: syncResult.status === "processing" ? "#93c5fd"
+                : syncResult.status === "failed" || syncResult.ok === false ? "#fca5a5"
+                : "#86efac",
             }}
           >
-            {syncResult.ok !== false ? (
+            {syncResult.status === "processing" && (
+              <p>⏳ {syncResult.message || "Processando leads em segundo plano…"}</p>
+            )}
+            {syncResult.status === "completed" && (
               <>
                 <p>✅ Sincronização concluída</p>
                 <p style={{ color: "var(--text-muted)", fontSize: 12 }}>
@@ -524,8 +570,12 @@ export function Integracao() {
                   {syncResult.errors?.length > 0 && ` · Erros: ${syncResult.errors.length}`}
                 </p>
               </>
-            ) : (
+            )}
+            {(syncResult.status === "failed" || syncResult.ok === false) && (
               <p>❌ {syncResult.error || "Erro desconhecido"}</p>
+            )}
+            {!syncResult.status && syncResult.ok !== false && (
+              <p>✅ {syncResult.message || "Operação concluída"}</p>
             )}
           </div>
         )}
