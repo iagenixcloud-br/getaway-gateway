@@ -128,8 +128,8 @@ export function useRoleta(enabled: boolean = true) {
   };
 
   const redistribute = async (leadId: string, corretorId: string | null) => {
-    const { error } = await supabase.functions.invoke("roleta-redistribute", {
-      body: { lead_id: leadId, corretor_id: corretorId },
+    const { error } = await invokeCloudFunction("roleta-redistribute", {
+      lead_id: leadId, corretor_id: corretorId,
     });
     if (error) setError(error.message);
     else load();
