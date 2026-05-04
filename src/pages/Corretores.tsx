@@ -425,6 +425,17 @@ export function Corretores() {
                           {c.is_admin ? "Admin" : "Corretor"}
                         </span>
                       </td>
+                      <td style={{ padding: "12px 16px" }}>
+                        <span
+                          className="badge"
+                          style={{
+                            background: c.is_active ? "rgba(34,197,94,0.15)" : "rgba(239,68,68,0.15)",
+                            color: c.is_active ? "#22c55e" : "#ef4444",
+                          }}
+                        >
+                          {c.is_active ? "Ativo" : "Inativo"}
+                        </span>
+                      </td>
                       <td style={{ padding: "12px 16px", textAlign: "right", whiteSpace: "nowrap" }}>
                         <button
                           onClick={() => openEdit(c)}
