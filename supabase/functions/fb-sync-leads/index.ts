@@ -185,10 +185,11 @@ Deno.serve(async (req) => {
             continue;
           }
 
-          // Insert into CRM
+          // Insert into CRM with corretor assignment (max 10 per corretor)
+          const assignTo = getNextCorretor();
           const { data: inserted, error: insertErr } = await crmAdmin
             .from("leads")
-            .insert({ ...fields, status: "lead_novo" })
+            .insert({ ...fields, status: "lead_novo", tenant_id: assignTo })
             .select("id")
             .single();
 
@@ -200,8 +201,6 @@ Deno.serve(async (req) => {
           // Track in sets for this run
           existingLeadgenIds.add(lead.id);
           if (normPhone) existingPhones.add(normPhone);
-
-          try { await crmAdmin.rpc("distribute_lead", { _lead_id: inserted.id }); } catch (_) {}
 
           await cloudAdmin.from("webhook_logs").insert({
             event_type: "leadgen_sync", page_id: PAGE_ID, leadgen_id: lead.id,
