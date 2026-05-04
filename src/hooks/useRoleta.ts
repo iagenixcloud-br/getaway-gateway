@@ -118,8 +118,8 @@ export function useRoleta(enabled: boolean = true) {
     setCorretores((prev) =>
       prev.map((c) => (c.id === corretorId ? { ...c, is_active: isActive } : c)),
     );
-    const { error } = await supabase.functions.invoke("toggle-corretor-active", {
-      body: { corretor_id: corretorId, is_active: isActive },
+    const { error } = await invokeCloudFunction("toggle-corretor-active", {
+      corretor_id: corretorId, is_active: isActive,
     });
     if (error) {
       setError(error.message);
