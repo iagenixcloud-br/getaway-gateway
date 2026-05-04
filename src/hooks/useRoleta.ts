@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
+import { invokeCloudFunction } from "../lib/cloudFunctions";
 
 export interface CorretorRoleta {
   id: string;
@@ -117,8 +118,8 @@ export function useRoleta(enabled: boolean = true) {
     setCorretores((prev) =>
       prev.map((c) => (c.id === corretorId ? { ...c, is_active: isActive } : c)),
     );
-    const { error } = await supabase.functions.invoke("toggle-corretor-active", {
-      body: { corretor_id: corretorId, is_active: isActive },
+    const { error } = await invokeCloudFunction("toggle-corretor-active", {
+      corretor_id: corretorId, is_active: isActive,
     });
     if (error) {
       setError(error.message);
@@ -127,8 +128,8 @@ export function useRoleta(enabled: boolean = true) {
   };
 
   const redistribute = async (leadId: string, corretorId: string | null) => {
-    const { error } = await supabase.functions.invoke("roleta-redistribute", {
-      body: { lead_id: leadId, corretor_id: corretorId },
+    const { error } = await invokeCloudFunction("roleta-redistribute", {
+      lead_id: leadId, corretor_id: corretorId,
     });
     if (error) setError(error.message);
     else load();

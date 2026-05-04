@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Navigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { supabase } from "../lib/supabase";
+import { invokeCloudFunction } from "../lib/cloudFunctions";
 
 function maskPhone(value: string): string {
   const digits = value.replace(/\D/g, "").slice(0, 11);
@@ -101,8 +102,8 @@ export function Corretores() {
   const handleToggleActive = async (c: Corretor) => {
     setTogglingId(c.id);
     const newActive = !c.is_active;
-    const { error } = await supabase.functions.invoke("toggle-corretor-active", {
-      body: { corretor_id: c.id, is_active: newActive },
+    const { error } = await invokeCloudFunction("toggle-corretor-active", {
+      corretor_id: c.id, is_active: newActive,
     });
     setTogglingId(null);
     if (!error) load();
@@ -134,13 +135,11 @@ export function Corretores() {
 
     // Chama a Edge Function 'create-corretor' que roda no servidor com service_role.
     // Isso NÃO troca a sessão do admin atual.
-    const { data, error } = await supabase.functions.invoke("create-corretor", {
-      body: {
-        name: name.trim(),
-        email: email.trim(),
-        password,
-        phone: normalizedPhone,
-      },
+    const { data, error } = await invokeCloudFunction("create-corretor", {
+      name: name.trim(),
+      email: email.trim(),
+      password,
+      phone: normalizedPhone,
     });
 
     setSubmitting(false);
@@ -191,8 +190,8 @@ export function Corretores() {
     setEditSubmitting(true);
     const normalizedPhone = phoneTrimmed ? toWhatsappJid(phoneTrimmed) : null;
 
-    const { data, error } = await supabase.functions.invoke("update-corretor", {
-      body: { user_id: editing.id, name: editName.trim(), phone: normalizedPhone },
+    const { data, error } = await invokeCloudFunction("update-corretor", {
+      user_id: editing.id, name: editName.trim(), phone: normalizedPhone,
     });
     setEditSubmitting(false);
 
@@ -215,8 +214,8 @@ export function Corretores() {
     setDeleting(true);
     setDeleteMsg(null);
 
-    const { data, error } = await supabase.functions.invoke("delete-corretor", {
-      body: { user_id: confirmDelete.id },
+    const { data, error } = await invokeCloudFunction("delete-corretor", {
+      user_id: confirmDelete.id,
     });
     setDeleting(false);
 

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Navigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { supabase } from "../lib/supabase";
+import { invokeCloudFunction } from "../lib/cloudFunctions";
 
 interface ReportSettings {
   id: number;
@@ -88,8 +89,8 @@ export function Relatorios() {
     setSending(true);
     setError(null);
     setSuccess(null);
-    const { data, error } = await supabase.functions.invoke("send-daily-report", {
-      body: { mode: "manual" },
+    const { data, error } = await invokeCloudFunction("send-daily-report", {
+      mode: "manual",
     });
     setSending(false);
     if (error || data?.error) {
