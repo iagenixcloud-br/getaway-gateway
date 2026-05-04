@@ -190,8 +190,8 @@ export function Corretores() {
     setEditSubmitting(true);
     const normalizedPhone = phoneTrimmed ? toWhatsappJid(phoneTrimmed) : null;
 
-    const { data, error } = await supabase.functions.invoke("update-corretor", {
-      body: { user_id: editing.id, name: editName.trim(), phone: normalizedPhone },
+    const { data, error } = await invokeCloudFunction("update-corretor", {
+      user_id: editing.id, name: editName.trim(), phone: normalizedPhone,
     });
     setEditSubmitting(false);
 
