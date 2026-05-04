@@ -39,6 +39,7 @@ interface Corretor {
   phone: string | null;
   created_at: string;
   is_admin: boolean;
+  is_active: boolean;
 }
 
 export function Corretores() {
@@ -63,6 +64,9 @@ export function Corretores() {
   const [editSubmitting, setEditSubmitting] = useState(false);
   const [editMsg, setEditMsg] = useState<string | null>(null);
 
+  // Toggle active
+  const [togglingId, setTogglingId] = useState<string | null>(null);
+
   // Delete confirm
   const [confirmDelete, setConfirmDelete] = useState<Corretor | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -71,7 +75,7 @@ export function Corretores() {
   const load = async () => {
     setLoading(true);
     const [profilesRes, rolesRes] = await Promise.all([
-      supabase.from("profiles").select("id,name,email,phone,created_at").order("created_at", { ascending: false }),
+      supabase.from("profiles").select("id,name,email,phone,created_at,is_active").order("created_at", { ascending: false }),
       supabase.from("user_roles").select("user_id,role"),
     ]);
     if (profilesRes.error) {
@@ -86,11 +90,22 @@ export function Corretores() {
     );
     setList(
       (profilesRes.data ?? []).map((p) => ({
-        ...(p as Omit<Corretor, "is_admin">),
+        ...(p as Omit<Corretor, "is_admin" | "is_active">),
         is_admin: adminIds.has((p as { id: string }).id),
+        is_active: (p as { is_active?: boolean }).is_active !== false,
       })),
     );
     setLoading(false);
+  };
+
+  const handleToggleActive = async (c: Corretor) => {
+    setTogglingId(c.id);
+    const newActive = !c.is_active;
+    const { error } = await supabase.functions.invoke("toggle-corretor-active", {
+      body: { corretor_id: c.id, is_active: newActive },
+    });
+    setTogglingId(null);
+    if (!error) load();
   };
 
   useEffect(() => {
@@ -372,6 +387,9 @@ export function Corretores() {
                 <th style={{ textAlign: "left", padding: "12px 16px", fontSize: 11, color: "var(--text-muted)", fontWeight: 600 }}>
                   Perfil
                 </th>
+                <th style={{ textAlign: "left", padding: "12px 16px", fontSize: 11, color: "var(--text-muted)", fontWeight: 600 }}>
+                  Status
+                </th>
                 <th style={{ textAlign: "right", padding: "12px 16px", fontSize: 11, color: "var(--text-muted)", fontWeight: 600 }}>
                   Ações
                 </th>
@@ -380,7 +398,7 @@ export function Corretores() {
             <tbody>
               {list.length === 0 ? (
                 <tr>
-                  <td colSpan={5} style={{ padding: 24, textAlign: "center", fontSize: 13, color: "var(--text-muted)" }}>
+                  <td colSpan={6} style={{ padding: 24, textAlign: "center", fontSize: 13, color: "var(--text-muted)" }}>
                     Nenhum corretor cadastrado.
                   </td>
                 </tr>
@@ -407,6 +425,17 @@ export function Corretores() {
                           {c.is_admin ? "Admin" : "Corretor"}
                         </span>
                       </td>
+                      <td style={{ padding: "12px 16px" }}>
+                        <span
+                          className="badge"
+                          style={{
+                            background: c.is_active ? "rgba(34,197,94,0.15)" : "rgba(239,68,68,0.15)",
+                            color: c.is_active ? "#22c55e" : "#ef4444",
+                          }}
+                        >
+                          {c.is_active ? "Ativo" : "Inativo"}
+                        </span>
+                      </td>
                       <td style={{ padding: "12px 16px", textAlign: "right", whiteSpace: "nowrap" }}>
                         <button
                           onClick={() => openEdit(c)}
@@ -424,6 +453,27 @@ export function Corretores() {
                         >
                           Editar
                         </button>
+                        {!isSelf && (
+                          <button
+                            onClick={() => handleToggleActive(c)}
+                            disabled={togglingId === c.id}
+                            title={c.is_active ? "Inativar corretor" : "Reativar corretor"}
+                            style={{
+                              background: c.is_active ? "rgba(245,158,11,0.1)" : "rgba(34,197,94,0.1)",
+                              border: `1px solid ${c.is_active ? "rgba(245,158,11,0.3)" : "rgba(34,197,94,0.3)"}`,
+                              color: c.is_active ? "#f59e0b" : "#22c55e",
+                              fontSize: 12,
+                              fontWeight: 600,
+                              padding: "6px 12px",
+                              borderRadius: 8,
+                              cursor: togglingId === c.id ? "not-allowed" : "pointer",
+                              opacity: togglingId === c.id ? 0.4 : 1,
+                              marginRight: 8,
+                            }}
+                          >
+                            {togglingId === c.id ? "..." : c.is_active ? "Inativar" : "Ativar"}
+                          </button>
+                        )}
                         <button
                           onClick={() => {
                             setConfirmDelete(c);
