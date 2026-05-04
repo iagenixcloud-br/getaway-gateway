@@ -415,10 +415,10 @@ function LeadModal({
             type="button"
             onClick={(e) => {
               e.stopPropagation();
-              const digits = lead.phone.replace(/[^\d]/g, "").replace(/^0+/, "");
-              if (!digits) { alert("Telefone não disponível"); return; }
-              // Tenta abrir via web.whatsapp.com (funciona mesmo quando api.whatsapp.com está bloqueado)
-              window.open(`https://web.whatsapp.com/send?phone=${digits}`, "_blank", "noopener,noreferrer");
+              const rawDigits = lead.phone.replace(/[^\d]/g, "").replace(/^0+/, "");
+              const digits = rawDigits.startsWith("55") ? rawDigits : `55${rawDigits}`;
+              if (!rawDigits) { alert("Telefone não disponível"); return; }
+              window.location.href = `https://api.whatsapp.com/send/?phone=${digits}&text&type=phone_number&app_absent=0`;
             }}
             className="flex items-center justify-center gap-2 py-3 rounded-xl w-full"
             style={{ background: "rgba(37,211,102,0.1)", border: "1px solid rgba(37,211,102,0.3)", color: "#25D366", fontSize: 13, fontWeight: 600, cursor: "pointer", textDecoration: "none" }}
