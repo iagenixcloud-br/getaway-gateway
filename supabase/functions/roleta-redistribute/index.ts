@@ -15,6 +15,11 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
+// External CRM credentials (same as used by the app client)
+const APP_AUTH_URL = "https://gycrprnkuwlzntqvpoxl.supabase.co";
+const APP_AUTH_ANON_KEY =
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd5Y3Jwcm5rdXdsem50cXZwb3hsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcwNzEyMzQsImV4cCI6MjA5MjY0NzIzNH0.w7RiS6L4gir4KIKWAZxdmXutyp7EDxIu9z62n0QUoRM";
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (req.method !== "POST") {
@@ -33,11 +38,8 @@ Deno.serve(async (req) => {
       });
     }
 
-    const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
-    const ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
-    const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-
-    const userClient = createClient(SUPABASE_URL, ANON_KEY, {
+    // Auth check against the CRM Supabase (where users/roles live)
+    const userClient = createClient(APP_AUTH_URL, APP_AUTH_ANON_KEY, {
       global: { headers: { Authorization: authHeader } },
     });
     const { data: { user }, error: userErr } = await userClient.auth.getUser();
@@ -48,11 +50,13 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { data: isAdmin } = await userClient.rpc("has_role", {
-      _user_id: user.id,
-      _role: "admin",
-    });
-    if (!isAdmin) {
+    const { data: roleRow } = await userClient
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", user.id)
+      .eq("role", "admin")
+      .maybeSingle();
+    if (!roleRow) {
       return new Response(JSON.stringify({ error: "Apenas admin" }), {
         status: 403,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -69,14 +73,17 @@ Deno.serve(async (req) => {
       });
     }
 
-    const admin = createClient(SUPABASE_URL, SERVICE_ROLE, {
+    // Use external CRM service role for data operations
+    const EXT_URL = Deno.env.get("EXTERNAL_SUPABASE_URL")!;
+    const EXT_SERVICE = Deno.env.get("EXTERNAL_SUPABASE_SERVICE_ROLE_KEY")!;
+    const crmAdmin = createClient(EXT_URL, EXT_SERVICE, {
       auth: { autoRefreshToken: false, persistSession: false },
     });
 
     // ── Validação: máximo 10 leads por corretor ──
     const MAX_LEADS_PER_CORRETOR = 10;
     if (corretorId) {
-      const { count, error: countErr } = await admin
+      const { count, error: countErr } = await crmAdmin
         .from("leads")
         .select("id", { count: "exact", head: true })
         .eq("tenant_id", corretorId);
@@ -94,7 +101,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    const { error: updErr } = await admin
+    const { error: updErr } = await crmAdmin
       .from("leads")
       .update({ tenant_id: corretorId })
       .eq("id", leadId);
@@ -105,7 +112,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    await admin.from("lead_assignments").insert({
+    await crmAdmin.from("lead_assignments").insert({
       lead_id: leadId,
       corretor_id: corretorId,
       source: "manual",
