@@ -54,19 +54,19 @@ Deno.serve(async (req) => {
       });
     }
 
-    const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
-    const ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
-    const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const EXT_URL = Deno.env.get("EXTERNAL_SUPABASE_URL")!;
+    const EXT_SERVICE = Deno.env.get("EXTERNAL_SUPABASE_SERVICE_ROLE_KEY")!;
+    const token = authHeader.replace("Bearer ", "");
 
-    // Cliente "como o usuário" — para validar a sessão e checar role
-    const userClient = createClient(SUPABASE_URL, ANON_KEY, {
-      global: { headers: { Authorization: authHeader } },
+    // Cliente admin no CRM externo — valida o JWT recebido e executa mutações autorizadas.
+    const adminClient = createClient(EXT_URL, EXT_SERVICE, {
+      auth: { autoRefreshToken: false, persistSession: false },
     });
 
     const {
       data: { user },
       error: userErr,
-    } = await userClient.auth.getUser();
+    } = await adminClient.auth.getUser(token);
 
     if (userErr || !user) {
       return new Response(JSON.stringify({ error: "Sessão inválida" }), {
@@ -75,11 +75,13 @@ Deno.serve(async (req) => {
       });
     }
 
-    // 2) Confere que é admin (via função has_role criada na migration)
-    const { data: isAdminData, error: roleErr } = await userClient.rpc(
-      "has_role",
-      { _user_id: user.id, _role: "admin" },
-    );
+    // 2) Confere que é admin no CRM externo
+    const { data: roleRow, error: roleErr } = await adminClient
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", user.id)
+      .eq("role", "admin")
+      .maybeSingle();
 
     if (roleErr) {
       return new Response(
@@ -90,7 +92,7 @@ Deno.serve(async (req) => {
         },
       );
     }
-    if (!isAdminData) {
+    if (!roleRow) {
       return new Response(
         JSON.stringify({ error: "Apenas administradores podem cadastrar corretores" }),
         {
@@ -128,11 +130,6 @@ Deno.serve(async (req) => {
         },
       );
     }
-
-    // 4) Cliente admin — usa SERVICE_ROLE para criar o usuário
-    const adminClient = createClient(SUPABASE_URL, SERVICE_ROLE, {
-      auth: { autoRefreshToken: false, persistSession: false },
-    });
 
     // 4a) Cria usuário já com email confirmado
     const { data: created, error: createErr } =
