@@ -109,8 +109,8 @@ Deno.serve(async (req) => {
       .eq("is_active", true)
       .order("last_received_at", { ascending: true, nullsFirst: true });
 
-    // Count current leads per corretor
-    const { data: allLeads } = await crmAdmin.from("leads").select("tenant_id").not("tenant_id", "is", null).limit(5000);
+    // Count only "lead_novo" leads per corretor (other statuses don't count toward cap)
+    const { data: allLeads } = await crmAdmin.from("leads").select("tenant_id").eq("status", "lead_novo").not("tenant_id", "is", null).limit(5000);
     const leadCounts = new Map<string, number>();
     (allLeads || []).forEach((l: any) => {
       leadCounts.set(l.tenant_id, (leadCounts.get(l.tenant_id) || 0) + 1);

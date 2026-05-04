@@ -166,7 +166,7 @@ Deno.serve(async (req) => {
           fields = { name: "Lead Facebook", phone: "", email: null, city: null, interest: null };
         }
 
-        // Determine next corretor (max 10 leads each)
+        // Determine next corretor (max 10 leads with status "lead_novo" each)
         const MAX_LEADS = 10;
         let assignTo: string | null = null;
         try {
@@ -180,6 +180,7 @@ Deno.serve(async (req) => {
             const { data: countData } = await crmAdmin
               .from("leads")
               .select("tenant_id")
+              .eq("status", "lead_novo")
               .not("tenant_id", "is", null);
 
             const counts = new Map<string, number>();
