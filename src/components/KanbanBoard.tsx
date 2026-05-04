@@ -382,9 +382,16 @@ function LeadModal({
         {/* Action Buttons */}
         <div className="grid grid-cols-2 gap-3">
           <a
-            href={`https://wa.me/${lead.phone.replace(/\D/g, "")}`}
+            href={`https://wa.me/${lead.phone.replace(/[^\d]/g, "").replace(/^0+/, "")}`}
             target="_blank"
             rel="noopener noreferrer"
+            onClick={(e) => {
+              e.stopPropagation();
+              const digits = lead.phone.replace(/[^\d]/g, "").replace(/^0+/, "");
+              if (!digits) { e.preventDefault(); alert("Telefone não disponível"); return; }
+              window.open(`https://wa.me/${digits}`, "_blank", "noopener,noreferrer");
+              e.preventDefault();
+            }}
             className="flex items-center justify-center gap-2 py-3 rounded-xl"
             style={{ background: "rgba(37,211,102,0.1)", border: "1px solid rgba(37,211,102,0.3)", color: "#25D366", fontSize: 13, fontWeight: 600, cursor: "pointer", textDecoration: "none" }}
           >
