@@ -39,6 +39,7 @@ interface Corretor {
   phone: string | null;
   created_at: string;
   is_admin: boolean;
+  is_active: boolean;
 }
 
 export function Corretores() {
