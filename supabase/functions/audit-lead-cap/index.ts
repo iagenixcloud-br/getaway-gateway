@@ -19,8 +19,8 @@ Deno.serve(async (req) => {
   // Get all corretores
   const { data: profiles } = await crm.from("profiles").select("id, name").order("name");
 
-  // Get all assigned leads
-  const { data: allLeads } = await crm.from("leads").select("id, tenant_id, created_at").not("tenant_id", "is", null).order("created_at", { ascending: true });
+  // Get all assigned leads with status "lead_novo" (only these count toward cap)
+  const { data: allLeads } = await crm.from("leads").select("id, tenant_id, created_at").eq("status", "lead_novo").not("tenant_id", "is", null).order("created_at", { ascending: true });
 
   // Group by corretor
   const grouped = new Map<string, { id: string; created_at: string }[]>();
