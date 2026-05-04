@@ -166,41 +166,6 @@ export function Integracao() {
       setDebugging(false);
     }
   }
-  async function pollJobStatus(jobId: string) {
-    const maxAttempts = 60; // poll for up to 5 min
-    for (let i = 0; i < maxAttempts; i++) {
-      await new Promise((r) => setTimeout(r, 5000));
-      try {
-        const res = await fetch(
-          `${CLOUD_FUNCTIONS_URL}/fb-sync-leads?job_id=${jobId}`,
-          { headers: { "Content-Type": "application/json", ...(CLOUD_PUBLISHABLE_KEY ? { apikey: CLOUD_PUBLISHABLE_KEY } : {}) } },
-        );
-        const data = await res.json();
-        setSyncResult(data);
-
-        if (data.status === "completed") {
-          setSyncing(false);
-          if (data.created > 0) {
-            toast.success(`${data.created} lead(s) importado(s) com sucesso!`);
-          } else {
-            toast(`Nenhum lead novo. ${data.skipped || 0} já existente(s).`);
-          }
-          return;
-        }
-        if (data.status === "failed") {
-          setSyncing(false);
-          toast.error(data.error || "Falha na sincronização");
-          return;
-        }
-        // still processing — continue polling
-      } catch {
-        // network blip, keep polling
-      }
-    }
-    setSyncing(false);
-    toast.error("Timeout — verifique os logs de webhook.");
-  }
-
   async function handleSyncLeads() {
     setSyncing(true);
     setSyncResult(null);
@@ -214,24 +179,24 @@ export function Integracao() {
       }
       const { data, error } = await invokeCloudFunction("fb-sync-leads", {
         method: "POST",
-        body: { max_pages: 10, limit: 100 },
+        body: { max_pages: 5, limit: 50 },
         authToken: accessToken,
       });
       if (error) {
         toast.error(error);
         setSyncResult({ ok: false, error });
-        setSyncing(false);
-      } else if (data?.job_id) {
-        toast("Sincronização iniciada! Acompanhando progresso…");
-        setSyncResult({ status: "processing", message: "Processando leads…" });
-        pollJobStatus(data.job_id);
       } else {
         setSyncResult(data);
-        setSyncing(false);
+        if (data?.created > 0) {
+          toast.success(`${data.created} lead(s) importado(s) com sucesso!`);
+        } else {
+          toast(`Nenhum lead novo. ${data?.skipped || 0} já existente(s).`);
+        }
       }
     } catch (e: any) {
       toast.error(String(e?.message || e));
       setSyncResult({ ok: false, error: String(e?.message || e) });
+    } finally {
       setSyncing(false);
     }
   }
