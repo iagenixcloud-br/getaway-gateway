@@ -54,6 +54,10 @@ function fieldValue(fieldData: Array<{ name: string; values?: string[] }>, keys:
   return null;
 }
 
+function normalizePhone(raw: string): string {
+  return raw.replace(/\D/g, "").replace(/^0+/, "");
+}
+
 function parseLead(lead: any, formName: string) {
   const fieldData = Array.isArray(lead.field_data) ? lead.field_data : [];
   const name = fieldValue(fieldData, ["full_name", "first_name", "nome", "name"]) || "Lead Facebook";
@@ -71,28 +75,25 @@ function parseLead(lead: any, formName: string) {
   };
 }
 
-// Generate a unique job ID
-function jobId() {
-  return crypto.randomUUID();
-}
+Deno.serve(async (req) => {
+  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+  if (req.method !== "POST") return json({ ok: false, error: "Método não permitido" }, 405);
 
-// Store sync job status in webhook_logs with a special event_type
-async function upsertJobStatus(id: string, status: string, details: Record<string, unknown> = {}) {
-  await cloudAdmin.from("webhook_logs").upsert({
-    id,
-    event_type: "sync_job",
-    page_id: PAGE_ID,
-    status,
-    payload: details,
-  }, { onConflict: "id" });
-}
+  const auth = await requireAdmin(req);
+  if (auth.error) return auth.error;
 
-async function performSync(job: string, maxPages: number, limit: number, token: string) {
+  let body: { max_pages?: number; limit?: number } = {};
+  try { body = await req.json(); } catch { body = {}; }
+
+  const maxPages = Math.min(Math.max(Number(body.max_pages || 3), 1), 10);
+  const limit = Math.min(Math.max(Number(body.limit || 50), 10), 100);
+  const token = await getFbToken();
+  if (!token) return json({ ok: false, error: "Token do Facebook não configurado" }, 500);
+
   const result = { forms_checked: 0, fetched: 0, created: 0, skipped: 0, errors: [] as string[] };
 
   try {
-    await upsertJobStatus(job, "processing", result);
-
+    // 1. Get active forms
     const formsRes = await fetch(`https://graph.facebook.com/v21.0/${PAGE_ID}/leadgen_forms?fields=id,name,status&limit=100&access_token=${encodeURIComponent(token)}`);
     const formsData = await formsRes.json();
     if (!formsRes.ok || formsData.error) throw new Error(formsData.error?.message || "Erro ao listar formulários");
@@ -100,6 +101,23 @@ async function performSync(job: string, maxPages: number, limit: number, token: 
     const activeForms = (formsData.data || []).filter((f: any) => f.status === "ACTIVE");
     result.forms_checked = activeForms.length;
 
+    // 2. Fetch ALL existing phone numbers from CRM for fast dedup
+    const { data: existingLeads } = await crmAdmin.from("leads").select("phone").limit(5000);
+    const existingPhones = new Set(
+      (existingLeads || []).map((l: any) => normalizePhone(l.phone || "")).filter(Boolean)
+    );
+
+    // 3. Also check webhook_logs for leadgen_ids already processed
+    const { data: existingLogs } = await cloudAdmin
+      .from("webhook_logs")
+      .select("leadgen_id")
+      .not("leadgen_id", "is", null)
+      .limit(5000);
+    const existingLeadgenIds = new Set(
+      (existingLogs || []).map((l: any) => l.leadgen_id).filter(Boolean)
+    );
+
+    // 4. Process each form
     for (const form of activeForms) {
       let nextUrl: string | null = `https://graph.facebook.com/v21.0/${form.id}/leads?fields=id,created_time,field_data,platform&limit=${limit}&access_token=${encodeURIComponent(token)}`;
 
@@ -111,15 +129,29 @@ async function performSync(job: string, maxPages: number, limit: number, token: 
         for (const lead of data.data || []) {
           result.fetched++;
 
-          const { data: existing } = await cloudAdmin
-            .from("webhook_logs")
-            .select("id")
-            .eq("leadgen_id", lead.id)
-            .maybeSingle();
-
-          if (existing) { result.skipped++; continue; }
+          // Skip if leadgen_id already processed
+          if (existingLeadgenIds.has(lead.id)) {
+            result.skipped++;
+            continue;
+          }
 
           const fields = parseLead(lead, form.name || form.id);
+
+          // Skip if phone already exists in CRM
+          const normPhone = normalizePhone(fields.phone);
+          if (normPhone && existingPhones.has(normPhone)) {
+            result.skipped++;
+            // Record in webhook_logs so we don't re-check next time
+            existingLeadgenIds.add(lead.id);
+            await cloudAdmin.from("webhook_logs").insert({
+              event_type: "leadgen_sync", page_id: PAGE_ID, leadgen_id: lead.id,
+              form_id: form.id, status: "skipped_duplicate",
+              payload: { form_name: form.name, phone: fields.phone },
+            });
+            continue;
+          }
+
+          // Insert into CRM
           const { data: inserted, error: insertErr } = await crmAdmin
             .from("leads")
             .insert({ ...fields, status: "lead_novo" })
@@ -128,16 +160,14 @@ async function performSync(job: string, maxPages: number, limit: number, token: 
 
           if (insertErr || !inserted) {
             result.errors.push(`${lead.id}: ${insertErr?.message || "falha"}`);
-            await cloudAdmin.from("webhook_logs").insert({
-              event_type: "leadgen_sync", page_id: PAGE_ID, leadgen_id: lead.id,
-              form_id: form.id, status: "error",
-              error_message: insertErr?.message || "falha ao inserir",
-              payload: { form_name: form.name, platform: lead.platform, fields },
-            });
             continue;
           }
 
-          try { await crmAdmin.rpc("distribute_lead", { _lead_id: inserted.id }); } catch (_) { /* optional */ }
+          // Track in sets for this run
+          existingLeadgenIds.add(lead.id);
+          if (normPhone) existingPhones.add(normPhone);
+
+          try { await crmAdmin.rpc("distribute_lead", { _lead_id: inserted.id }); } catch (_) {}
 
           await cloudAdmin.from("webhook_logs").insert({
             event_type: "leadgen_sync", page_id: PAGE_ID, leadgen_id: lead.id,
@@ -150,48 +180,11 @@ async function performSync(job: string, maxPages: number, limit: number, token: 
       }
     }
 
-    await upsertJobStatus(job, "completed", result);
     console.log("Sync completed", result);
+    return json({ ok: true, status: "completed", ...result });
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
-    await upsertJobStatus(job, "failed", { ...result, error: msg });
     console.error("Sync failed", msg);
+    return json({ ok: false, status: "failed", error: msg, ...result }, 500);
   }
-}
-
-Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
-
-  // GET = check job status
-  if (req.method === "GET") {
-    const url = new URL(req.url);
-    const id = url.searchParams.get("job_id");
-    if (!id) return json({ error: "job_id obrigatório" }, 400);
-
-    const { data } = await cloudAdmin.from("webhook_logs").select("status, payload").eq("id", id).maybeSingle();
-    if (!data) return json({ status: "not_found" }, 404);
-    return json({ status: data.status, ...((data.payload as Record<string, unknown>) || {}) });
-  }
-
-  if (req.method !== "POST") return json({ ok: false, error: "Método não permitido" }, 405);
-
-  const auth = await requireAdmin(req);
-  if (auth.error) return auth.error;
-
-  let body: { max_pages?: number; limit?: number } = {};
-  try { body = await req.json(); } catch { body = {}; }
-
-  const maxPages = Math.min(Math.max(Number(body.max_pages || 5), 1), 20);
-  const limit = Math.min(Math.max(Number(body.limit || 100), 25), 100);
-  const token = await getFbToken();
-  if (!token) return json({ ok: false, error: "Token do Facebook não configurado" }, 500);
-
-  const job = jobId();
-  await upsertJobStatus(job, "pending", { max_pages: maxPages, limit });
-
-  // Fire and forget — EdgeRuntime.waitUntil keeps the function alive
-  // @ts-ignore EdgeRuntime is a Supabase global
-  EdgeRuntime.waitUntil(performSync(job, maxPages, limit, token));
-
-  return json({ ok: true, job_id: job, message: "Sincronização iniciada. Acompanhe o progresso." }, 202);
 });
