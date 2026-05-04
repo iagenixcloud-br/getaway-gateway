@@ -11,3 +11,27 @@ verify_jwt = false
 
 [functions.fb-subscribe]
 verify_jwt = false
+
+[functions.delete-corretor]
+verify_jwt = false
+
+[functions.create-corretor]
+verify_jwt = false
+
+[functions.update-corretor]
+verify_jwt = false
+
+[functions.toggle-corretor-active]
+verify_jwt = false
+
+[functions.roleta-redistribute]
+verify_jwt = false
+
+[functions.send-daily-report]
+verify_jwt = false
+
+[functions.audit-lead-cap]
+verify_jwt = false
+
+[functions.fb-sync-leads]
+verify_jwt = false
