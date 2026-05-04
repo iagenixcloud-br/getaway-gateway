@@ -214,8 +214,8 @@ export function Corretores() {
     setDeleting(true);
     setDeleteMsg(null);
 
-    const { data, error } = await supabase.functions.invoke("delete-corretor", {
-      body: { user_id: confirmDelete.id },
+    const { data, error } = await invokeCloudFunction("delete-corretor", {
+      user_id: confirmDelete.id,
     });
     setDeleting(false);
 
