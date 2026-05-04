@@ -101,6 +101,40 @@ Deno.serve(async (req) => {
     const activeForms = (formsData.data || []).filter((f: any) => f.status === "ACTIVE");
     result.forms_checked = activeForms.length;
 
+    // 1b. Load active corretores and their current lead counts for round-robin with cap
+    const MAX_LEADS_PER_CORRETOR = 10;
+    const { data: corretoresRaw } = await crmAdmin
+      .from("profiles")
+      .select("id, name, is_active, last_received_at")
+      .eq("is_active", true)
+      .order("last_received_at", { ascending: true, nullsFirst: true });
+
+    // Count current leads per corretor
+    const { data: allLeads } = await crmAdmin.from("leads").select("tenant_id").not("tenant_id", "is", null).limit(5000);
+    const leadCounts = new Map<string, number>();
+    (allLeads || []).forEach((l: any) => {
+      leadCounts.set(l.tenant_id, (leadCounts.get(l.tenant_id) || 0) + 1);
+    });
+
+    const activeCorretores = (corretoresRaw || []).filter((c: any) => c.is_active !== false);
+    let corretorIndex = 0;
+
+    function getNextCorretor(): string | null {
+      if (activeCorretores.length === 0) return null;
+      // Try each corretor starting from current index
+      for (let i = 0; i < activeCorretores.length; i++) {
+        const idx = (corretorIndex + i) % activeCorretores.length;
+        const c = activeCorretores[idx];
+        const count = leadCounts.get(c.id) || 0;
+        if (count < MAX_LEADS_PER_CORRETOR) {
+          corretorIndex = (idx + 1) % activeCorretores.length;
+          leadCounts.set(c.id, count + 1);
+          return c.id;
+        }
+      }
+      return null; // All corretores at max capacity
+    }
+
     // 2. Fetch ALL existing phone numbers from CRM for fast dedup
     const { data: existingLeads } = await crmAdmin.from("leads").select("phone").limit(5000);
     const existingPhones = new Set(
