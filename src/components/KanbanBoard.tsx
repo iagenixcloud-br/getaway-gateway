@@ -332,17 +332,45 @@ function LeadModal({
               <select
                 style={inputStyle}
                 value={lead.assignedTo ?? ""}
-                onChange={(e) => onAssign(e.target.value || null)}
+                onChange={(e) => {
+                  const id = e.target.value || null;
+                  if (id) {
+                    const count = leadCountByCorretor.get(id) ?? 0;
+                    if (count >= 10) {
+                      alert("Este corretor já atingiu o limite de 10 leads atribuídos.");
+                      return;
+                    }
+                  }
+                  onAssign(id);
+                }}
               >
                 <option value="" style={{ background: "#1a1a1a" }}>
                   — Não atribuído —
                 </option>
-                {corretores.map((c) => (
-                  <option key={c.id} value={c.id} style={{ background: "#1a1a1a" }}>
-                    {c.name}
-                  </option>
-                ))}
+                {corretores.map((c) => {
+                  const count = leadCountByCorretor.get(c.id) ?? 0;
+                  const atLimit = count >= 10;
+                  return (
+                    <option
+                      key={c.id}
+                      value={c.id}
+                      disabled={atLimit}
+                      style={{ background: "#1a1a1a", color: atLimit ? "#ef4444" : undefined }}
+                    >
+                      {c.name} ({count}/10){atLimit ? " — LIMITE" : ""}
+                    </option>
+                  );
+                })}
               </select>
+              {(() => {
+                const allFull = corretores.length > 0 && corretores.every((c) => (leadCountByCorretor.get(c.id) ?? 0) >= 10);
+                if (!allFull) return null;
+                return (
+                  <div style={{ marginTop: 6, padding: "6px 10px", borderRadius: 8, background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.3)", color: "#ef4444", fontSize: 11, fontWeight: 600 }}>
+                    ⚠ Todos os corretores atingiram o limite de 10 leads.
+                  </div>
+                );
+              })()}
             </div>
           )}
         </div>
