@@ -55,16 +55,22 @@ const formatBudget = (n: number | null): string => {
 };
 
 const initialsAvatar = (name: string): string => {
-  const initials = name
-    .split(" ")
+  // Strip non-ASCII decorative chars, then extract initials
+  const clean = name.replace(/[^\p{L}\p{N}\s]/gu, "").trim();
+  const initials = clean
+    .split(/\s+/)
     .map((p) => p[0])
     .filter(Boolean)
     .slice(0, 2)
     .join("")
     .toUpperCase();
-  return `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(
-    initials || name,
-  )}&backgroundColor=D4AF37&textColor=0a0a0a`;
+  try {
+    return `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(
+      initials || clean || "L",
+    )}&backgroundColor=D4AF37&textColor=0a0a0a`;
+  } catch {
+    return `https://api.dicebear.com/7.x/initials/svg?seed=L&backgroundColor=D4AF37&textColor=0a0a0a`;
+  }
 };
 
 const hoursSince = (iso: string): number => {
