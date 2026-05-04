@@ -102,8 +102,8 @@ export function Corretores() {
   const handleToggleActive = async (c: Corretor) => {
     setTogglingId(c.id);
     const newActive = !c.is_active;
-    const { error } = await supabase.functions.invoke("toggle-corretor-active", {
-      body: { corretor_id: c.id, is_active: newActive },
+    const { error } = await invokeCloudFunction("toggle-corretor-active", {
+      corretor_id: c.id, is_active: newActive,
     });
     setTogglingId(null);
     if (!error) load();
