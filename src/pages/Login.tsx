@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate, Navigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
+import { Eye, EyeOff } from "lucide-react";
 import logo from "@/assets/andrade-mark.png";
 
 export function Login() {
@@ -10,6 +11,7 @@ export function Login() {
   const [password, setPassword] = useState("");
   const [err, setErr] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   if (loading) return null;
   if (session) return <Navigate to="/" replace />;
@@ -93,23 +95,44 @@ export function Login() {
             <label style={{ fontSize: 11, color: "var(--text-muted)", display: "block", marginBottom: 4 }}>
               Senha
             </label>
-            <input
-              type="password"
-              required
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              autoComplete="current-password"
-              style={{
-                width: "100%",
-                background: "rgba(255,255,255,0.04)",
-                border: "1px solid var(--glass-border)",
-                borderRadius: 8,
-                padding: "10px 12px",
-                fontSize: 13,
-                color: "var(--text-primary)",
-                outline: "none",
-              }}
-            />
+            <div style={{ position: "relative" }}>
+              <input
+                type={showPassword ? "text" : "password"}
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                autoComplete="current-password"
+                style={{
+                  width: "100%",
+                  background: "rgba(255,255,255,0.04)",
+                  border: "1px solid var(--glass-border)",
+                  borderRadius: 8,
+                  padding: "10px 40px 10px 12px",
+                  fontSize: 13,
+                  color: "var(--text-primary)",
+                  outline: "none",
+                }}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                style={{
+                  position: "absolute",
+                  right: 10,
+                  top: "50%",
+                  transform: "translateY(-50%)",
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                  color: "var(--text-muted)",
+                  padding: 4,
+                  display: "flex",
+                  alignItems: "center",
+                }}
+              >
+                {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
+            </div>
           </div>
 
           {err && (

@@ -1,18 +1,10 @@
-# Ajuste no rodapé do FollowUpCard
+## Plano: Botão de visibilidade da senha no Login
 
-## O que muda
+Adicionar um ícone de olho no campo de senha da página de login, permitindo alternar entre mostrar e esconder a senha.
 
-No card da coluna **Follow-up**, no rodapé:
+### Alterações
 
-- **Remover** a etiqueta "Sem contato há Xd" (laranja, à direita).
-- **Aumentar** o nome do corretor responsável para ficar em destaque, ocupando todo o rodapé.
-
-## Detalhes técnicos
-
-Arquivo único: `src/components/KanbanBoard.tsx`, dentro do componente `FollowUpCard`.
-
-- Trocar o container `flex justify-between` por um `flex` simples.
-- Remover o `<span>` do `waitingLabel(lead.waitingHours)`.
-- Ajustar o nome do corretor: fonte de **10.5px → 13px**, peso **600**, cor `var(--text-primary)` (em vez de `--text-muted`), e ícone de pessoa um pouco maior (10px → 13px) na cor dourada (`var(--gold)`) para combinar com o resto do app.
-
-O ícone vermelho de alerta no canto superior direito (urgência > 72h) **continua igual**, sem mudança.
+**`src/pages/Login.tsx`**
+- Adicionar estado `showPassword` (boolean)
+- Trocar o `type` do input de senha entre `"password"` e `"text"` conforme o estado
+- Adicionar um botão com ícone de olho (Eye/EyeOff do lucide-react) posicionado dentro do campo de senha à direita
