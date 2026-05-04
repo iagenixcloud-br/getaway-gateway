@@ -49,7 +49,7 @@ interface LeadFieldData {
 async function fetchLeadDetails(leadgenId: string) {
   const token = await getFbToken();
   if (!token) return null;
-  const url = `https://graph.facebook.com/v19.0/${leadgenId}?access_token=${token}`;
+  const url = `https://graph.facebook.com/v25.0/${leadgenId}?access_token=${token}`;
   const res = await fetch(url);
   if (!res.ok) return null;
   return await res.json();
