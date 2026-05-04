@@ -64,6 +64,9 @@ export function Corretores() {
   const [editSubmitting, setEditSubmitting] = useState(false);
   const [editMsg, setEditMsg] = useState<string | null>(null);
 
+  // Toggle active
+  const [togglingId, setTogglingId] = useState<string | null>(null);
+
   // Delete confirm
   const [confirmDelete, setConfirmDelete] = useState<Corretor | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -72,7 +75,7 @@ export function Corretores() {
   const load = async () => {
     setLoading(true);
     const [profilesRes, rolesRes] = await Promise.all([
-      supabase.from("profiles").select("id,name,email,phone,created_at").order("created_at", { ascending: false }),
+      supabase.from("profiles").select("id,name,email,phone,created_at,is_active").order("created_at", { ascending: false }),
       supabase.from("user_roles").select("user_id,role"),
     ]);
     if (profilesRes.error) {
@@ -87,11 +90,22 @@ export function Corretores() {
     );
     setList(
       (profilesRes.data ?? []).map((p) => ({
-        ...(p as Omit<Corretor, "is_admin">),
+        ...(p as Omit<Corretor, "is_admin" | "is_active">),
         is_admin: adminIds.has((p as { id: string }).id),
+        is_active: (p as { is_active?: boolean }).is_active !== false,
       })),
     );
     setLoading(false);
+  };
+
+  const handleToggleActive = async (c: Corretor) => {
+    setTogglingId(c.id);
+    const newActive = !c.is_active;
+    const { error } = await supabase.functions.invoke("toggle-corretor-active", {
+      body: { corretor_id: c.id, is_active: newActive },
+    });
+    setTogglingId(null);
+    if (!error) load();
   };
 
   useEffect(() => {
