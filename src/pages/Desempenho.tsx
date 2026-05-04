@@ -17,6 +17,7 @@ import {
 } from "recharts";
 import { useAuth } from "../contexts/AuthContext";
 import { supabase, LeadRow } from "../lib/supabase";
+import { invokeCloudFunction } from "../lib/cloudFunctions";
 import { LeadStatus } from "../data/mockData";
 import { useCorretores } from "../hooks/useCorretores";
 
