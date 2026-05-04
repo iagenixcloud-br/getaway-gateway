@@ -8,3 +8,6 @@ verify_jwt = false
 
 [functions.fb-public-config]
 verify_jwt = false
+
+[functions.fb-subscribe]
+verify_jwt = false
