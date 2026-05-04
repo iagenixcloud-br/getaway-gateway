@@ -166,7 +166,41 @@ export function Integracao() {
       setDebugging(false);
     }
   }
+  async function handleSyncLeads() {
+    setSyncing(true);
+    setSyncResult(null);
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const accessToken = sessionData.session?.access_token;
+      if (!accessToken) {
+        toast.error("Você precisa estar logado para sincronizar.");
+        return;
+      }
+      const { data, error } = await invokeCloudFunction("fb-sync-leads", {
+        method: "POST",
+        body: { max_pages: 10, limit: 100 },
+        authToken: accessToken,
+      });
+      if (error) {
+        toast.error(error);
+        setSyncResult({ ok: false, error });
+      } else {
+        setSyncResult(data);
+        if (data?.created > 0) {
+          toast.success(`${data.created} lead(s) importado(s) com sucesso!`);
+        } else {
+          toast(`Nenhum lead novo encontrado. ${data?.skipped || 0} já existente(s).`);
+        }
+      }
+    } catch (e: any) {
+      toast.error(String(e?.message || e));
+      setSyncResult({ ok: false, error: String(e?.message || e) });
+    } finally {
+      setSyncing(false);
+    }
+  }
 
+  
   
 
   const FB_REDIRECT_URI = `${CLOUD_FUNCTIONS_URL}/fb-oauth-callback`;
