@@ -166,6 +166,38 @@ Deno.serve(async (req) => {
           fields = { name: "Lead Facebook", phone: "", email: null, city: null, interest: null };
         }
 
+        // Determine next corretor (max 10 leads each)
+        const MAX_LEADS = 10;
+        let assignTo: string | null = null;
+        try {
+          const { data: corretores } = await crmAdmin
+            .from("profiles")
+            .select("id")
+            .eq("is_active", true)
+            .order("last_received_at", { ascending: true, nullsFirst: true });
+
+          if (corretores?.length) {
+            const { data: countData } = await crmAdmin
+              .from("leads")
+              .select("tenant_id")
+              .not("tenant_id", "is", null);
+
+            const counts = new Map<string, number>();
+            (countData || []).forEach((l: any) => {
+              counts.set(l.tenant_id, (counts.get(l.tenant_id) || 0) + 1);
+            });
+
+            for (const c of corretores) {
+              if ((counts.get(c.id) || 0) < MAX_LEADS) {
+                assignTo = c.id;
+                break;
+              }
+            }
+          }
+        } catch (e) {
+          console.warn("corretor assignment failed:", e);
+        }
+
         // Insere o lead no Supabase do CRM
         const { data: lead, error: insertErr } = await crmAdmin
           .from("leads")
@@ -176,6 +208,7 @@ Deno.serve(async (req) => {
             city: fields.city,
             interest: fields.interest,
             status: "lead_novo",
+            tenant_id: assignTo,
           })
           .select()
           .single();
@@ -194,16 +227,6 @@ Deno.serve(async (req) => {
             payload: { fields, change_value: change.value },
           });
           continue;
-        }
-
-        // Round-robin
-        try {
-          const { error: distErr } = await crmAdmin.rpc("distribute_lead", {
-            _lead_id: lead.id,
-          });
-          if (distErr) console.warn("distribute_lead skipped:", distErr.message);
-        } catch (e) {
-          console.warn("distribute_lead not available:", e);
         }
 
         created.push(lead.id);
