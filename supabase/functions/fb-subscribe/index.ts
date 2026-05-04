@@ -2,6 +2,8 @@ import { corsHeaders } from "https://esm.sh/@supabase/supabase-js@2.95.0/cors";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.95.0";
 
 const PAGE_ID = "101491475744542"; // Salles Imóveis
+const FORM_ID = "849013068226913"; // Recreio 01 - Parcela Alta
+console.log("fb-subscribe diagnostic function loaded", { page_id: PAGE_ID });
 
 async function getFbToken(): Promise<string | null> {
   try {
@@ -37,7 +39,11 @@ Deno.serve(async (req) => {
         `https://graph.facebook.com/v21.0/${PAGE_ID}/subscribed_apps?access_token=${token}`,
       );
       const data = await res.json();
-      return new Response(JSON.stringify({ action: "list", page_id: PAGE_ID, ...data }, null, 2), {
+      const formRes = await fetch(
+        `https://graph.facebook.com/v21.0/${FORM_ID}?fields=id,name,status&access_token=${token}`,
+      );
+      const form = await formRes.json();
+      return new Response(JSON.stringify({ action: "list", page_id: PAGE_ID, form_id: FORM_ID, subscribed_apps: data, form }, null, 2), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
