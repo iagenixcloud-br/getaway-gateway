@@ -398,7 +398,7 @@ export function Corretores() {
             <tbody>
               {list.length === 0 ? (
                 <tr>
-                  <td colSpan={5} style={{ padding: 24, textAlign: "center", fontSize: 13, color: "var(--text-muted)" }}>
+                  <td colSpan={6} style={{ padding: 24, textAlign: "center", fontSize: 13, color: "var(--text-muted)" }}>
                     Nenhum corretor cadastrado.
                   </td>
                 </tr>
