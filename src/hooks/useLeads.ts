@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase, LeadRow } from "../lib/supabase";
+import { invokeCloudFunction } from "../lib/cloudFunctions";
 import { Lead, LeadStatus, LeadOrigin, LeadPurpose } from "../data/mockData";
 import { useAuth } from "../contexts/AuthContext";
 
@@ -201,6 +202,8 @@ export function useLeads() {
 
   const updateLeadStatus = async (id: string, newStatus: LeadStatus) => {
     // Otimista: move o card imediatamente
+    const oldLead = leads.find((l) => l.id === id);
+    const wasLeadNovo = oldLead?.status === "lead_novo";
     setLeads((prev) =>
       prev.map((l) => (l.id === id ? { ...l, status: newStatus } : l)),
     );
@@ -210,6 +213,9 @@ export function useLeads() {
       .eq("id", id);
     if (error) {
       setError(`Falha ao mover lead: ${error.message}`);
+    } else if (wasLeadNovo && newStatus !== "lead_novo") {
+      // Lead saiu de "lead_novo" — preencher automaticamente
+      invokeCloudFunction("auto-fill-leads", {}).catch(() => {});
     }
   };
 
