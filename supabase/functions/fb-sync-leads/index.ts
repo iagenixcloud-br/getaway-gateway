@@ -3,7 +3,7 @@ import { createClient } from "npm:@supabase/supabase-js@2.45.0";
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Allow-Methods": "POST, GET, OPTIONS",
 };
 
 const PAGE_ID = "101491475744542";
@@ -71,17 +71,108 @@ function parseLead(lead: any, formName: string) {
   };
 }
 
-async function graphGet(path: string, token: string) {
-  const url = new URL(`https://graph.facebook.com/v21.0/${path}`);
-  url.searchParams.set("access_token", token);
-  const res = await fetch(url.toString());
-  const data = await res.json();
-  if (!res.ok || data.error) throw new Error(data.error?.message || `Facebook retornou erro ${res.status}`);
-  return data;
+// Generate a unique job ID
+function jobId() {
+  return crypto.randomUUID();
+}
+
+// Store sync job status in webhook_logs with a special event_type
+async function upsertJobStatus(id: string, status: string, details: Record<string, unknown> = {}) {
+  await cloudAdmin.from("webhook_logs").upsert({
+    id,
+    event_type: "sync_job",
+    page_id: PAGE_ID,
+    status,
+    payload: details,
+  }, { onConflict: "id" });
+}
+
+async function performSync(job: string, maxPages: number, limit: number, token: string) {
+  const result = { forms_checked: 0, fetched: 0, created: 0, skipped: 0, errors: [] as string[] };
+
+  try {
+    await upsertJobStatus(job, "processing", result);
+
+    const formsRes = await fetch(`https://graph.facebook.com/v21.0/${PAGE_ID}/leadgen_forms?fields=id,name,status&limit=100&access_token=${encodeURIComponent(token)}`);
+    const formsData = await formsRes.json();
+    if (!formsRes.ok || formsData.error) throw new Error(formsData.error?.message || "Erro ao listar formulários");
+
+    const activeForms = (formsData.data || []).filter((f: any) => f.status === "ACTIVE");
+    result.forms_checked = activeForms.length;
+
+    for (const form of activeForms) {
+      let nextUrl: string | null = `https://graph.facebook.com/v21.0/${form.id}/leads?fields=id,created_time,field_data,platform&limit=${limit}&access_token=${encodeURIComponent(token)}`;
+
+      for (let page = 0; nextUrl && page < maxPages; page++) {
+        const res = await fetch(nextUrl);
+        const data = await res.json();
+        if (!res.ok || data.error) throw new Error(data.error?.message || `Erro formulário ${form.id}`);
+
+        for (const lead of data.data || []) {
+          result.fetched++;
+
+          const { data: existing } = await cloudAdmin
+            .from("webhook_logs")
+            .select("id")
+            .eq("leadgen_id", lead.id)
+            .maybeSingle();
+
+          if (existing) { result.skipped++; continue; }
+
+          const fields = parseLead(lead, form.name || form.id);
+          const { data: inserted, error: insertErr } = await crmAdmin
+            .from("leads")
+            .insert({ ...fields, status: "lead_novo" })
+            .select("id")
+            .single();
+
+          if (insertErr || !inserted) {
+            result.errors.push(`${lead.id}: ${insertErr?.message || "falha"}`);
+            await cloudAdmin.from("webhook_logs").insert({
+              event_type: "leadgen_sync", page_id: PAGE_ID, leadgen_id: lead.id,
+              form_id: form.id, status: "error",
+              error_message: insertErr?.message || "falha ao inserir",
+              payload: { form_name: form.name, platform: lead.platform, fields },
+            });
+            continue;
+          }
+
+          try { await crmAdmin.rpc("distribute_lead", { _lead_id: inserted.id }); } catch (_) { /* optional */ }
+
+          await cloudAdmin.from("webhook_logs").insert({
+            event_type: "leadgen_sync", page_id: PAGE_ID, leadgen_id: lead.id,
+            form_id: form.id, status: "success", lead_id: inserted.id,
+            payload: { form_name: form.name, platform: lead.platform, fields, created_time: lead.created_time },
+          });
+          result.created++;
+        }
+        nextUrl = data.paging?.next || null;
+      }
+    }
+
+    await upsertJobStatus(job, "completed", result);
+    console.log("Sync completed", result);
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    await upsertJobStatus(job, "failed", { ...result, error: msg });
+    console.error("Sync failed", msg);
+  }
 }
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+
+  // GET = check job status
+  if (req.method === "GET") {
+    const url = new URL(req.url);
+    const id = url.searchParams.get("job_id");
+    if (!id) return json({ error: "job_id obrigatório" }, 400);
+
+    const { data } = await cloudAdmin.from("webhook_logs").select("status, payload").eq("id", id).maybeSingle();
+    if (!data) return json({ status: "not_found" }, 404);
+    return json({ status: data.status, ...((data.payload as Record<string, unknown>) || {}) });
+  }
+
   if (req.method !== "POST") return json({ ok: false, error: "Método não permitido" }, 405);
 
   const auth = await requireAdmin(req);
@@ -95,75 +186,12 @@ Deno.serve(async (req) => {
   const token = await getFbToken();
   if (!token) return json({ ok: false, error: "Token do Facebook não configurado" }, 500);
 
-  const result = { ok: true, page_id: PAGE_ID, forms_checked: 0, fetched: 0, created: 0, skipped: 0, errors: [] as string[] };
+  const job = jobId();
+  await upsertJobStatus(job, "pending", { max_pages: maxPages, limit });
 
-  try {
-    const formsData = await graphGet(`${PAGE_ID}/leadgen_forms?fields=id,name,status&limit=100`, token);
-    const activeForms = (formsData.data || []).filter((form: any) => form.status === "ACTIVE");
-    result.forms_checked = activeForms.length;
+  // Fire and forget — EdgeRuntime.waitUntil keeps the function alive
+  // @ts-ignore EdgeRuntime is a Supabase global
+  EdgeRuntime.waitUntil(performSync(job, maxPages, limit, token));
 
-    for (const form of activeForms) {
-      let nextUrl: string | null = `https://graph.facebook.com/v21.0/${form.id}/leads?fields=id,created_time,field_data,platform&limit=${limit}&access_token=${encodeURIComponent(token)}`;
-
-      for (let page = 0; nextUrl && page < maxPages; page++) {
-        const res = await fetch(nextUrl);
-        const data = await res.json();
-        if (!res.ok || data.error) throw new Error(data.error?.message || `Erro ao ler leads do formulário ${form.id}`);
-
-        for (const lead of data.data || []) {
-          result.fetched++;
-          const { data: existing } = await cloudAdmin
-            .from("webhook_logs")
-            .select("id")
-            .eq("leadgen_id", lead.id)
-            .maybeSingle();
-
-          if (existing) {
-            result.skipped++;
-            continue;
-          }
-
-          const fields = parseLead(lead, form.name || form.id);
-          const { data: inserted, error: insertErr } = await crmAdmin
-            .from("leads")
-            .insert({ ...fields, status: "lead_novo" })
-            .select("id")
-            .single();
-
-          if (insertErr || !inserted) {
-            result.errors.push(`${lead.id}: ${insertErr?.message || "falha ao inserir"}`);
-            await cloudAdmin.from("webhook_logs").insert({
-              event_type: "leadgen_sync",
-              page_id: PAGE_ID,
-              leadgen_id: lead.id,
-              form_id: form.id,
-              status: "error",
-              error_message: insertErr?.message || "falha ao inserir",
-              payload: { form_name: form.name, platform: lead.platform, fields },
-            });
-            continue;
-          }
-
-          try { await crmAdmin.rpc("distribute_lead", { _lead_id: inserted.id }); } catch (_) { /* optional */ }
-
-          await cloudAdmin.from("webhook_logs").insert({
-            event_type: "leadgen_sync",
-            page_id: PAGE_ID,
-            leadgen_id: lead.id,
-            form_id: form.id,
-            status: "success",
-            lead_id: inserted.id,
-            payload: { form_name: form.name, platform: lead.platform, fields, created_time: lead.created_time },
-          });
-          result.created++;
-        }
-
-        nextUrl = data.paging?.next || null;
-      }
-    }
-
-    return json(result, result.errors.length ? 207 : 200);
-  } catch (e) {
-    return json({ ...result, ok: false, error: e instanceof Error ? e.message : String(e) }, 500);
-  }
+  return json({ ok: true, job_id: job, message: "Sincronização iniciada. Acompanhe o progresso." }, 202);
 });
