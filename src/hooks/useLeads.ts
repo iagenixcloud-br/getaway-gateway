@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase, LeadRow } from "../lib/supabase";
+import { invokeCloudFunction } from "../lib/cloudFunctions";
 import { Lead, LeadStatus, LeadOrigin, LeadPurpose } from "../data/mockData";
 import { useAuth } from "../contexts/AuthContext";
 
