@@ -61,6 +61,8 @@ async function invokeCloudFunction<T = any>(
 
 export function Integracao() {
   const [debugging, setDebugging] = useState(false);
+  const [syncing, setSyncing] = useState(false);
+  const [syncResult, setSyncResult] = useState<any>(null);
   const [saveMsg, setSaveMsg] = useState<{ type: "ok" | "err"; text: string } | null>(null);
   const [check, setCheck] = useState<CheckResult | null>(null);
   const [debug, setDebug] = useState<any>(null);
