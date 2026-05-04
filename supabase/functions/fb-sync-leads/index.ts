@@ -8,7 +8,7 @@ const corsHeaders = {
 
 const PAGE_ID = "101491475744542";
 const APP_AUTH_URL = "https://gycrprnkuwlzntqvpoxl.supabase.co";
-const APP_AUTH_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJodHRwczovL2d5Y3Jwcm5rdXdsem50cXZwb3hsLnN1cGFiYXNlLmNvL2F1dGgvdjEiLCJyb2xlIjoiYW5vbiIsImlhdCI6MTc3NzA3MTIzNCwiZXhwIjoyMDkyNjQ3MjM0fQ.w7RiS6L4gir4KIKWAZxdmXutyp7EDxIu9z62n0QUoRM";
+const APP_AUTH_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd5Y3Jwcm5rdXdsem50cXZwb3hsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcwNzEyMzQsImV4cCI6MjA5MjY0NzIzNH0.w7RiS6L4gir4KIKWAZxdmXutyp7EDxIu9z62n0QUoRM";
 
 const CLOUD_URL = Deno.env.get("SUPABASE_URL")!;
 const CLOUD_SERVICE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
