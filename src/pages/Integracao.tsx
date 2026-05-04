@@ -545,12 +545,22 @@ export function Integracao() {
           <div
             className="mt-4 rounded-lg px-4 py-3 text-sm space-y-1"
             style={{
-              background: syncResult.ok !== false ? "rgba(34,197,94,0.12)" : "rgba(239,68,68,0.12)",
-              border: `1px solid ${syncResult.ok !== false ? "rgba(34,197,94,0.4)" : "rgba(239,68,68,0.4)"}`,
-              color: syncResult.ok !== false ? "#86efac" : "#fca5a5",
+              background: syncResult.status === "processing" ? "rgba(59,130,246,0.12)"
+                : syncResult.status === "completed" ? "rgba(34,197,94,0.12)"
+                : syncResult.status === "failed" || syncResult.ok === false ? "rgba(239,68,68,0.12)"
+                : "rgba(34,197,94,0.12)",
+              border: `1px solid ${syncResult.status === "processing" ? "rgba(59,130,246,0.4)"
+                : syncResult.status === "failed" || syncResult.ok === false ? "rgba(239,68,68,0.4)"
+                : "rgba(34,197,94,0.4)"}`,
+              color: syncResult.status === "processing" ? "#93c5fd"
+                : syncResult.status === "failed" || syncResult.ok === false ? "#fca5a5"
+                : "#86efac",
             }}
           >
-            {syncResult.ok !== false ? (
+            {syncResult.status === "processing" && (
+              <p>⏳ {syncResult.message || "Processando leads em segundo plano…"}</p>
+            )}
+            {syncResult.status === "completed" && (
               <>
                 <p>✅ Sincronização concluída</p>
                 <p style={{ color: "var(--text-muted)", fontSize: 12 }}>
@@ -560,8 +570,12 @@ export function Integracao() {
                   {syncResult.errors?.length > 0 && ` · Erros: ${syncResult.errors.length}`}
                 </p>
               </>
-            ) : (
+            )}
+            {(syncResult.status === "failed" || syncResult.ok === false) && (
               <p>❌ {syncResult.error || "Erro desconhecido"}</p>
+            )}
+            {!syncResult.status && syncResult.ok !== false && (
+              <p>✅ {syncResult.message || "Operação concluída"}</p>
             )}
           </div>
         )}
