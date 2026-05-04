@@ -985,6 +985,7 @@ export function KanbanBoard() {
           isAdmin={isAdmin}
           corretores={corretores}
           onAssign={(corretorId) => assignLead(selectedLead.id, corretorId)}
+          leadCountByCorretor={leadCountByCorretor}
         />
       )}
     </div>
