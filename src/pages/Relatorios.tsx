@@ -89,8 +89,8 @@ export function Relatorios() {
     setSending(true);
     setError(null);
     setSuccess(null);
-    const { data, error } = await supabase.functions.invoke("send-daily-report", {
-      body: { mode: "manual" },
+    const { data, error } = await invokeCloudFunction("send-daily-report", {
+      mode: "manual",
     });
     setSending(false);
     if (error || data?.error) {
