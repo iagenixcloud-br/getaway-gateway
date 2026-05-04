@@ -71,7 +71,17 @@ Deno.serve(async (req) => {
       });
     }
 
-    return new Response(JSON.stringify({ error: "action deve ser 'list' ou 'subscribe'" }), {
+    if (action === "leads") {
+      const res = await fetch(
+        `https://graph.facebook.com/v21.0/${FORM_ID}/leads?fields=id,created_time,field_data,platform&limit=5&access_token=${token}`,
+      );
+      const data = await res.json();
+      return new Response(JSON.stringify({ action: "leads", page_id: PAGE_ID, form_id: FORM_ID, ...data }, null, 2), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    return new Response(JSON.stringify({ error: "action deve ser 'list', 'subscribe' ou 'leads'" }), {
       status: 400,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
