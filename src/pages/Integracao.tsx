@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
+import { toast } from "sonner";
 
 type CheckResult = {
   ok: boolean;
@@ -60,6 +61,8 @@ async function invokeCloudFunction<T = any>(
 
 export function Integracao() {
   const [debugging, setDebugging] = useState(false);
+  const [syncing, setSyncing] = useState(false);
+  const [syncResult, setSyncResult] = useState<any>(null);
   const [saveMsg, setSaveMsg] = useState<{ type: "ok" | "err"; text: string } | null>(null);
   const [check, setCheck] = useState<CheckResult | null>(null);
   const [debug, setDebug] = useState<any>(null);
@@ -163,7 +166,41 @@ export function Integracao() {
       setDebugging(false);
     }
   }
+  async function handleSyncLeads() {
+    setSyncing(true);
+    setSyncResult(null);
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const accessToken = sessionData.session?.access_token;
+      if (!accessToken) {
+        toast.error("Você precisa estar logado para sincronizar.");
+        return;
+      }
+      const { data, error } = await invokeCloudFunction("fb-sync-leads", {
+        method: "POST",
+        body: { max_pages: 10, limit: 100 },
+        authToken: accessToken,
+      });
+      if (error) {
+        toast.error(error);
+        setSyncResult({ ok: false, error });
+      } else {
+        setSyncResult(data);
+        if (data?.created > 0) {
+          toast.success(`${data.created} lead(s) importado(s) com sucesso!`);
+        } else {
+          toast(`Nenhum lead novo encontrado. ${data?.skipped || 0} já existente(s).`);
+        }
+      }
+    } catch (e: any) {
+      toast.error(String(e?.message || e));
+      setSyncResult({ ok: false, error: String(e?.message || e) });
+    } finally {
+      setSyncing(false);
+    }
+  }
 
+  
   
 
   const FB_REDIRECT_URI = `${CLOUD_FUNCTIONS_URL}/fb-oauth-callback`;
@@ -444,6 +481,55 @@ export function Integracao() {
           )}
         </div>
       )}
+
+      {/* Sincronização Emergencial */}
+      <div className="glass rounded-2xl p-6" style={{ border: "1px solid var(--glass-border)" }}>
+        <h2 style={{ fontFamily: "Montserrat, sans-serif", fontWeight: 700, fontSize: 18, color: "var(--gold)" }}>
+          ⚡ Sincronização Emergencial
+        </h2>
+        <p style={{ fontSize: 13, color: "var(--text-muted)", marginTop: 6 }}>
+          Importa leads diretamente da API do Facebook, ignorando o webhook. Use quando os leads não estão chegando automaticamente.
+        </p>
+        <button
+          onClick={handleSyncLeads}
+          disabled={syncing}
+          className="mt-4 px-5 py-2.5 rounded-xl font-semibold text-sm transition-all inline-flex items-center gap-2"
+          style={{
+            background: syncing ? "rgba(239,68,68,0.4)" : "linear-gradient(135deg, #ef4444, #f97316)",
+            color: "#fff",
+            boxShadow: "0 4px 14px rgba(239,68,68,0.35)",
+            cursor: syncing ? "not-allowed" : "pointer",
+          }}
+        >
+          <span style={{ fontSize: 16 }}>{syncing ? "⏳" : "🔄"}</span>
+          {syncing ? "Sincronizando..." : "Importar Leads Agora"}
+        </button>
+
+        {syncResult && (
+          <div
+            className="mt-4 rounded-lg px-4 py-3 text-sm space-y-1"
+            style={{
+              background: syncResult.ok !== false ? "rgba(34,197,94,0.12)" : "rgba(239,68,68,0.12)",
+              border: `1px solid ${syncResult.ok !== false ? "rgba(34,197,94,0.4)" : "rgba(239,68,68,0.4)"}`,
+              color: syncResult.ok !== false ? "#86efac" : "#fca5a5",
+            }}
+          >
+            {syncResult.ok !== false ? (
+              <>
+                <p>✅ Sincronização concluída</p>
+                <p style={{ color: "var(--text-muted)", fontSize: 12 }}>
+                  Formulários: {syncResult.forms_checked} · Encontrados: {syncResult.fetched} · 
+                  Novos: <strong style={{ color: "#86efac" }}>{syncResult.created}</strong> · 
+                  Já existentes: {syncResult.skipped}
+                  {syncResult.errors?.length > 0 && ` · Erros: ${syncResult.errors.length}`}
+                </p>
+              </>
+            ) : (
+              <p>❌ {syncResult.error || "Erro desconhecido"}</p>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
