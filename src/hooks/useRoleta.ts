@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
+import { invokeCloudFunction } from "../lib/cloudFunctions";
 
 export interface CorretorRoleta {
   id: string;
