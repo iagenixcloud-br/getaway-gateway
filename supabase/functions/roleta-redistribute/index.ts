@@ -73,6 +73,27 @@ Deno.serve(async (req) => {
       auth: { autoRefreshToken: false, persistSession: false },
     });
 
+    // ── Validação: máximo 10 leads por corretor ──
+    const MAX_LEADS_PER_CORRETOR = 10;
+    if (corretorId) {
+      const { count, error: countErr } = await admin
+        .from("leads")
+        .select("id", { count: "exact", head: true })
+        .eq("tenant_id", corretorId);
+      if (countErr) {
+        return new Response(JSON.stringify({ error: countErr.message }), {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      if ((count ?? 0) >= MAX_LEADS_PER_CORRETOR) {
+        return new Response(
+          JSON.stringify({ error: `Corretor já atingiu o limite de ${MAX_LEADS_PER_CORRETOR} leads atribuídos.` }),
+          { status: 422, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+    }
+
     const { error: updErr } = await admin
       .from("leads")
       .update({ tenant_id: corretorId })

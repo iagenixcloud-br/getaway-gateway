@@ -71,6 +71,7 @@ function LeadModal({
   isAdmin,
   corretores,
   onAssign,
+  leadCountByCorretor,
 }: {
   lead: Lead;
   onClose: () => void;
@@ -79,6 +80,7 @@ function LeadModal({
   isAdmin: boolean;
   corretores: CorretorOption[];
   onAssign: (corretorId: string | null) => void;
+  leadCountByCorretor: Map<string, number>;
 }) {
   // Estado local do formulário (sincroniza com prop)
   const [form, setForm] = useState<Lead>(lead);
@@ -330,17 +332,45 @@ function LeadModal({
               <select
                 style={inputStyle}
                 value={lead.assignedTo ?? ""}
-                onChange={(e) => onAssign(e.target.value || null)}
+                onChange={(e) => {
+                  const id = e.target.value || null;
+                  if (id) {
+                    const count = leadCountByCorretor.get(id) ?? 0;
+                    if (count >= 10) {
+                      alert("Este corretor já atingiu o limite de 10 leads atribuídos.");
+                      return;
+                    }
+                  }
+                  onAssign(id);
+                }}
               >
                 <option value="" style={{ background: "#1a1a1a" }}>
                   — Não atribuído —
                 </option>
-                {corretores.map((c) => (
-                  <option key={c.id} value={c.id} style={{ background: "#1a1a1a" }}>
-                    {c.name}
-                  </option>
-                ))}
+                {corretores.map((c) => {
+                  const count = leadCountByCorretor.get(c.id) ?? 0;
+                  const atLimit = count >= 10;
+                  return (
+                    <option
+                      key={c.id}
+                      value={c.id}
+                      disabled={atLimit}
+                      style={{ background: "#1a1a1a", color: atLimit ? "#ef4444" : undefined }}
+                    >
+                      {c.name} ({count}/10){atLimit ? " — LIMITE" : ""}
+                    </option>
+                  );
+                })}
               </select>
+              {(() => {
+                const allFull = corretores.length > 0 && corretores.every((c) => (leadCountByCorretor.get(c.id) ?? 0) >= 10);
+                if (!allFull) return null;
+                return (
+                  <div style={{ marginTop: 6, padding: "6px 10px", borderRadius: 8, background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.3)", color: "#ef4444", fontSize: 11, fontWeight: 600 }}>
+                    ⚠ Todos os corretores atingiram o limite de 10 leads.
+                  </div>
+                );
+              })()}
             </div>
           )}
         </div>
@@ -795,6 +825,17 @@ export function KanbanBoard() {
     return m;
   }, [corretores]);
 
+  // Conta quantos leads cada corretor tem atribuídos
+  const leadCountByCorretor = React.useMemo(() => {
+    const m = new Map<string, number>();
+    allLeads.forEach((l) => {
+      if (l.assignedTo) {
+        m.set(l.assignedTo, (m.get(l.assignedTo) ?? 0) + 1);
+      }
+    });
+    return m;
+  }, [allLeads]);
+
   // Quando o lead selecionado é atualizado na lista, refletir no modal aberto
   React.useEffect(() => {
     if (!selectedLead) return;
@@ -944,6 +985,7 @@ export function KanbanBoard() {
           isAdmin={isAdmin}
           corretores={corretores}
           onAssign={(corretorId) => assignLead(selectedLead.id, corretorId)}
+          leadCountByCorretor={leadCountByCorretor}
         />
       )}
     </div>
