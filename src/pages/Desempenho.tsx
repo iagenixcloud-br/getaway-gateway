@@ -87,6 +87,8 @@ export function Desempenho() {
     let mounted = true;
     (async () => {
       setLoading(true);
+      // Auto-fill: garante que corretores tenham até 10 leads_novo
+      await invokeCloudFunction("auto-fill-leads", {}).catch(() => {});
       const { data, error } = await supabase
         .from("leads")
         .select("*")
