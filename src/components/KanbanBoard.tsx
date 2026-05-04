@@ -71,6 +71,7 @@ function LeadModal({
   isAdmin,
   corretores,
   onAssign,
+  leadCountByCorretor,
 }: {
   lead: Lead;
   onClose: () => void;
@@ -79,6 +80,7 @@ function LeadModal({
   isAdmin: boolean;
   corretores: CorretorOption[];
   onAssign: (corretorId: string | null) => void;
+  leadCountByCorretor: Map<string, number>;
 }) {
   // Estado local do formulário (sincroniza com prop)
   const [form, setForm] = useState<Lead>(lead);
