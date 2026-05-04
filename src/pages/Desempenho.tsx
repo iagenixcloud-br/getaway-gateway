@@ -17,6 +17,7 @@ import {
 } from "recharts";
 import { useAuth } from "../contexts/AuthContext";
 import { supabase, LeadRow } from "../lib/supabase";
+import { invokeCloudFunction } from "../lib/cloudFunctions";
 import { LeadStatus } from "../data/mockData";
 import { useCorretores } from "../hooks/useCorretores";
 
@@ -86,6 +87,8 @@ export function Desempenho() {
     let mounted = true;
     (async () => {
       setLoading(true);
+      // Auto-fill: garante que corretores tenham até 10 leads_novo
+      await invokeCloudFunction("auto-fill-leads", {}).catch(() => {});
       const { data, error } = await supabase
         .from("leads")
         .select("*")
