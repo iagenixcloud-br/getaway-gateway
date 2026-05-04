@@ -2,6 +2,7 @@ import { corsHeaders } from "https://esm.sh/@supabase/supabase-js@2.95.0/cors";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.95.0";
 
 const PAGE_ID = "101491475744542"; // Salles Imóveis
+console.log("fb-subscribe diagnostic function loaded", { page_id: PAGE_ID });
 
 async function getFbToken(): Promise<string | null> {
   try {
