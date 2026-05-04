@@ -156,6 +156,11 @@ export function useLeads() {
 
     load();
 
+    // Auto-fill: garante que cada corretor tenha até 10 leads_novo
+    if (isAdmin) {
+      invokeCloudFunction("auto-fill-leads", {}).catch(() => {});
+    }
+
     // Realtime: assina TODAS as mudanças e filtramos no cliente
     const channel = supabase
       .channel("leads-changes")
