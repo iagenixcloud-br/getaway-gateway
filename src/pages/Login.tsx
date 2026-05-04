@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate, Navigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
+import { Eye, EyeOff } from "lucide-react";
 import logo from "@/assets/andrade-mark.png";
 
 export function Login() {
