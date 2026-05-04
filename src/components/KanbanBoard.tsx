@@ -825,6 +825,17 @@ export function KanbanBoard() {
     return m;
   }, [corretores]);
 
+  // Conta quantos leads cada corretor tem atribuídos
+  const leadCountByCorretor = React.useMemo(() => {
+    const m = new Map<string, number>();
+    allLeads.forEach((l) => {
+      if (l.assignedTo) {
+        m.set(l.assignedTo, (m.get(l.assignedTo) ?? 0) + 1);
+      }
+    });
+    return m;
+  }, [allLeads]);
+
   // Quando o lead selecionado é atualizado na lista, refletir no modal aberto
   React.useEffect(() => {
     if (!selectedLead) return;
