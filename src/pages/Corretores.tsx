@@ -453,6 +453,27 @@ export function Corretores() {
                         >
                           Editar
                         </button>
+                        {!isSelf && (
+                          <button
+                            onClick={() => handleToggleActive(c)}
+                            disabled={togglingId === c.id}
+                            title={c.is_active ? "Inativar corretor" : "Reativar corretor"}
+                            style={{
+                              background: c.is_active ? "rgba(245,158,11,0.1)" : "rgba(34,197,94,0.1)",
+                              border: `1px solid ${c.is_active ? "rgba(245,158,11,0.3)" : "rgba(34,197,94,0.3)"}`,
+                              color: c.is_active ? "#f59e0b" : "#22c55e",
+                              fontSize: 12,
+                              fontWeight: 600,
+                              padding: "6px 12px",
+                              borderRadius: 8,
+                              cursor: togglingId === c.id ? "not-allowed" : "pointer",
+                              opacity: togglingId === c.id ? 0.4 : 1,
+                              marginRight: 8,
+                            }}
+                          >
+                            {togglingId === c.id ? "..." : c.is_active ? "Inativar" : "Ativar"}
+                          </button>
+                        )}
                         <button
                           onClick={() => {
                             setConfirmDelete(c);
