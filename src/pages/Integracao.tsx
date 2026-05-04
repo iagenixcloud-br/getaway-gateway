@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
+import { toast } from "sonner";
 
 type CheckResult = {
   ok: boolean;
