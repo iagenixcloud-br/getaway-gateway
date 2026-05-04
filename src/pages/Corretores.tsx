@@ -135,13 +135,11 @@ export function Corretores() {
 
     // Chama a Edge Function 'create-corretor' que roda no servidor com service_role.
     // Isso NÃO troca a sessão do admin atual.
-    const { data, error } = await supabase.functions.invoke("create-corretor", {
-      body: {
-        name: name.trim(),
-        email: email.trim(),
-        password,
-        phone: normalizedPhone,
-      },
+    const { data, error } = await invokeCloudFunction("create-corretor", {
+      name: name.trim(),
+      email: email.trim(),
+      password,
+      phone: normalizedPhone,
     });
 
     setSubmitting(false);
