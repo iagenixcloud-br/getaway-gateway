@@ -11,7 +11,8 @@ export type LeadStatus =
   | "proposta"
   | "venda"
   | "follow_up"
-  | "nao_qualificado";
+  | "perda"
+  | "cliente_futuro";
 
 export type LeadOrigin = "FB" | "IG" | "WA" | "Site" | "Indicação";
 
