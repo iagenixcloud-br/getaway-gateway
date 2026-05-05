@@ -171,26 +171,35 @@ export function Integracao() {
   async function handleSyncLeads(opts: { today_only?: boolean; since?: string } = {}) {
     setSyncing(true);
     setSyncResult(null);
+    setSyncProgress({ label: "Autenticando…", step: 1, total: 5 });
+    setSyncStartTime(Date.now());
     try {
       const { data: sessionData } = await supabase.auth.getSession();
       const accessToken = sessionData.session?.access_token;
       if (!accessToken) {
         toast.error("Você precisa estar logado para sincronizar.");
         setSyncing(false);
+        setSyncProgress(null);
+        setSyncStartTime(null);
         return;
       }
+      setSyncProgress({ label: "Conectando à API do Facebook…", step: 2, total: 5 });
       const body: Record<string, unknown> = { max_pages: 5, limit: 50 };
       if (opts.today_only) body.today_only = true;
       if (opts.since) body.since = opts.since;
+
+      setSyncProgress({ label: "Buscando formulários e leads…", step: 3, total: 5 });
       const { data, error } = await invokeCloudFunction("fb-sync-leads", {
         method: "POST",
         body,
         authToken: accessToken,
       });
+
       if (error) {
         toast.error(error);
         setSyncResult({ ok: false, error });
       } else {
+        setSyncProgress({ label: "Processando resultado…", step: 4, total: 5 });
         setSyncResult(data);
         if (data?.created > 0) {
           toast.success(`${data.created} lead(s) importado(s) com sucesso!`);
@@ -202,7 +211,10 @@ export function Integracao() {
       toast.error(String(e?.message || e));
       setSyncResult({ ok: false, error: String(e?.message || e) });
     } finally {
+      setSyncProgress({ label: "Concluído!", step: 5, total: 5 });
+      setTimeout(() => setSyncProgress(null), 1500);
       setSyncing(false);
+      setSyncStartTime(null);
     }
   }
 
