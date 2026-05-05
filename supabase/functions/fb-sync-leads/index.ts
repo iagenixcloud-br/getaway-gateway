@@ -159,7 +159,10 @@ Deno.serve(async (req) => {
     // 2. Process each form — collect leads into batches
     for (const form of activeForms) {
       let baseUrl = `https://graph.facebook.com/v21.0/${form.id}/leads?fields=id,created_time,field_data,platform&limit=${limit}&access_token=${encodeURIComponent(token)}`;
-      if (sinceTimestamp) baseUrl += `&filtering=[{"field":"time_created","operator":"GREATER_THAN","value":${sinceTimestamp}}]`;
+      if (sinceTimestamp) {
+        const filterJson = JSON.stringify([{ field: "time_created", operator: "GREATER_THAN", value: sinceTimestamp }]);
+        baseUrl += `&filtering=${encodeURIComponent(filterJson)}`;
+      }
       let nextUrl: string | null = baseUrl;
 
       for (let page = 0; nextUrl && page < maxPages; page++) {
@@ -169,6 +172,15 @@ Deno.serve(async (req) => {
 
         for (const lead of data.data || []) {
           result.fetched++;
+
+          // Server-side date filter fallback — skip leads older than requested date
+          if (sinceTimestamp && lead.created_time) {
+            const leadTs = Math.floor(new Date(lead.created_time).getTime() / 1000);
+            if (leadTs <= sinceTimestamp) {
+              result.skipped++;
+              continue;
+            }
+          }
 
           if (existingLeadgenIds.has(lead.id)) {
             result.skipped++;
