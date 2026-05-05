@@ -13,7 +13,7 @@ import { Roleta } from "./pages/Roleta";
 import { Integracao } from "./pages/Integracao";
 import { Dashboard } from "./pages/Dashboard";
 import { Leads } from "./pages/Leads";
-
+import { Admins } from "./pages/Admins";
 
 export default function App() {
   return (
@@ -87,6 +87,16 @@ export default function App() {
               <ProtectedRoute>
                 <Layout>
                   <Leads />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admins"
+            element={
+              <ProtectedRoute requireAdmin>
+                <Layout>
+                  <Admins />
                 </Layout>
               </ProtectedRoute>
             }
