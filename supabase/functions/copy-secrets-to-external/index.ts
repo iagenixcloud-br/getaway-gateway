@@ -1,3 +1,5 @@
+import { createClient } from "npm:@supabase/supabase-js@2.45.0";
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -15,12 +17,32 @@ Deno.serve(async (req) => {
     });
   }
 
-  // Secrets to copy
-  const secretNames = ["FB_APP_ID", "FB_APP_SECRET", "FB_PAGE_TOKEN", "FB_VERIFY_TOKEN"];
+  const cloudAdmin = createClient(
+    Deno.env.get("SUPABASE_URL")!,
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+    { auth: { autoRefreshToken: false, persistSession: false } }
+  );
+
+  // Read FB_PAGE_TOKEN from integration_secrets table (the valid one)
+  const { data: tokenRow, error: dbErr } = await cloudAdmin
+    .from("integration_secrets")
+    .select("value")
+    .eq("name", "FB_PAGE_TOKEN")
+    .maybeSingle();
+
+  const dbToken = tokenRow?.value;
+
+  // Build secrets list: FB_PAGE_TOKEN from DB, rest from env
   const secrets: { name: string; value: string }[] = [];
   const missing: string[] = [];
 
-  for (const name of secretNames) {
+  if (dbToken) {
+    secrets.push({ name: "FB_PAGE_TOKEN", value: dbToken });
+  } else {
+    missing.push("FB_PAGE_TOKEN (tabela integration_secrets)");
+  }
+
+  for (const name of ["FB_APP_ID", "FB_APP_SECRET", "FB_VERIFY_TOKEN"]) {
     const val = Deno.env.get(name);
     if (val) {
       secrets.push({ name, value: val });
@@ -30,12 +52,12 @@ Deno.serve(async (req) => {
   }
 
   if (missing.length > 0) {
-    return new Response(JSON.stringify({ ok: false, error: `Secrets não encontrados no Cloud: ${missing.join(", ")}` }), {
+    return new Response(JSON.stringify({ ok: false, error: `Não encontrados: ${missing.join(", ")}` }), {
       status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
 
-  // Use Supabase Management API to set secrets on external project
+  // Push to external Supabase via Management API
   const res = await fetch(
     `https://api.supabase.com/v1/projects/${EXTERNAL_PROJECT_REF}/secrets`,
     {
@@ -49,7 +71,6 @@ Deno.serve(async (req) => {
   );
 
   const body = await res.text();
-
   if (!res.ok) {
     return new Response(JSON.stringify({ ok: false, status: res.status, error: body }), {
       status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -59,6 +80,8 @@ Deno.serve(async (req) => {
   return new Response(JSON.stringify({
     ok: true,
     copied: secrets.map(s => s.name),
+    token_source: "integration_secrets table",
+    token_preview: dbToken!.slice(0, 12) + "...",
     message: `✅ ${secrets.length} secrets copiados para o Supabase externo!`,
   }), {
     headers: { ...corsHeaders, "Content-Type": "application/json" },
