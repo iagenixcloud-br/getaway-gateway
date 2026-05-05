@@ -173,6 +173,15 @@ Deno.serve(async (req) => {
         for (const lead of data.data || []) {
           result.fetched++;
 
+          // Server-side date filter fallback — skip leads older than requested date
+          if (sinceTimestamp && lead.created_time) {
+            const leadTs = Math.floor(new Date(lead.created_time).getTime() / 1000);
+            if (leadTs <= sinceTimestamp) {
+              result.skipped++;
+              continue;
+            }
+          }
+
           if (existingLeadgenIds.has(lead.id)) {
             result.skipped++;
             continue;
