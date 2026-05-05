@@ -47,4 +47,5 @@ export interface Lead {
   purpose: LeadPurpose;   // investimento | moradia
   areaSqm: string;        // metragem desejada (texto livre, ex.: "70-90m²")
   region: string;         // região desejada
+  substatus: string;      // motivo da perda ou cliente futuro
 }
