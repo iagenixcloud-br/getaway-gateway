@@ -490,25 +490,83 @@ export function Integracao() {
       {/* Sincronização Emergencial */}
       <div className="glass rounded-2xl p-6" style={{ border: "1px solid var(--glass-border)" }}>
         <h2 style={{ fontFamily: "Montserrat, sans-serif", fontWeight: 700, fontSize: 18, color: "var(--gold)" }}>
-          ⚡ Sincronização Emergencial
+          ⚡ Importar Leads do Facebook
         </h2>
         <p style={{ fontSize: 13, color: "var(--text-muted)", marginTop: 6 }}>
-          Importa leads diretamente da API do Facebook, ignorando o webhook. Use quando os leads não estão chegando automaticamente.
+          Importa leads diretamente da API do Facebook. Escolha importar apenas os de hoje, todos, ou filtre por data.
         </p>
-        <button
-          onClick={handleSyncLeads}
-          disabled={syncing}
-          className="mt-4 px-5 py-2.5 rounded-xl font-semibold text-sm transition-all inline-flex items-center gap-2"
-          style={{
-            background: syncing ? "rgba(239,68,68,0.4)" : "linear-gradient(135deg, #ef4444, #f97316)",
-            color: "#fff",
-            boxShadow: "0 4px 14px rgba(239,68,68,0.35)",
-            cursor: syncing ? "not-allowed" : "pointer",
-          }}
-        >
-          <span style={{ fontSize: 16 }}>{syncing ? "⏳" : "🔄"}</span>
-          {syncing ? "Sincronizando..." : "Importar Leads Agora"}
-        </button>
+
+        <div className="mt-4 flex flex-wrap gap-3">
+          <button
+            onClick={() => handleSyncLeads({ today_only: true })}
+            disabled={syncing}
+            className="px-5 py-2.5 rounded-xl font-semibold text-sm transition-all inline-flex items-center gap-2"
+            style={{
+              background: syncing ? "rgba(34,197,94,0.4)" : "linear-gradient(135deg, #22c55e, #16a34a)",
+              color: "#fff",
+              boxShadow: "0 4px 14px rgba(34,197,94,0.35)",
+              cursor: syncing ? "not-allowed" : "pointer",
+            }}
+          >
+            <span style={{ fontSize: 16 }}>📅</span>
+            {syncing ? "Importando..." : "Leads de Hoje"}
+          </button>
+
+          <button
+            onClick={() => handleSyncLeads()}
+            disabled={syncing}
+            className="px-5 py-2.5 rounded-xl font-semibold text-sm transition-all inline-flex items-center gap-2"
+            style={{
+              background: syncing ? "rgba(239,68,68,0.4)" : "linear-gradient(135deg, #ef4444, #f97316)",
+              color: "#fff",
+              boxShadow: "0 4px 14px rgba(239,68,68,0.35)",
+              cursor: syncing ? "not-allowed" : "pointer",
+            }}
+          >
+            <span style={{ fontSize: 16 }}>🔄</span>
+            {syncing ? "Importando..." : "Todos os Leads"}
+          </button>
+        </div>
+
+        {/* Filtro por data */}
+        <div className="mt-4 flex flex-wrap items-end gap-3">
+          <div>
+            <label style={{ fontSize: 12, color: "var(--text-muted)", display: "block", marginBottom: 4 }}>
+              Filtrar a partir de:
+            </label>
+            <input
+              type="date"
+              value={syncDateFilter}
+              onChange={(e) => setSyncDateFilter(e.target.value)}
+              className="rounded-lg px-3 py-2 text-sm"
+              style={{
+                background: "rgba(0,0,0,0.3)",
+                border: "1px solid var(--glass-border)",
+                color: "var(--text-primary)",
+              }}
+            />
+          </div>
+          <button
+            onClick={() => {
+              if (!syncDateFilter) {
+                toast.error("Selecione uma data primeiro.");
+                return;
+              }
+              handleSyncLeads({ since: syncDateFilter });
+            }}
+            disabled={syncing || !syncDateFilter}
+            className="px-5 py-2.5 rounded-xl font-semibold text-sm transition-all inline-flex items-center gap-2"
+            style={{
+              background: syncing || !syncDateFilter ? "rgba(59,130,246,0.3)" : "linear-gradient(135deg, #3b82f6, #6366f1)",
+              color: "#fff",
+              boxShadow: "0 4px 14px rgba(59,130,246,0.35)",
+              cursor: syncing || !syncDateFilter ? "not-allowed" : "pointer",
+            }}
+          >
+            <span style={{ fontSize: 16 }}>🔍</span>
+            {syncing ? "Importando..." : "Importar por Data"}
+          </button>
+        </div>
 
         {syncResult && (
           <div
