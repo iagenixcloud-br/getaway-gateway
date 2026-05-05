@@ -62,16 +62,6 @@ export default function App() {
             }
           />
           <Route
-            path="/relatorios"
-            element={
-              <ProtectedRoute requireAdmin>
-                <Layout>
-                  <Relatorios />
-                </Layout>
-              </ProtectedRoute>
-            }
-          />
-          <Route
             path="/integracao"
             element={
               <ProtectedRoute requireAdmin>
