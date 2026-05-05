@@ -133,9 +133,9 @@ export function Leads() {
             outline: "none",
           }}
         >
-          <option value="all">Todos os status</option>
+          <option value="all" style={{ background: "#001f3f", color: "#f0f4f8" }}>Todos os status</option>
           {Object.entries(STATUS_LABELS).map(([val, label]) => (
-            <option key={val} value={val}>{label}</option>
+            <option key={val} value={val} style={{ background: "#001f3f", color: "#f0f4f8" }}>{label}</option>
           ))}
         </select>
 
