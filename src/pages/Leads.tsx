@@ -13,6 +13,7 @@ const STATUS_LABELS: Record<LeadStatus, string> = {
   proposta: "Proposta",
   follow_up: "Follow-up",
   venda: "Venda",
+  nao_qualificado: "Não-Qualificado",
 };
 
 const STATUS_COLORS: Record<LeadStatus, string> = {
@@ -24,6 +25,7 @@ const STATUS_COLORS: Record<LeadStatus, string> = {
   proposta: "#f97316",
   follow_up: "#6366f1",
   venda: "#22c55e",
+  nao_qualificado: "#ef4444",
 };
 
 type SortField = "created_at" | "name" | "status";

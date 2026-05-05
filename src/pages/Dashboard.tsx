@@ -11,6 +11,7 @@ const COLUMNS: { key: LeadStatus; label: string; color: string; icon: string }[]
   { key: "visita", label: "Visita", color: "#8b5cf6", icon: "🏠" },
   { key: "proposta", label: "Proposta", color: "#ec4899", icon: "📄" },
   { key: "venda", label: "Venda", color: "#22c55e", icon: "🎉" },
+  { key: "nao_qualificado", label: "Não-Qualificado", color: "#ef4444", icon: "⛔" },
 ];
 
 function formatDuration(hours: number): string {
