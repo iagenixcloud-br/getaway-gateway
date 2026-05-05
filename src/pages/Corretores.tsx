@@ -247,15 +247,8 @@ export function Corretores() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 style={{ fontFamily: "Montserrat", fontWeight: 700, fontSize: 22, color: "var(--text-primary)" }}>
-            Corretores
-          </h1>
-          <p style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 2 }}>
-            Gerencie acessos da equipe
-          </p>
-        </div>
+      <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
+        <div />
         <button
           onClick={() => setShowForm(!showForm)}
           className="px-4 py-2 rounded-xl"
