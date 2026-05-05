@@ -21,8 +21,8 @@ const REQUIRED = [
   "pages_read_engagement",
 ];
 
-const CLOUD_FUNCTIONS_URL = `https://${import.meta.env.VITE_SUPABASE_PROJECT_ID || "lzgdvvapzmuogtlivzxa"}.supabase.co/functions/v1`;
-const CLOUD_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || "";
+const CLOUD_FUNCTIONS_URL = "https://gycrprnkuwlzntqvpoxl.supabase.co/functions/v1";
+const CLOUD_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd5Y3Jwcm5rdXdsem50cXZwb3hsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcwNzEyMzQsImV4cCI6MjA5MjY0NzIzNH0.w7RiS6L4gir4KIKWAZxdmXutyp7EDxIu9z62n0QUoRM";
 
 async function invokeCloudFunction<T = any>(
   name: string,
