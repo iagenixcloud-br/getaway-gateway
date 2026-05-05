@@ -57,7 +57,8 @@ const columns: { id: LeadStatus; label: string; color: string; icon: string }[] 
   { id: "visita", label: "Visita", color: "#ec4899", icon: "⌂" },
   { id: "proposta", label: "Proposta", color: "#D4AF37", icon: "★" },
   { id: "venda", label: "Venda", color: "#22c55e", icon: "✓" },
-  { id: "nao_qualificado", label: "Não-Qualificado", color: "#ef4444", icon: "✕" },
+  { id: "perda", label: "Perda", color: "#ef4444", icon: "✕" },
+  { id: "cliente_futuro", label: "Cliente Futuro", color: "#0ea5e9", icon: "🔄" },
 ];
 
 // Threshold (em horas) acima do qual um lead em Follow-up é considerado urgente
