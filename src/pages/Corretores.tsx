@@ -461,7 +461,6 @@ export function Corretores() {
                               borderRadius: 8,
                               cursor: togglingId === c.id ? "not-allowed" : "pointer",
                               opacity: togglingId === c.id ? 0.4 : 1,
-                              marginRight: 8,
                             }}
                           >
                             {togglingId === c.id ? "..." : c.is_active ? "Inativar" : "Ativar"}
