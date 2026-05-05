@@ -150,7 +150,7 @@ function LeadModal({
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div
-        className="modal-content glass rounded-2xl p-8 w-full"
+        className="modal-content glass rounded-2xl p-4 sm:p-8 w-full mx-3 sm:mx-0"
         style={{ maxWidth: 560, border: "1px solid rgba(212,175,55,0.2)", maxHeight: "90vh", overflowY: "auto" }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -180,7 +180,7 @@ function LeadModal({
         </div>
 
         {/* Form Grid */}
-        <div className="grid grid-cols-2 gap-3 mb-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
           <div className="col-span-2">
             <label style={labelStyle}>Nome</label>
             <input
@@ -898,7 +898,7 @@ export function KanbanBoard() {
       </div>
 
       {/* Kanban Columns */}
-      <div className="flex gap-4 overflow-x-auto pb-4">
+      <div className="flex gap-4 overflow-x-auto pb-4 kanban-scroll">
         {columns.map((col) => {
           const colLeads = getColumnLeads(col.id);
           return (
