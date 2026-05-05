@@ -383,7 +383,7 @@ export function Corretores() {
                 <th style={{ textAlign: "left", padding: "12px 16px", fontSize: 11, color: "var(--text-muted)", fontWeight: 600 }}>
                   Status
                 </th>
-                <th style={{ textAlign: "right", padding: "12px 16px", fontSize: 11, color: "var(--text-muted)", fontWeight: 600 }}>
+                <th style={{ textAlign: "right", padding: "12px 16px", fontSize: 11, color: "var(--text-muted)", fontWeight: 600, width: 260 }}>
                   Ações
                 </th>
               </tr>
