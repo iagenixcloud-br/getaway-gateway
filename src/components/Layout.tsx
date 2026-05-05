@@ -60,6 +60,8 @@ export function Layout({ children }: LayoutProps) {
       ? { title: "Lista de Leads", subtitle: "Busque, filtre e ordene todos os leads" }
       : location.pathname === "/admins"
       ? { title: "Administradores", subtitle: "Gerencie quem tem acesso total ao sistema" }
+      : location.pathname === "/assinaturas"
+      ? { title: "Assinaturas", subtitle: "Gestão de licenças e cobranças" }
       : { title: "Pipeline de Leads", subtitle: "Gerencie seus leads em tempo real" };
 
   const sidebarContent = (
@@ -184,6 +186,16 @@ export function Layout({ children }: LayoutProps) {
             "Administradores",
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+            </svg>,
+          )}
+
+        {user?.email === "iagenixcloud@gmail.com" &&
+          navItem(
+            "/assinaturas",
+            "Assinaturas",
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <line x1="12" y1="1" x2="12" y2="23" />
+              <path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6" />
             </svg>,
           )}
 

@@ -9,6 +9,7 @@ import { Login } from "./pages/Login";
 import { Corretores } from "./pages/Corretores";
 import { Desempenho } from "./pages/Desempenho";
 import { Roleta } from "./pages/Roleta";
+import { Assinaturas } from "./pages/Assinaturas";
 
 import { Integracao } from "./pages/Integracao";
 import { Dashboard } from "./pages/Dashboard";
@@ -97,6 +98,16 @@ export default function App() {
               <ProtectedRoute requireAdmin>
                 <Layout>
                   <Admins />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/assinaturas"
+            element={
+              <ProtectedRoute requireAdmin>
+                <Layout>
+                  <Assinaturas />
                 </Layout>
               </ProtectedRoute>
             }
