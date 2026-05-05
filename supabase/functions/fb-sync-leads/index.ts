@@ -234,7 +234,7 @@ Deno.serve(async (req) => {
     }
 
     console.log("Sync completed", result);
-    return json({ ok: true, status: "completed", ...result });
+    return json({ ok: true, status: "completed", filter: sinceTimestamp ? { since: new Date(sinceTimestamp * 1000).toISOString(), today_only: !!body.today_only } : "all", ...result });
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     console.error("Sync failed", msg);
