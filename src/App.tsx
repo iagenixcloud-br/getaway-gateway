@@ -13,7 +13,7 @@ import { Roleta } from "./pages/Roleta";
 import { Integracao } from "./pages/Integracao";
 import { Dashboard } from "./pages/Dashboard";
 import { Leads } from "./pages/Leads";
-import { WebhookLogs } from "./pages/WebhookLogs";
+
 
 export default function App() {
   return (
@@ -87,16 +87,6 @@ export default function App() {
               <ProtectedRoute>
                 <Layout>
                   <Leads />
-                </Layout>
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/webhook-logs"
-            element={
-              <ProtectedRoute requireAdmin>
-                <Layout>
-                  <WebhookLogs />
                 </Layout>
               </ProtectedRoute>
             }
