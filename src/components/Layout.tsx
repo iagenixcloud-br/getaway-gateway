@@ -60,6 +60,8 @@ export function Layout({ children }: LayoutProps) {
       ? { title: "Lista de Leads", subtitle: "Busque, filtre e ordene todos os leads" }
       : location.pathname === "/admins"
       ? { title: "Administradores", subtitle: "Gerencie quem tem acesso total ao sistema" }
+      : location.pathname === "/assinaturas"
+      ? { title: "Assinaturas", subtitle: "Gestão de licenças e cobranças" }
       : { title: "Pipeline de Leads", subtitle: "Gerencie seus leads em tempo real" };
 
   const sidebarContent = (
