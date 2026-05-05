@@ -429,7 +429,8 @@ export function Corretores() {
                           {c.is_active ? "Ativo" : "Inativo"}
                         </span>
                       </td>
-                      <td style={{ padding: "12px 16px", textAlign: "right", whiteSpace: "nowrap" }}>
+                      <td style={{ padding: "12px 16px", textAlign: "right", whiteSpace: "nowrap", width: 260 }}>
+                        <div style={{ display: "inline-flex", gap: 8, justifyContent: "flex-end" }}>
                         <button
                           onClick={() => openEdit(c)}
                           style={{
