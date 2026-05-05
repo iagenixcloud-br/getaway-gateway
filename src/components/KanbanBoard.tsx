@@ -180,7 +180,7 @@ function LeadModal({
         </div>
 
         {/* Form Grid */}
-        <div className="grid grid-cols-2 gap-3 mb-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
           <div className="col-span-2">
             <label style={labelStyle}>Nome</label>
             <input
