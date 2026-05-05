@@ -61,6 +61,121 @@ const columns: { id: LeadStatus; label: string; color: string; icon: string }[] 
   { id: "cliente_futuro", label: "Cliente Futuro", color: "#0ea5e9", icon: "🔄" },
 ];
 
+// ── Substatus options ─────────────────────────────────────────
+const SUBSTATUS_OPTIONS: Record<string, string[]> = {
+  perda: [
+    "Não gostou da localização",
+    "Não gostou da planta",
+    "Sem perfil financeiro",
+    "Prazo longo",
+    "Fora do momento de compra",
+  ],
+  cliente_futuro: [
+    "Busca outra região",
+    "Busca imóvel maior",
+    "Busca imóvel mais barato",
+    "Busca imóvel pronto",
+    "Entrada menor",
+    "Parcela menor",
+  ],
+};
+
+const needsSubstatus = (status: LeadStatus) =>
+  status === "perda" || status === "cliente_futuro";
+
+// ── Substatus Modal ───────────────────────────────────────────
+function SubstatusModal({
+  targetStatus,
+  onConfirm,
+  onCancel,
+}: {
+  targetStatus: "perda" | "cliente_futuro";
+  onConfirm: (substatus: string) => void;
+  onCancel: () => void;
+}) {
+  const [selected, setSelected] = useState("");
+  const options = SUBSTATUS_OPTIONS[targetStatus] || [];
+  const col = columns.find((c) => c.id === targetStatus);
+  const color = col?.color || "#ef4444";
+
+  return (
+    <div className="modal-overlay" onClick={onCancel}>
+      <div
+        className="glass rounded-2xl p-6 w-full mx-3 sm:mx-0"
+        style={{ maxWidth: 420, border: `1px solid ${color}40` }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <h3
+          style={{
+            fontFamily: "Montserrat, sans-serif",
+            fontWeight: 700,
+            fontSize: 16,
+            marginBottom: 4,
+            color: "var(--text-primary)",
+          }}
+        >
+          {col?.icon} Mover para {col?.label}
+        </h3>
+        <p style={{ fontSize: 12, color: "var(--text-muted)", marginBottom: 16 }}>
+          Selecione o motivo:
+        </p>
+
+        <div className="flex flex-col gap-2 mb-5">
+          {options.map((opt) => (
+            <button
+              key={opt}
+              onClick={() => setSelected(opt)}
+              className="text-left px-4 py-3 rounded-xl transition-all"
+              style={{
+                background: selected === opt ? `${color}20` : "rgba(255,255,255,0.04)",
+                border: `1px solid ${selected === opt ? `${color}60` : "rgba(255,255,255,0.08)"}`,
+                color: selected === opt ? color : "var(--text-secondary, var(--text-muted))",
+                fontSize: 13,
+                fontWeight: selected === opt ? 600 : 400,
+                cursor: "pointer",
+              }}
+            >
+              • {opt}
+            </button>
+          ))}
+        </div>
+
+        <div className="flex gap-2">
+          <button
+            onClick={() => selected && onConfirm(selected)}
+            disabled={!selected}
+            className="flex-1 py-2.5 rounded-xl"
+            style={{
+              background: selected ? color : `${color}30`,
+              color: selected ? "#fff" : "var(--text-muted)",
+              fontSize: 13,
+              fontWeight: 700,
+              cursor: selected ? "pointer" : "not-allowed",
+              border: "none",
+            }}
+          >
+            Confirmar
+          </button>
+          <button
+            onClick={onCancel}
+            className="px-4 py-2.5 rounded-xl"
+            style={{
+              background: "rgba(255,255,255,0.05)",
+              color: "var(--text-muted)",
+              fontSize: 13,
+              fontWeight: 600,
+              cursor: "pointer",
+              border: "1px solid var(--glass-border)",
+            }}
+          >
+            Cancelar
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // Threshold (em horas) acima do qual um lead em Follow-up é considerado urgente
 const FOLLOWUP_URGENT_HOURS = 72;
 
