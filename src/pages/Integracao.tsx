@@ -438,7 +438,7 @@ export function Integracao() {
             </h3>
           </div>
 
-          <div className="grid grid-cols-2 gap-3 text-sm">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
             <Info label="Página" value={check.page_name || "—"} />
             <Info label="Page ID" value={check.page_id || "—"} />
             <Info label="Tipo" value={check.token_type || "—"} />
