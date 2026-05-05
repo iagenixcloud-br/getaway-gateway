@@ -82,11 +82,23 @@ Deno.serve(async (req) => {
   const auth = await requireAdmin(req);
   if (auth.error) return auth.error;
 
-  let body: { max_pages?: number; limit?: number } = {};
+  let body: { max_pages?: number; limit?: number; since?: string; today_only?: boolean } = {};
   try { body = await req.json(); } catch { body = {}; }
 
   const maxPages = Math.min(Math.max(Number(body.max_pages || 3), 1), 10);
   const limit = Math.min(Math.max(Number(body.limit || 50), 10), 100);
+
+  // Filtro por data: se today_only=true, usa início do dia UTC; se since="YYYY-MM-DD", usa essa data
+  let sinceTimestamp: number | null = null;
+  if (body.today_only) {
+    const now = new Date();
+    sinceTimestamp = Math.floor(new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime() / 1000);
+  } else if (body.since) {
+    const parsed = new Date(body.since);
+    if (!isNaN(parsed.getTime())) {
+      sinceTimestamp = Math.floor(parsed.getTime() / 1000);
+    }
+  }
   const token = await getFbToken();
   if (!token) return json({ ok: false, error: "Token do Facebook não configurado" }, 500);
 
@@ -146,7 +158,9 @@ Deno.serve(async (req) => {
 
     // 2. Process each form — collect leads into batches
     for (const form of activeForms) {
-      let nextUrl: string | null = `https://graph.facebook.com/v21.0/${form.id}/leads?fields=id,created_time,field_data,platform&limit=${limit}&access_token=${encodeURIComponent(token)}`;
+      let baseUrl = `https://graph.facebook.com/v21.0/${form.id}/leads?fields=id,created_time,field_data,platform&limit=${limit}&access_token=${encodeURIComponent(token)}`;
+      if (sinceTimestamp) baseUrl += `&filtering=[{"field":"time_created","operator":"GREATER_THAN","value":${sinceTimestamp}}]`;
+      let nextUrl: string | null = baseUrl;
 
       for (let page = 0; nextUrl && page < maxPages; page++) {
         const res = await fetch(nextUrl);
@@ -220,7 +234,7 @@ Deno.serve(async (req) => {
     }
 
     console.log("Sync completed", result);
-    return json({ ok: true, status: "completed", ...result });
+    return json({ ok: true, status: "completed", filter: sinceTimestamp ? { since: new Date(sinceTimestamp * 1000).toISOString(), today_only: !!body.today_only } : "all", ...result });
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     console.error("Sync failed", msg);
