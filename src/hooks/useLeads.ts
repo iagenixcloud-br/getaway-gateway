@@ -286,6 +286,7 @@ export function useLeads() {
     if (patch.purpose !== undefined) dbPatch.purpose = toStr(patch.purpose);
     if (patch.areaSqm !== undefined) dbPatch.area_sqm = toStr(patch.areaSqm);
     if (patch.region !== undefined) dbPatch.region = toStr(patch.region);
+    if (patch.substatus !== undefined) dbPatch.substatus = toStr(patch.substatus);
 
     // Remove chaves marcadas como "não mexer" (undefined)
     Object.keys(dbPatch).forEach((k) => {
