@@ -91,16 +91,6 @@ export default function App() {
               </ProtectedRoute>
             }
           />
-          <Route
-            path="/webhook-logs"
-            element={
-              <ProtectedRoute requireAdmin>
-                <Layout>
-                  <WebhookLogs />
-                </Layout>
-              </ProtectedRoute>
-            }
-          />
         </Routes>
       </AuthProvider>
     </BrowserRouter>
