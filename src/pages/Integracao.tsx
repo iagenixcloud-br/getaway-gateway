@@ -68,7 +68,8 @@ export function Integracao() {
   const [debug, setDebug] = useState<any>(null);
   const [fbAppId, setFbAppId] = useState<string | null>(null);
   const [syncDateFilter, setSyncDateFilter] = useState("");
-
+  const [syncProgress, setSyncProgress] = useState<{ label: string; step: number; total: number } | null>(null);
+  const [syncStartTime, setSyncStartTime] = useState<number | null>(null);
   useEffect(() => {
     invokeCloudFunction<{ fb_app_id: string | null }>("fb-public-config", { method: "GET" })
       .then(({ data }) => setFbAppId(data?.fb_app_id ?? null));
@@ -170,26 +171,35 @@ export function Integracao() {
   async function handleSyncLeads(opts: { today_only?: boolean; since?: string } = {}) {
     setSyncing(true);
     setSyncResult(null);
+    setSyncProgress({ label: "Autenticando…", step: 1, total: 5 });
+    setSyncStartTime(Date.now());
     try {
       const { data: sessionData } = await supabase.auth.getSession();
       const accessToken = sessionData.session?.access_token;
       if (!accessToken) {
         toast.error("Você precisa estar logado para sincronizar.");
         setSyncing(false);
+        setSyncProgress(null);
+        setSyncStartTime(null);
         return;
       }
+      setSyncProgress({ label: "Conectando à API do Facebook…", step: 2, total: 5 });
       const body: Record<string, unknown> = { max_pages: 5, limit: 50 };
       if (opts.today_only) body.today_only = true;
       if (opts.since) body.since = opts.since;
+
+      setSyncProgress({ label: "Buscando formulários e leads…", step: 3, total: 5 });
       const { data, error } = await invokeCloudFunction("fb-sync-leads", {
         method: "POST",
         body,
         authToken: accessToken,
       });
+
       if (error) {
         toast.error(error);
         setSyncResult({ ok: false, error });
       } else {
+        setSyncProgress({ label: "Processando resultado…", step: 4, total: 5 });
         setSyncResult(data);
         if (data?.created > 0) {
           toast.success(`${data.created} lead(s) importado(s) com sucesso!`);
@@ -201,7 +211,10 @@ export function Integracao() {
       toast.error(String(e?.message || e));
       setSyncResult({ ok: false, error: String(e?.message || e) });
     } finally {
+      setSyncProgress({ label: "Concluído!", step: 5, total: 5 });
+      setTimeout(() => setSyncProgress(null), 1500);
       setSyncing(false);
+      setSyncStartTime(null);
     }
   }
 
@@ -567,6 +580,46 @@ export function Integracao() {
             {syncing ? "Importando..." : "Importar por Data"}
           </button>
         </div>
+
+        {/* Progress indicator */}
+        {syncProgress && (
+          <div
+            className="mt-4 rounded-lg px-4 py-3 text-sm space-y-2"
+            style={{
+              background: "rgba(59,130,246,0.08)",
+              border: "1px solid rgba(59,130,246,0.3)",
+            }}
+          >
+            <div className="flex items-center justify-between">
+              <span style={{ color: "#93c5fd", fontWeight: 600, fontSize: 13 }}>
+                {syncProgress.label}
+              </span>
+              <span style={{ color: "var(--text-muted)", fontSize: 11 }}>
+                Etapa {syncProgress.step}/{syncProgress.total}
+              </span>
+            </div>
+            <div
+              className="w-full rounded-full overflow-hidden"
+              style={{ height: 6, background: "rgba(59,130,246,0.15)" }}
+            >
+              <div
+                className="h-full rounded-full transition-all duration-500 ease-out"
+                style={{
+                  width: `${(syncProgress.step / syncProgress.total) * 100}%`,
+                  background: syncProgress.step === syncProgress.total
+                    ? "linear-gradient(90deg, #22c55e, #16a34a)"
+                    : "linear-gradient(90deg, #3b82f6, #6366f1)",
+                  animation: syncProgress.step < syncProgress.total ? "pulse 1.5s ease-in-out infinite" : "none",
+                }}
+              />
+            </div>
+            {syncProgress.step < syncProgress.total && (
+              <p style={{ color: "var(--text-muted)", fontSize: 11 }}>
+                ⏱ Aguarde enquanto os leads são processados…
+              </p>
+            )}
+          </div>
+        )}
 
         {syncResult && (
           <div
