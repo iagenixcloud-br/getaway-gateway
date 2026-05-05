@@ -167,7 +167,7 @@ export function Integracao() {
       setDebugging(false);
     }
   }
-  async function handleSyncLeads() {
+  async function handleSyncLeads(opts: { today_only?: boolean; since?: string } = {}) {
     setSyncing(true);
     setSyncResult(null);
     try {
@@ -178,9 +178,12 @@ export function Integracao() {
         setSyncing(false);
         return;
       }
+      const body: Record<string, unknown> = { max_pages: 5, limit: 50 };
+      if (opts.today_only) body.today_only = true;
+      if (opts.since) body.since = opts.since;
       const { data, error } = await invokeCloudFunction("fb-sync-leads", {
         method: "POST",
-        body: { max_pages: 5, limit: 50 },
+        body,
         authToken: accessToken,
       });
       if (error) {
