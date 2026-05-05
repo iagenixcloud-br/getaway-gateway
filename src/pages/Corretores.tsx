@@ -495,6 +495,7 @@ export function Corretores() {
               )}
             </tbody>
           </table>
+          </div>
         </div>
       )}
 
