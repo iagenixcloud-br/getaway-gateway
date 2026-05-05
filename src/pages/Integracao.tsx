@@ -68,6 +68,7 @@ export function Integracao() {
   const [check, setCheck] = useState<CheckResult | null>(null);
   const [debug, setDebug] = useState<any>(null);
   const [fbAppId, setFbAppId] = useState<string | null>(null);
+  const [syncDateFilter, setSyncDateFilter] = useState("");
 
   useEffect(() => {
     invokeCloudFunction<{ fb_app_id: string | null }>("fb-public-config", { method: "GET" })
