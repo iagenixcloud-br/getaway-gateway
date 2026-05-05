@@ -816,6 +816,25 @@ function LeadCard({
         )}
       </div>
 
+      {/* Substatus (perda / cliente futuro) */}
+      {needsSubstatus(lead.status) && lead.substatus && (
+        <div
+          className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg mb-2"
+          style={{
+            background: lead.status === "perda" ? "rgba(239,68,68,0.10)" : "rgba(14,165,233,0.10)",
+            border: `1px solid ${lead.status === "perda" ? "rgba(239,68,68,0.25)" : "rgba(14,165,233,0.25)"}`,
+            fontSize: 11,
+            fontWeight: 500,
+            color: lead.status === "perda" ? "#ef4444" : "#0ea5e9",
+          }}
+        >
+          <span>•</span>
+          <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            {lead.substatus}
+          </span>
+        </div>
+      )}
+
       {/* Chip de corretor (apenas quando passado, ex: visão admin) */}
       {corretorName !== null && corretorName !== undefined && (
         <div
