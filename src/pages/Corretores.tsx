@@ -488,7 +488,7 @@ export function Corretores() {
                           }}
                         >
                           Excluir
-                        </button>
+                        </div>
                       </td>
                     </tr>
                   );
