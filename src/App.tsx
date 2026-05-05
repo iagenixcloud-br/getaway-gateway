@@ -9,7 +9,7 @@ import { Login } from "./pages/Login";
 import { Corretores } from "./pages/Corretores";
 import { Desempenho } from "./pages/Desempenho";
 import { Roleta } from "./pages/Roleta";
-import { Relatorios } from "./pages/Relatorios";
+
 import { Integracao } from "./pages/Integracao";
 import { Dashboard } from "./pages/Dashboard";
 import { Leads } from "./pages/Leads";
@@ -57,16 +57,6 @@ export default function App() {
               <ProtectedRoute requireAdmin>
                 <Layout>
                   <Roleta />
-                </Layout>
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/relatorios"
-            element={
-              <ProtectedRoute requireAdmin>
-                <Layout>
-                  <Relatorios />
                 </Layout>
               </ProtectedRoute>
             }
