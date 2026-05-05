@@ -82,11 +82,23 @@ Deno.serve(async (req) => {
   const auth = await requireAdmin(req);
   if (auth.error) return auth.error;
 
-  let body: { max_pages?: number; limit?: number } = {};
+  let body: { max_pages?: number; limit?: number; since?: string; today_only?: boolean } = {};
   try { body = await req.json(); } catch { body = {}; }
 
   const maxPages = Math.min(Math.max(Number(body.max_pages || 3), 1), 10);
   const limit = Math.min(Math.max(Number(body.limit || 50), 10), 100);
+
+  // Filtro por data: se today_only=true, usa início do dia UTC; se since="YYYY-MM-DD", usa essa data
+  let sinceTimestamp: number | null = null;
+  if (body.today_only) {
+    const now = new Date();
+    sinceTimestamp = Math.floor(new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime() / 1000);
+  } else if (body.since) {
+    const parsed = new Date(body.since);
+    if (!isNaN(parsed.getTime())) {
+      sinceTimestamp = Math.floor(parsed.getTime() / 1000);
+    }
+  }
   const token = await getFbToken();
   if (!token) return json({ ok: false, error: "Token do Facebook não configurado" }, 500);
 
