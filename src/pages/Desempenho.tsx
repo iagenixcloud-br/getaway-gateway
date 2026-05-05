@@ -501,7 +501,7 @@ export function Desempenho() {
               </div>
             )}
 
-            <div style={{ overflowX: "auto" }}>
+            <div style={{ overflowX: "auto", WebkitOverflowScrolling: "touch" }}>
               <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 720 }}>
                 <thead>
                   <tr style={{ background: "rgba(255,255,255,0.02)" }}>
