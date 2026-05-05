@@ -158,7 +158,9 @@ Deno.serve(async (req) => {
 
     // 2. Process each form — collect leads into batches
     for (const form of activeForms) {
-      let nextUrl: string | null = `https://graph.facebook.com/v21.0/${form.id}/leads?fields=id,created_time,field_data,platform&limit=${limit}&access_token=${encodeURIComponent(token)}`;
+      let baseUrl = `https://graph.facebook.com/v21.0/${form.id}/leads?fields=id,created_time,field_data,platform&limit=${limit}&access_token=${encodeURIComponent(token)}`;
+      if (sinceTimestamp) baseUrl += `&filtering=[{"field":"time_created","operator":"GREATER_THAN","value":${sinceTimestamp}}]`;
+      let nextUrl: string | null = baseUrl;
 
       for (let page = 0; nextUrl && page < maxPages; page++) {
         const res = await fetch(nextUrl);
