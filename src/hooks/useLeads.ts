@@ -43,12 +43,16 @@ const mapStatus = (s: string | null): LeadStatus => {
     case "negocio fechado":
     case "negócio fechado":
       return "venda";
+    case "perda":
     case "nao_qualificado":
     case "não qualificado":
     case "nao qualificado":
     case "não-qualificado":
     case "desqualificado":
-      return "nao_qualificado";
+      return "perda";
+    case "cliente_futuro":
+    case "cliente futuro":
+      return "cliente_futuro";
     default:
       return "lead_novo";
   }
