@@ -442,7 +442,6 @@ export function Corretores() {
                             padding: "6px 12px",
                             borderRadius: 8,
                             cursor: "pointer",
-                            marginRight: 8,
                           }}
                         >
                           Editar
