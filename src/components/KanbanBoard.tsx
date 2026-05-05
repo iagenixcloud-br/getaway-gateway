@@ -898,7 +898,7 @@ export function KanbanBoard() {
       </div>
 
       {/* Kanban Columns */}
-      <div className="flex gap-4 overflow-x-auto pb-4">
+      <div className="flex gap-4 overflow-x-auto pb-4 kanban-scroll">
         {columns.map((col) => {
           const colLeads = getColumnLeads(col.id);
           return (
