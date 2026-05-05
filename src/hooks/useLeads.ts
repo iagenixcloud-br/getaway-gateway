@@ -43,12 +43,16 @@ const mapStatus = (s: string | null): LeadStatus => {
     case "negocio fechado":
     case "negócio fechado":
       return "venda";
+    case "perda":
     case "nao_qualificado":
     case "não qualificado":
     case "nao qualificado":
     case "não-qualificado":
     case "desqualificado":
-      return "nao_qualificado";
+      return "perda";
+    case "cliente_futuro":
+    case "cliente futuro":
+      return "cliente_futuro";
     default:
       return "lead_novo";
   }
@@ -123,6 +127,7 @@ export const rowToLead = (row: LeadRow): Lead => ({
   purpose: normalizePurpose(row.purpose),
   areaSqm: row.area_sqm ?? "",
   region: row.region ?? "",
+  substatus: row.substatus ?? "",
 });
 
 export function useLeads() {
@@ -281,6 +286,7 @@ export function useLeads() {
     if (patch.purpose !== undefined) dbPatch.purpose = toStr(patch.purpose);
     if (patch.areaSqm !== undefined) dbPatch.area_sqm = toStr(patch.areaSqm);
     if (patch.region !== undefined) dbPatch.region = toStr(patch.region);
+    if (patch.substatus !== undefined) dbPatch.substatus = toStr(patch.substatus);
 
     // Remove chaves marcadas como "não mexer" (undefined)
     Object.keys(dbPatch).forEach((k) => {

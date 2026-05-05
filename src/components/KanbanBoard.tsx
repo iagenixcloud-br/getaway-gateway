@@ -57,8 +57,124 @@ const columns: { id: LeadStatus; label: string; color: string; icon: string }[] 
   { id: "visita", label: "Visita", color: "#ec4899", icon: "⌂" },
   { id: "proposta", label: "Proposta", color: "#D4AF37", icon: "★" },
   { id: "venda", label: "Venda", color: "#22c55e", icon: "✓" },
-  { id: "nao_qualificado", label: "Não-Qualificado", color: "#ef4444", icon: "✕" },
+  { id: "perda", label: "Perda", color: "#ef4444", icon: "✕" },
+  { id: "cliente_futuro", label: "Cliente Futuro", color: "#0ea5e9", icon: "🔄" },
 ];
+
+// ── Substatus options ─────────────────────────────────────────
+const SUBSTATUS_OPTIONS: Record<string, string[]> = {
+  perda: [
+    "Não gostou da localização",
+    "Não gostou da planta",
+    "Sem perfil financeiro",
+    "Prazo longo",
+    "Fora do momento de compra",
+  ],
+  cliente_futuro: [
+    "Busca outra região",
+    "Busca imóvel maior",
+    "Busca imóvel mais barato",
+    "Busca imóvel pronto",
+    "Entrada menor",
+    "Parcela menor",
+  ],
+};
+
+const needsSubstatus = (status: LeadStatus) =>
+  status === "perda" || status === "cliente_futuro";
+
+// ── Substatus Modal ───────────────────────────────────────────
+function SubstatusModal({
+  targetStatus,
+  onConfirm,
+  onCancel,
+}: {
+  targetStatus: "perda" | "cliente_futuro";
+  onConfirm: (substatus: string) => void;
+  onCancel: () => void;
+}) {
+  const [selected, setSelected] = useState("");
+  const options = SUBSTATUS_OPTIONS[targetStatus] || [];
+  const col = columns.find((c) => c.id === targetStatus);
+  const color = col?.color || "#ef4444";
+
+  return (
+    <div className="modal-overlay" onClick={onCancel}>
+      <div
+        className="glass rounded-2xl p-6 w-full mx-3 sm:mx-0"
+        style={{ maxWidth: 420, border: `1px solid ${color}40` }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <h3
+          style={{
+            fontFamily: "Montserrat, sans-serif",
+            fontWeight: 700,
+            fontSize: 16,
+            marginBottom: 4,
+            color: "var(--text-primary)",
+          }}
+        >
+          {col?.icon} Mover para {col?.label}
+        </h3>
+        <p style={{ fontSize: 12, color: "var(--text-muted)", marginBottom: 16 }}>
+          Selecione o motivo:
+        </p>
+
+        <div className="flex flex-col gap-2 mb-5">
+          {options.map((opt) => (
+            <button
+              key={opt}
+              onClick={() => setSelected(opt)}
+              className="text-left px-4 py-3 rounded-xl transition-all"
+              style={{
+                background: selected === opt ? `${color}20` : "rgba(255,255,255,0.04)",
+                border: `1px solid ${selected === opt ? `${color}60` : "rgba(255,255,255,0.08)"}`,
+                color: selected === opt ? color : "var(--text-secondary, var(--text-muted))",
+                fontSize: 13,
+                fontWeight: selected === opt ? 600 : 400,
+                cursor: "pointer",
+              }}
+            >
+              • {opt}
+            </button>
+          ))}
+        </div>
+
+        <div className="flex gap-2">
+          <button
+            onClick={() => selected && onConfirm(selected)}
+            disabled={!selected}
+            className="flex-1 py-2.5 rounded-xl"
+            style={{
+              background: selected ? color : `${color}30`,
+              color: selected ? "#fff" : "var(--text-muted)",
+              fontSize: 13,
+              fontWeight: 700,
+              cursor: selected ? "pointer" : "not-allowed",
+              border: "none",
+            }}
+          >
+            Confirmar
+          </button>
+          <button
+            onClick={onCancel}
+            className="px-4 py-2.5 rounded-xl"
+            style={{
+              background: "rgba(255,255,255,0.05)",
+              color: "var(--text-muted)",
+              fontSize: 13,
+              fontWeight: 600,
+              cursor: "pointer",
+              border: "1px solid var(--glass-border)",
+            }}
+          >
+            Cancelar
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 // Threshold (em horas) acima do qual um lead em Follow-up é considerado urgente
 const FOLLOWUP_URGENT_HOURS = 72;
@@ -700,6 +816,25 @@ function LeadCard({
         )}
       </div>
 
+      {/* Substatus (perda / cliente futuro) */}
+      {needsSubstatus(lead.status) && lead.substatus && (
+        <div
+          className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg mb-2"
+          style={{
+            background: lead.status === "perda" ? "rgba(239,68,68,0.10)" : "rgba(14,165,233,0.10)",
+            border: `1px solid ${lead.status === "perda" ? "rgba(239,68,68,0.25)" : "rgba(14,165,233,0.25)"}`,
+            fontSize: 11,
+            fontWeight: 500,
+            color: lead.status === "perda" ? "#ef4444" : "#0ea5e9",
+          }}
+        >
+          <span>•</span>
+          <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            {lead.substatus}
+          </span>
+        </div>
+      )}
+
       {/* Chip de corretor (apenas quando passado, ex: visão admin) */}
       {corretorName !== null && corretorName !== undefined && (
         <div
@@ -804,18 +939,17 @@ function DroppableArea({
 export function KanbanBoard() {
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [activeLead, setActiveLead] = useState<Lead | null>(null);
+  // Pending substatus: when moving to perda/cliente_futuro, we pause and ask for reason
+  const [pendingMove, setPendingMove] = useState<{ leadId: string; status: "perda" | "cliente_futuro" } | null>(null);
   const { leads: allLeads, loading, error, updateLeadStatus, updateLead, assignLead } = useLeads();
   const { isAdmin } = useAuth();
-  // Só carrega lista de corretores quando admin (corretor não precisa)
   const { corretores } = useCorretores(isAdmin);
-  // Mapa id -> nome para resolver chip rapidamente
   const corretorNameById = React.useMemo(() => {
     const m = new Map<string, string>();
     corretores.forEach((c) => m.set(c.id, c.name));
     return m;
   }, [corretores]);
 
-  // Conta quantos leads cada corretor tem atribuídos
   const leadCountByCorretor = React.useMemo(() => {
     const m = new Map<string, number>();
     allLeads.forEach((l) => {
@@ -826,7 +960,6 @@ export function KanbanBoard() {
     return m;
   }, [allLeads]);
 
-  // Quando o lead selecionado é atualizado na lista, refletir no modal aberto
   React.useEffect(() => {
     if (!selectedLead) return;
     const fresh = allLeads.find((l) => l.id === selectedLead.id);
@@ -845,6 +978,20 @@ export function KanbanBoard() {
     setActiveLead(lead || null);
   };
 
+  // Moves a lead, asking for substatus if needed
+  const moveLeadWithSubstatus = (leadId: string, newStatus: LeadStatus) => {
+    if (needsSubstatus(newStatus)) {
+      setPendingMove({ leadId, status: newStatus as "perda" | "cliente_futuro" });
+    } else {
+      updateLeadStatus(leadId, newStatus);
+      // Clear substatus when moving away from perda/cliente_futuro
+      const lead = allLeads.find((l) => l.id === leadId);
+      if (lead && needsSubstatus(lead.status)) {
+        updateLead(leadId, { substatus: "" });
+      }
+    }
+  };
+
   const handleDragEnd = (event: DragEndEvent) => {
     setActiveLead(null);
     const { active, over } = event;
@@ -852,7 +999,7 @@ export function KanbanBoard() {
     const newStatus = over.id as LeadStatus;
     const lead = allLeads.find((l) => l.id === active.id);
     if (!lead || lead.status === newStatus) return;
-    updateLeadStatus(lead.id, newStatus);
+    moveLeadWithSubstatus(lead.id, newStatus);
   };
 
   return (
@@ -970,12 +1117,29 @@ export function KanbanBoard() {
         <LeadModal
           lead={selectedLead}
           onClose={() => setSelectedLead(null)}
-          onMove={(newStatus) => updateLeadStatus(selectedLead.id, newStatus)}
+          onMove={(newStatus) => {
+            moveLeadWithSubstatus(selectedLead.id, newStatus);
+            if (!needsSubstatus(newStatus)) setSelectedLead(null);
+          }}
           onUpdate={(patch) => updateLead(selectedLead.id, patch)}
           isAdmin={isAdmin}
           corretores={corretores}
           onAssign={(corretorId) => assignLead(selectedLead.id, corretorId)}
           leadCountByCorretor={leadCountByCorretor}
+        />
+      )}
+
+      {/* Modal de substatus (perda / cliente futuro) */}
+      {pendingMove && (
+        <SubstatusModal
+          targetStatus={pendingMove.status}
+          onConfirm={(substatus) => {
+            updateLeadStatus(pendingMove.leadId, pendingMove.status);
+            updateLead(pendingMove.leadId, { substatus });
+            setPendingMove(null);
+            setSelectedLead(null);
+          }}
+          onCancel={() => setPendingMove(null)}
         />
       )}
     </div>
