@@ -1117,12 +1117,29 @@ export function KanbanBoard() {
         <LeadModal
           lead={selectedLead}
           onClose={() => setSelectedLead(null)}
-          onMove={(newStatus) => updateLeadStatus(selectedLead.id, newStatus)}
+          onMove={(newStatus) => {
+            moveLeadWithSubstatus(selectedLead.id, newStatus);
+            if (!needsSubstatus(newStatus)) setSelectedLead(null);
+          }}
           onUpdate={(patch) => updateLead(selectedLead.id, patch)}
           isAdmin={isAdmin}
           corretores={corretores}
           onAssign={(corretorId) => assignLead(selectedLead.id, corretorId)}
           leadCountByCorretor={leadCountByCorretor}
+        />
+      )}
+
+      {/* Modal de substatus (perda / cliente futuro) */}
+      {pendingMove && (
+        <SubstatusModal
+          targetStatus={pendingMove.status}
+          onConfirm={(substatus) => {
+            updateLeadStatus(pendingMove.leadId, pendingMove.status);
+            updateLead(pendingMove.leadId, { substatus });
+            setPendingMove(null);
+            setSelectedLead(null);
+          }}
+          onCancel={() => setPendingMove(null)}
         />
       )}
     </div>
