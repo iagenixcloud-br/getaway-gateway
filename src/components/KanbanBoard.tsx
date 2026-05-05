@@ -939,18 +939,17 @@ function DroppableArea({
 export function KanbanBoard() {
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [activeLead, setActiveLead] = useState<Lead | null>(null);
+  // Pending substatus: when moving to perda/cliente_futuro, we pause and ask for reason
+  const [pendingMove, setPendingMove] = useState<{ leadId: string; status: "perda" | "cliente_futuro" } | null>(null);
   const { leads: allLeads, loading, error, updateLeadStatus, updateLead, assignLead } = useLeads();
   const { isAdmin } = useAuth();
-  // Só carrega lista de corretores quando admin (corretor não precisa)
   const { corretores } = useCorretores(isAdmin);
-  // Mapa id -> nome para resolver chip rapidamente
   const corretorNameById = React.useMemo(() => {
     const m = new Map<string, string>();
     corretores.forEach((c) => m.set(c.id, c.name));
     return m;
   }, [corretores]);
 
-  // Conta quantos leads cada corretor tem atribuídos
   const leadCountByCorretor = React.useMemo(() => {
     const m = new Map<string, number>();
     allLeads.forEach((l) => {
@@ -961,7 +960,6 @@ export function KanbanBoard() {
     return m;
   }, [allLeads]);
 
-  // Quando o lead selecionado é atualizado na lista, refletir no modal aberto
   React.useEffect(() => {
     if (!selectedLead) return;
     const fresh = allLeads.find((l) => l.id === selectedLead.id);
@@ -980,6 +978,20 @@ export function KanbanBoard() {
     setActiveLead(lead || null);
   };
 
+  // Moves a lead, asking for substatus if needed
+  const moveLeadWithSubstatus = (leadId: string, newStatus: LeadStatus) => {
+    if (needsSubstatus(newStatus)) {
+      setPendingMove({ leadId, status: newStatus as "perda" | "cliente_futuro" });
+    } else {
+      updateLeadStatus(leadId, newStatus);
+      // Clear substatus when moving away from perda/cliente_futuro
+      const lead = allLeads.find((l) => l.id === leadId);
+      if (lead && needsSubstatus(lead.status)) {
+        updateLead(leadId, { substatus: "" });
+      }
+    }
+  };
+
   const handleDragEnd = (event: DragEndEvent) => {
     setActiveLead(null);
     const { active, over } = event;
@@ -987,7 +999,7 @@ export function KanbanBoard() {
     const newStatus = over.id as LeadStatus;
     const lead = allLeads.find((l) => l.id === active.id);
     if (!lead || lead.status === newStatus) return;
-    updateLeadStatus(lead.id, newStatus);
+    moveLeadWithSubstatus(lead.id, newStatus);
   };
 
   return (
