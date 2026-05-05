@@ -247,15 +247,8 @@ export function Corretores() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 style={{ fontFamily: "Montserrat", fontWeight: 700, fontSize: 22, color: "var(--text-primary)" }}>
-            Corretores
-          </h1>
-          <p style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 2 }}>
-            Gerencie acessos da equipe
-          </p>
-        </div>
+      <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
+        <div />
         <button
           onClick={() => setShowForm(!showForm)}
           className="px-4 py-2 rounded-xl"
@@ -371,7 +364,8 @@ export function Corretores() {
         <p style={{ fontSize: 13, color: "#ef4444" }}>{error}</p>
       ) : (
         <div className="glass rounded-2xl overflow-hidden" style={{ border: "1px solid var(--glass-border)" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse" }}>
+          <div style={{ overflowX: "auto", WebkitOverflowScrolling: "touch" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 700 }}>
             <thead>
               <tr style={{ background: "rgba(255,255,255,0.03)" }}>
                 <th style={{ textAlign: "left", padding: "12px 16px", fontSize: 11, color: "var(--text-muted)", fontWeight: 600 }}>
@@ -501,6 +495,7 @@ export function Corretores() {
               )}
             </tbody>
           </table>
+          </div>
         </div>
       )}
 
