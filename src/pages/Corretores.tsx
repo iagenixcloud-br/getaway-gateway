@@ -383,7 +383,7 @@ export function Corretores() {
                 <th style={{ textAlign: "left", padding: "12px 16px", fontSize: 11, color: "var(--text-muted)", fontWeight: 600 }}>
                   Status
                 </th>
-                <th style={{ textAlign: "right", padding: "12px 16px", fontSize: 11, color: "var(--text-muted)", fontWeight: 600 }}>
+                <th style={{ textAlign: "right", padding: "12px 16px", fontSize: 11, color: "var(--text-muted)", fontWeight: 600, width: 260 }}>
                   Ações
                 </th>
               </tr>
@@ -429,7 +429,8 @@ export function Corretores() {
                           {c.is_active ? "Ativo" : "Inativo"}
                         </span>
                       </td>
-                      <td style={{ padding: "12px 16px", textAlign: "right", whiteSpace: "nowrap" }}>
+                      <td style={{ padding: "12px 16px", textAlign: "right", whiteSpace: "nowrap", width: 260 }}>
+                        <div style={{ display: "inline-flex", gap: 8, justifyContent: "flex-end" }}>
                         <button
                           onClick={() => openEdit(c)}
                           style={{
@@ -441,7 +442,6 @@ export function Corretores() {
                             padding: "6px 12px",
                             borderRadius: 8,
                             cursor: "pointer",
-                            marginRight: 8,
                           }}
                         >
                           Editar
@@ -461,7 +461,6 @@ export function Corretores() {
                               borderRadius: 8,
                               cursor: togglingId === c.id ? "not-allowed" : "pointer",
                               opacity: togglingId === c.id ? 0.4 : 1,
-                              marginRight: 8,
                             }}
                           >
                             {togglingId === c.id ? "..." : c.is_active ? "Inativar" : "Ativar"}
@@ -488,6 +487,7 @@ export function Corretores() {
                         >
                           Excluir
                         </button>
+                        </div>
                       </td>
                     </tr>
                   );
