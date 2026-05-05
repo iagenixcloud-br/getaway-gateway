@@ -102,6 +102,16 @@ export default function App() {
               </ProtectedRoute>
             }
           />
+          <Route
+            path="/assinaturas"
+            element={
+              <ProtectedRoute requireAdmin>
+                <Layout>
+                  <Assinaturas />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
         </Routes>
       </AuthProvider>
     </BrowserRouter>
