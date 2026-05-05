@@ -10,7 +10,8 @@ export type LeadStatus =
   | "visita"
   | "proposta"
   | "venda"
-  | "follow_up";
+  | "follow_up"
+  | "nao_qualificado";
 
 export type LeadOrigin = "FB" | "IG" | "WA" | "Site" | "Indicação";
 
