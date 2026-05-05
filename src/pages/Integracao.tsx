@@ -581,6 +581,46 @@ export function Integracao() {
           </button>
         </div>
 
+        {/* Progress indicator */}
+        {syncProgress && (
+          <div
+            className="mt-4 rounded-lg px-4 py-3 text-sm space-y-2"
+            style={{
+              background: "rgba(59,130,246,0.08)",
+              border: "1px solid rgba(59,130,246,0.3)",
+            }}
+          >
+            <div className="flex items-center justify-between">
+              <span style={{ color: "#93c5fd", fontWeight: 600, fontSize: 13 }}>
+                {syncProgress.label}
+              </span>
+              <span style={{ color: "var(--text-muted)", fontSize: 11 }}>
+                Etapa {syncProgress.step}/{syncProgress.total}
+              </span>
+            </div>
+            <div
+              className="w-full rounded-full overflow-hidden"
+              style={{ height: 6, background: "rgba(59,130,246,0.15)" }}
+            >
+              <div
+                className="h-full rounded-full transition-all duration-500 ease-out"
+                style={{
+                  width: `${(syncProgress.step / syncProgress.total) * 100}%`,
+                  background: syncProgress.step === syncProgress.total
+                    ? "linear-gradient(90deg, #22c55e, #16a34a)"
+                    : "linear-gradient(90deg, #3b82f6, #6366f1)",
+                  animation: syncProgress.step < syncProgress.total ? "pulse 1.5s ease-in-out infinite" : "none",
+                }}
+              />
+            </div>
+            {syncProgress.step < syncProgress.total && (
+              <p style={{ color: "var(--text-muted)", fontSize: 11 }}>
+                ⏱ Aguarde enquanto os leads são processados…
+              </p>
+            )}
+          </div>
+        )}
+
         {syncResult && (
           <div
             className="mt-4 rounded-lg px-4 py-3 text-sm space-y-1"
