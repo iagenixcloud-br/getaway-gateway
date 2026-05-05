@@ -253,3 +253,66 @@ body {
   background-size: 200% 100%;
   animation: shimmer 2s infinite;
 }
+
+/* ── Responsive ────────────────────────────────────────── */
+@media (max-width: 1023px) {
+  .kanban-column {
+    min-width: 260px;
+    max-width: 280px;
+  }
+}
+
+@media (max-width: 640px) {
+  .kanban-column {
+    min-width: 85vw;
+    max-width: 85vw;
+  }
+  .modal-content {
+    margin: 12px;
+    max-width: calc(100vw - 24px) !important;
+    max-height: calc(100vh - 24px) !important;
+  }
+}
+
+/* ── Touch scroll for kanban on mobile ─────────────────── */
+.kanban-scroll {
+  -webkit-overflow-scrolling: touch;
+  scroll-snap-type: x proximity;
+}
+.kanban-scroll > * {
+  scroll-snap-align: start;
+}
+
+/* ── Cross-browser ─────────────────────────────────────── */
+input, select, textarea, button {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+}
+
+select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23999' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  padding-right: 30px;
+}
+
+/* Safe area for notched devices (iPhone X+) */
+@supports (padding: max(0px)) {
+  .safe-bottom {
+    padding-bottom: max(env(safe-area-inset-bottom, 0px), 16px);
+  }
+}
+
+/* Prevent zoom on input focus (iOS Safari) */
+@media screen and (max-width: 768px) {
+  input[type="text"],
+  input[type="email"],
+  input[type="tel"],
+  input[type="number"],
+  input[type="password"],
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+}
