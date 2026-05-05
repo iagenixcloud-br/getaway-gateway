@@ -103,14 +103,13 @@ Deno.serve(async (req) => {
 
     // 1b. Load active corretores and their current lead counts for round-robin with cap
     const MAX_LEADS_PER_CORRETOR = 10;
-    const { data: corretoresRaw } = await crmAdmin
-      .from("profiles")
-      .select("id, name, is_active, last_received_at")
-      .eq("is_active", true)
-      .order("last_received_at", { ascending: true, nullsFirst: true });
+    const [{ data: corretoresRaw }, { data: allLeads }, { data: existingLeads }, { data: existingLogs }] = await Promise.all([
+      crmAdmin.from("profiles").select("id, name, is_active, last_received_at").eq("is_active", true).order("last_received_at", { ascending: true, nullsFirst: true }),
+      crmAdmin.from("leads").select("tenant_id").eq("status", "lead_novo").not("tenant_id", "is", null).limit(5000),
+      crmAdmin.from("leads").select("phone").limit(5000),
+      cloudAdmin.from("webhook_logs").select("leadgen_id").not("leadgen_id", "is", null).limit(5000),
+    ]);
 
-    // Count only "lead_novo" leads per corretor (other statuses don't count toward cap)
-    const { data: allLeads } = await crmAdmin.from("leads").select("tenant_id").eq("status", "lead_novo").not("tenant_id", "is", null).limit(5000);
     const leadCounts = new Map<string, number>();
     (allLeads || []).forEach((l: any) => {
       leadCounts.set(l.tenant_id, (leadCounts.get(l.tenant_id) || 0) + 1);
@@ -121,7 +120,6 @@ Deno.serve(async (req) => {
 
     function getNextCorretor(): string | null {
       if (activeCorretores.length === 0) return null;
-      // Try each corretor starting from current index
       for (let i = 0; i < activeCorretores.length; i++) {
         const idx = (corretorIndex + i) % activeCorretores.length;
         const c = activeCorretores[idx];
@@ -132,26 +130,21 @@ Deno.serve(async (req) => {
           return c.id;
         }
       }
-      return null; // All corretores at max capacity
+      return null;
     }
 
-    // 2. Fetch ALL existing phone numbers from CRM for fast dedup
-    const { data: existingLeads } = await crmAdmin.from("leads").select("phone").limit(5000);
     const existingPhones = new Set(
       (existingLeads || []).map((l: any) => normalizePhone(l.phone || "")).filter(Boolean)
     );
-
-    // 3. Also check webhook_logs for leadgen_ids already processed
-    const { data: existingLogs } = await cloudAdmin
-      .from("webhook_logs")
-      .select("leadgen_id")
-      .not("leadgen_id", "is", null)
-      .limit(5000);
     const existingLeadgenIds = new Set(
       (existingLogs || []).map((l: any) => l.leadgen_id).filter(Boolean)
     );
 
-    // 4. Process each form
+    // Collect batches for bulk insert
+    const leadsToInsert: any[] = [];
+    const logsToInsert: any[] = [];
+
+    // 2. Process each form — collect leads into batches
     for (const form of activeForms) {
       let nextUrl: string | null = `https://graph.facebook.com/v21.0/${form.id}/leads?fields=id,created_time,field_data,platform&limit=${limit}&access_token=${encodeURIComponent(token)}`;
 
@@ -163,21 +156,18 @@ Deno.serve(async (req) => {
         for (const lead of data.data || []) {
           result.fetched++;
 
-          // Skip if leadgen_id already processed
           if (existingLeadgenIds.has(lead.id)) {
             result.skipped++;
             continue;
           }
 
           const fields = parseLead(lead, form.name || form.id);
-
-          // Skip if phone already exists in CRM
           const normPhone = normalizePhone(fields.phone);
+
           if (normPhone && existingPhones.has(normPhone)) {
             result.skipped++;
-            // Record in webhook_logs so we don't re-check next time
             existingLeadgenIds.add(lead.id);
-            await cloudAdmin.from("webhook_logs").insert({
+            logsToInsert.push({
               event_type: "leadgen_sync", page_id: PAGE_ID, leadgen_id: lead.id,
               form_id: form.id, status: "skipped_duplicate",
               payload: { form_name: form.name, phone: fields.phone },
@@ -185,32 +175,48 @@ Deno.serve(async (req) => {
             continue;
           }
 
-          // Insert into CRM with corretor assignment (max 10 per corretor)
           const assignTo = getNextCorretor();
-          const { data: inserted, error: insertErr } = await crmAdmin
-            .from("leads")
-            .insert({ ...fields, status: "lead_novo", tenant_id: assignTo })
-            .select("id")
-            .single();
-
-          if (insertErr || !inserted) {
-            result.errors.push(`${lead.id}: ${insertErr?.message || "falha"}`);
-            continue;
-          }
-
-          // Track in sets for this run
+          leadsToInsert.push({ ...fields, status: "lead_novo", tenant_id: assignTo, _leadgen_id: lead.id, _form_id: form.id, _form_name: form.name, _platform: lead.platform, _created_time: lead.created_time });
           existingLeadgenIds.add(lead.id);
           if (normPhone) existingPhones.add(normPhone);
-
-          await cloudAdmin.from("webhook_logs").insert({
-            event_type: "leadgen_sync", page_id: PAGE_ID, leadgen_id: lead.id,
-            form_id: form.id, status: "success", lead_id: inserted.id,
-            payload: { form_name: form.name, platform: lead.platform, fields, created_time: lead.created_time },
-          });
           result.created++;
         }
         nextUrl = data.paging?.next || null;
       }
+    }
+
+    // 3. Batch insert leads into CRM (chunks of 50)
+    const BATCH_SIZE = 50;
+    for (let i = 0; i < leadsToInsert.length; i += BATCH_SIZE) {
+      const chunk = leadsToInsert.slice(i, i + BATCH_SIZE);
+      const crmRows = chunk.map(({ _leadgen_id, _form_id, _form_name, _platform, _created_time, ...rest }) => rest);
+      const { data: inserted, error: insertErr } = await crmAdmin
+        .from("leads")
+        .insert(crmRows)
+        .select("id");
+
+      if (insertErr || !inserted) {
+        const ids = chunk.map(l => l._leadgen_id).join(", ");
+        result.errors.push(`Batch error: ${insertErr?.message || "falha"} (${ids})`);
+        result.created -= chunk.length;
+        continue;
+      }
+
+      // Build webhook log entries for successful inserts
+      for (let j = 0; j < inserted.length; j++) {
+        const src = chunk[j];
+        logsToInsert.push({
+          event_type: "leadgen_sync", page_id: PAGE_ID, leadgen_id: src._leadgen_id,
+          form_id: src._form_id, status: "success", lead_id: inserted[j].id,
+          payload: { form_name: src._form_name, platform: src._platform, fields: { name: src.name, phone: src.phone, email: src.email, city: src.city, interest: src.interest }, created_time: src._created_time },
+        });
+      }
+    }
+
+    // 4. Batch insert webhook logs (chunks of 100)
+    for (let i = 0; i < logsToInsert.length; i += 100) {
+      const chunk = logsToInsert.slice(i, i + 100);
+      await cloudAdmin.from("webhook_logs").insert(chunk);
     }
 
     console.log("Sync completed", result);
