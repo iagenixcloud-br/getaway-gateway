@@ -4,6 +4,13 @@ import { invokeCloudFunction } from "../lib/cloudFunctions";
 import { Lead, LeadStatus, LeadOrigin, LeadPurpose } from "../data/mockData";
 import { useAuth } from "../contexts/AuthContext";
 
+/** Remove caracteres não numéricos e garante formato +55… */
+function sanitizePhone(raw: string): string {
+  const digits = raw.replace(/\D/g, "");
+  const withCountry = digits.startsWith("55") ? digits : `55${digits}`;
+  return `+${withCountry}`;
+}
+
 // Valores oficiais salvos no banco (coluna `status` da tabela leads):
 // 'lead_novo' | 'curioso' | 'negocio' | 'agendamento' | 'visita' | 'proposta' | 'venda'
 //
@@ -244,7 +251,7 @@ export function useLeads() {
     // Mapeia para colunas do banco
     const dbPatch: Record<string, unknown> = {};
     if (patch.name !== undefined) dbPatch.name = patch.name;
-    if (patch.phone !== undefined) dbPatch.phone = patch.phone;
+    if (patch.phone !== undefined) dbPatch.phone = sanitizePhone(patch.phone);
     if (patch.city !== undefined) dbPatch.city = patch.city;
     if (patch.property !== undefined) dbPatch.interest = patch.property;
     if (patch.status !== undefined) dbPatch.status = patch.status;
@@ -325,7 +332,7 @@ export function useLeads() {
 
     const payload = {
       name: input.name.trim(),
-      phone: input.phone.trim(),
+      phone: sanitizePhone(input.phone),
       status: input.status ?? "novo",
       interest: input.property?.trim() || null,
       budget: budgetNum,
