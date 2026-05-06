@@ -150,25 +150,40 @@ export function useLeads() {
     let mounted = true;
 
     const load = async () => {
-      let query = supabase
-        .from("leads")
-        .select("*")
-        .order("created_at", { ascending: false });
+      const PAGE_SIZE = 1000;
+      let allRows: LeadRow[] = [];
+      let from = 0;
+      let fetchError: string | null = null;
 
-      // Corretor não-admin: filtra pelos leads dele
-      if (!isAdmin && user) {
-        query = query.eq("tenant_id", user.id);
+      while (true) {
+        let query = supabase
+          .from("leads")
+          .select("*")
+          .order("created_at", { ascending: false })
+          .range(from, from + PAGE_SIZE - 1);
+
+        if (!isAdmin && user) {
+          query = query.eq("tenant_id", user.id);
+        }
+
+        const { data, error } = await query;
+        if (!mounted) return;
+        if (error) {
+          fetchError = error.message;
+          break;
+        }
+        allRows = allRows.concat(data as LeadRow[]);
+        if (!data || data.length < PAGE_SIZE) break;
+        from += PAGE_SIZE;
       }
 
-      const { data, error } = await query;
-
       if (!mounted) return;
-      if (error) {
-        setError(error.message);
+      if (fetchError) {
+        setError(fetchError);
         setLoading(false);
         return;
       }
-      setLeads((data as LeadRow[]).map(rowToLead));
+      setLeads(allRows.map(rowToLead));
       setLoading(false);
     };
 
