@@ -244,7 +244,7 @@ export function useLeads() {
     // Mapeia para colunas do banco
     const dbPatch: Record<string, unknown> = {};
     if (patch.name !== undefined) dbPatch.name = patch.name;
-    if (patch.phone !== undefined) dbPatch.phone = patch.phone;
+    if (patch.phone !== undefined) dbPatch.phone = sanitizePhone(patch.phone);
     if (patch.city !== undefined) dbPatch.city = patch.city;
     if (patch.property !== undefined) dbPatch.interest = patch.property;
     if (patch.status !== undefined) dbPatch.status = patch.status;
@@ -325,7 +325,7 @@ export function useLeads() {
 
     const payload = {
       name: input.name.trim(),
-      phone: input.phone.trim(),
+      phone: sanitizePhone(input.phone),
       status: input.status ?? "novo",
       interest: input.property?.trim() || null,
       budget: budgetNum,
