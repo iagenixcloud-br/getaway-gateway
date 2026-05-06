@@ -4,6 +4,13 @@ import { invokeCloudFunction } from "../lib/cloudFunctions";
 import { Lead, LeadStatus, LeadOrigin, LeadPurpose } from "../data/mockData";
 import { useAuth } from "../contexts/AuthContext";
 
+/** Remove caracteres não numéricos e garante formato +55… */
+function sanitizePhone(raw: string): string {
+  const digits = raw.replace(/\D/g, "");
+  const withCountry = digits.startsWith("55") ? digits : `55${digits}`;
+  return `+${withCountry}`;
+}
+
 // Valores oficiais salvos no banco (coluna `status` da tabela leads):
 // 'lead_novo' | 'curioso' | 'negocio' | 'agendamento' | 'visita' | 'proposta' | 'venda'
 //
