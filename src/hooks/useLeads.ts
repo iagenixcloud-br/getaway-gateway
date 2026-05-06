@@ -179,11 +179,11 @@ export function useLeads() {
 
       if (!mounted) return;
       if (fetchError) {
-        setError(error.message);
+        setError(fetchError);
         setLoading(false);
         return;
       }
-      setLeads((data as LeadRow[]).map(rowToLead));
+      setLeads(allRows.map(rowToLead));
       setLoading(false);
     };
 
