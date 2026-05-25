@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Navigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { supabase } from "../lib/supabase";
+import { invokeCloudFunction } from "../lib/cloudFunctions";
 
 interface UserWithRole {
   id: string;
@@ -11,12 +12,57 @@ interface UserWithRole {
 }
 
 export function Admins() {
-  const { isAdmin, loading: authLoading, user } = useAuth();
+  const { isAdmin, isMaster, loading: authLoading, user } = useAuth();
   const [users, setUsers] = useState<UserWithRole[]>([]);
   const [loading, setLoading] = useState(true);
   const [toggling, setToggling] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+
+  // Reset password (Master only)
+  const [resetTarget, setResetTarget] = useState<UserWithRole | null>(null);
+  const [resetPwd, setResetPwd] = useState("");
+  const [resetPwd2, setResetPwd2] = useState("");
+  const [resetting, setResetting] = useState(false);
+  const [resetMsg, setResetMsg] = useState<{ type: "ok" | "err"; text: string } | null>(null);
+
+  const openReset = (u: UserWithRole) => {
+    setResetTarget(u);
+    setResetPwd("");
+    setResetPwd2("");
+    setResetMsg(null);
+  };
+
+  const handleResetPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!resetTarget) return;
+    setResetMsg(null);
+    if (resetPwd.length < 6) {
+      setResetMsg({ type: "err", text: "A senha precisa ter pelo menos 6 caracteres." });
+      return;
+    }
+    if (resetPwd !== resetPwd2) {
+      setResetMsg({ type: "err", text: "As senhas não coincidem." });
+      return;
+    }
+    setResetting(true);
+    const { data, error: err } = await invokeCloudFunction("admin-reset-password", {
+      user_id: resetTarget.id,
+      new_password: resetPwd,
+    });
+    setResetting(false);
+    if (err) {
+      setResetMsg({ type: "err", text: err.message || "Falha ao redefinir senha" });
+      return;
+    }
+    if (data?.error) {
+      setResetMsg({ type: "err", text: data.error });
+      return;
+    }
+    setResetMsg({ type: "ok", text: `Senha de ${resetTarget.name || resetTarget.email} redefinida!` });
+    setResetPwd("");
+    setResetPwd2("");
+  };
 
   const load = async () => {
     const [{ data: profiles }, { data: roles }] = await Promise.all([
