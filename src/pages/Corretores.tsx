@@ -511,6 +511,24 @@ export function Corretores() {
                             {togglingId === c.id ? "..." : c.is_active ? "Inativar" : "Ativar"}
                           </button>
                         )}
+                        {isMaster && !isSelf && (
+                          <button
+                            onClick={() => openReset(c)}
+                            title="Redefinir senha"
+                            style={{
+                              background: "rgba(212,175,55,0.1)",
+                              border: "1px solid rgba(212,175,55,0.3)",
+                              color: "var(--gold)",
+                              fontSize: 12,
+                              fontWeight: 600,
+                              padding: "6px 12px",
+                              borderRadius: 8,
+                              cursor: "pointer",
+                            }}
+                          >
+                            Senha
+                          </button>
+                        )}
                         <button
                           onClick={() => {
                             setConfirmDelete(c);
