@@ -44,7 +44,7 @@ interface Corretor {
 }
 
 export function Corretores() {
-  const { isAdmin, loading: authLoading, user } = useAuth();
+  const { isAdmin, isMaster, loading: authLoading, user } = useAuth();
   const [list, setList] = useState<Corretor[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -72,6 +72,51 @@ export function Corretores() {
   const [confirmDelete, setConfirmDelete] = useState<Corretor | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [deleteMsg, setDeleteMsg] = useState<string | null>(null);
+
+  // Reset password (Master only)
+  const [resetTarget, setResetTarget] = useState<Corretor | null>(null);
+  const [resetPwd, setResetPwd] = useState("");
+  const [resetPwd2, setResetPwd2] = useState("");
+  const [resetting, setResetting] = useState(false);
+  const [resetMsg, setResetMsg] = useState<{ type: "ok" | "err"; text: string } | null>(null);
+
+  const openReset = (c: Corretor) => {
+    setResetTarget(c);
+    setResetPwd("");
+    setResetPwd2("");
+    setResetMsg(null);
+  };
+
+  const handleResetPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!resetTarget) return;
+    setResetMsg(null);
+    if (resetPwd.length < 6) {
+      setResetMsg({ type: "err", text: "A senha precisa ter pelo menos 6 caracteres." });
+      return;
+    }
+    if (resetPwd !== resetPwd2) {
+      setResetMsg({ type: "err", text: "As senhas não coincidem." });
+      return;
+    }
+    setResetting(true);
+    const { data, error } = await invokeCloudFunction("admin-reset-password", {
+      user_id: resetTarget.id,
+      new_password: resetPwd,
+    });
+    setResetting(false);
+    if (error) {
+      setResetMsg({ type: "err", text: error.message || "Falha ao redefinir senha" });
+      return;
+    }
+    if (data?.error) {
+      setResetMsg({ type: "err", text: data.error });
+      return;
+    }
+    setResetMsg({ type: "ok", text: `Senha de ${resetTarget.name} redefinida com sucesso!` });
+    setResetPwd("");
+    setResetPwd2("");
+  };
 
   const load = async () => {
     setLoading(true);
