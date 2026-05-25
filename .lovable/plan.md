@@ -1,38 +1,31 @@
 
-## Problema
+## Implementação
 
-O Supabase retorna no maximo 1000 linhas por request. O hook `useLeads` faz uma unica query `select("*")`, entao so carrega 1000 dos 3080 leads. Isso causa:
-1. Dashboard mostra "Total de Leads: 1000" em vez de 3080
-2. Leads com corretores atribuidos nao aparecem porque estao alem do limite
+### 1. Edge function `admin-reset-password`
+Nova função em `supabase/functions/admin-reset-password/index.ts` que:
+- Valida o JWT do chamador
+- Confere se ele tem role `master` na tabela `user_roles` (externo)
+- Usa `EXTERNAL_SUPABASE_SERVICE_ROLE_KEY` para chamar `auth.admin.updateUserById(userId, { password })`
+- Retorna 403 se não for Master, 400 se senha < 6 chars
 
-## Solucao
+### 2. `AuthContext`
+- Adicionar `'master'` ao tipo `AppRole`
+- Expor flag `isMaster` derivado das roles
 
-Implementar paginacao automatica no `useLeads.ts` para buscar TODOS os leads em lotes de 1000.
+### 3. `ProtectedRoute`
+- Nova prop `requireMaster` que redireciona para `/` se o usuário não for Master
 
-### Alteracoes
+### 4. Rota `/assinaturas`
+- Em `App.tsx`, trocar `requireAdmin` por `requireMaster`
 
-**Arquivo: `src/hooks/useLeads.ts`**
+### 5. Sidebar (`Layout.tsx`)
+- Trocar a checagem `user?.email === "iagenixcloud@..."` por `isMaster` para esconder o link Assinaturas
 
-- Criar uma funcao auxiliar `fetchAllLeads` que faz queries em loop com `.range(from, to)` ate nao haver mais resultados
-- Substituir a query simples `supabase.from("leads").select("*")` pela funcao paginada
-- Manter os filtros existentes (admin ve tudo, corretor ve so os dele)
-- Manter o `order("created_at", { ascending: false })`
+### 6. Botão "Redefinir senha" (Master)
+- Em `Corretores.tsx` e `Admins.tsx`: novo botão visível apenas se `isMaster`
+- Modal pedindo nova senha (mín. 6 caracteres) com confirmação
+- Chama `invokeCloudFunction("admin-reset-password", { user_id, new_password })`
+- Mostra feedback de sucesso/erro
+- Pequeno aviso no topo: "Por segurança, senhas não podem ser visualizadas. Use 'Redefinir senha' para definir uma nova."
 
-Logica da paginacao:
-```
-async function fetchAllLeads(baseQuery) {
-  const PAGE_SIZE = 1000;
-  let allRows = [];
-  let from = 0;
-  while (true) {
-    const { data, error } = await baseQuery.range(from, from + PAGE_SIZE - 1);
-    if (error) throw error;
-    allRows.push(...data);
-    if (data.length < PAGE_SIZE) break;
-    from += PAGE_SIZE;
-  }
-  return allRows;
-}
-```
-
-Nenhuma outra alteracao necessaria — Dashboard, Kanban, etc. ja consomem o array `leads` do hook.
+Após você aprovar, eu deploy a edge function automaticamente.

@@ -44,7 +44,7 @@ interface Corretor {
 }
 
 export function Corretores() {
-  const { isAdmin, loading: authLoading, user } = useAuth();
+  const { isAdmin, isMaster, loading: authLoading, user } = useAuth();
   const [list, setList] = useState<Corretor[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -72,6 +72,51 @@ export function Corretores() {
   const [confirmDelete, setConfirmDelete] = useState<Corretor | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [deleteMsg, setDeleteMsg] = useState<string | null>(null);
+
+  // Reset password (Master only)
+  const [resetTarget, setResetTarget] = useState<Corretor | null>(null);
+  const [resetPwd, setResetPwd] = useState("");
+  const [resetPwd2, setResetPwd2] = useState("");
+  const [resetting, setResetting] = useState(false);
+  const [resetMsg, setResetMsg] = useState<{ type: "ok" | "err"; text: string } | null>(null);
+
+  const openReset = (c: Corretor) => {
+    setResetTarget(c);
+    setResetPwd("");
+    setResetPwd2("");
+    setResetMsg(null);
+  };
+
+  const handleResetPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!resetTarget) return;
+    setResetMsg(null);
+    if (resetPwd.length < 6) {
+      setResetMsg({ type: "err", text: "A senha precisa ter pelo menos 6 caracteres." });
+      return;
+    }
+    if (resetPwd !== resetPwd2) {
+      setResetMsg({ type: "err", text: "As senhas não coincidem." });
+      return;
+    }
+    setResetting(true);
+    const { data, error } = await invokeCloudFunction("admin-reset-password", {
+      user_id: resetTarget.id,
+      new_password: resetPwd,
+    });
+    setResetting(false);
+    if (error) {
+      setResetMsg({ type: "err", text: error.message || "Falha ao redefinir senha" });
+      return;
+    }
+    if (data?.error) {
+      setResetMsg({ type: "err", text: data.error });
+      return;
+    }
+    setResetMsg({ type: "ok", text: `Senha de ${resetTarget.name} redefinida com sucesso!` });
+    setResetPwd("");
+    setResetPwd2("");
+  };
 
   const load = async () => {
     setLoading(true);
@@ -466,6 +511,24 @@ export function Corretores() {
                             {togglingId === c.id ? "..." : c.is_active ? "Inativar" : "Ativar"}
                           </button>
                         )}
+                        {isMaster && !isSelf && (
+                          <button
+                            onClick={() => openReset(c)}
+                            title="Redefinir senha"
+                            style={{
+                              background: "rgba(212,175,55,0.1)",
+                              border: "1px solid rgba(212,175,55,0.3)",
+                              color: "var(--gold)",
+                              fontSize: 12,
+                              fontWeight: 600,
+                              padding: "6px 12px",
+                              borderRadius: 8,
+                              cursor: "pointer",
+                            }}
+                          >
+                            Senha
+                          </button>
+                        )}
                         <button
                           onClick={() => {
                             setConfirmDelete(c);
@@ -697,6 +760,102 @@ export function Corretores() {
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* ── Modal Redefinir Senha (Master) ─────────────── */}
+      {resetTarget && (
+        <div
+          onClick={() => !resetting && setResetTarget(null)}
+          style={{
+            position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)",
+            backdropFilter: "blur(4px)", display: "flex",
+            alignItems: "center", justifyContent: "center", zIndex: 50, padding: 16,
+          }}
+        >
+          <form
+            onClick={(e) => e.stopPropagation()}
+            onSubmit={handleResetPassword}
+            className="glass rounded-2xl p-6"
+            style={{ width: "100%", maxWidth: 440, border: "1px solid rgba(212,175,55,0.3)" }}
+          >
+            <h2 style={{ fontSize: 16, fontWeight: 700, marginBottom: 4, color: "var(--text-primary)" }}>
+              Redefinir senha
+            </h2>
+            <p style={{ fontSize: 12, color: "var(--text-muted)", marginBottom: 16 }}>
+              {resetTarget.name} — {resetTarget.email}
+            </p>
+
+            <div className="space-y-3">
+              <div>
+                <label style={{ fontSize: 11, color: "var(--text-muted)", display: "block", marginBottom: 4 }}>
+                  Nova senha (mín. 6 caracteres)
+                </label>
+                <input
+                  style={inputStyle}
+                  type="text"
+                  required
+                  minLength={6}
+                  value={resetPwd}
+                  onChange={(e) => setResetPwd(e.target.value)}
+                  autoFocus
+                />
+              </div>
+              <div>
+                <label style={{ fontSize: 11, color: "var(--text-muted)", display: "block", marginBottom: 4 }}>
+                  Confirmar nova senha
+                </label>
+                <input
+                  style={inputStyle}
+                  type="text"
+                  required
+                  minLength={6}
+                  value={resetPwd2}
+                  onChange={(e) => setResetPwd2(e.target.value)}
+                />
+              </div>
+            </div>
+
+            {resetMsg && (
+              <div
+                className="rounded-lg px-3 py-2 mt-4"
+                style={{
+                  background: resetMsg.type === "ok" ? "rgba(34,197,94,0.1)" : "rgba(239,68,68,0.1)",
+                  border: `1px solid ${resetMsg.type === "ok" ? "rgba(34,197,94,0.3)" : "rgba(239,68,68,0.3)"}`,
+                  color: resetMsg.type === "ok" ? "#22c55e" : "#ef4444",
+                  fontSize: 12,
+                }}
+              >
+                {resetMsg.text}
+              </div>
+            )}
+
+            <div className="flex gap-2 mt-5">
+              <button
+                type="button"
+                onClick={() => setResetTarget(null)}
+                disabled={resetting}
+                style={{
+                  flex: 1, background: "rgba(255,255,255,0.05)",
+                  border: "1px solid var(--glass-border)", color: "var(--text-primary)",
+                  fontSize: 13, fontWeight: 600, padding: "10px", borderRadius: 10, cursor: "pointer",
+                }}
+              >
+                Fechar
+              </button>
+              <button
+                type="submit"
+                disabled={resetting}
+                style={{
+                  flex: 1, background: "var(--gold)", border: "none", color: "#0a0a0a",
+                  fontSize: 13, fontWeight: 700, padding: "10px", borderRadius: 10,
+                  cursor: resetting ? "not-allowed" : "pointer", opacity: resetting ? 0.6 : 1,
+                }}
+              >
+                {resetting ? "Salvando..." : "Redefinir"}
+              </button>
+            </div>
+          </form>
         </div>
       )}
     </div>
