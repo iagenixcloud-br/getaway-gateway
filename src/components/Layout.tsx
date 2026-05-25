@@ -8,7 +8,7 @@ interface LayoutProps {
 }
 
 export function Layout({ children }: LayoutProps) {
-  const { profile, isAdmin, signOut, user } = useAuth();
+  const { profile, isAdmin, isMaster, signOut, user } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -189,7 +189,7 @@ export function Layout({ children }: LayoutProps) {
             </svg>,
           )}
 
-        {user?.email === "iagenixcloud@gmail.com" &&
+        {isMaster &&
           navItem(
             "/assinaturas",
             "Assinaturas",

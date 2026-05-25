@@ -105,7 +105,7 @@ export default function App() {
           <Route
             path="/assinaturas"
             element={
-              <ProtectedRoute requireAdmin>
+              <ProtectedRoute requireMaster>
                 <Layout>
                   <Assinaturas />
                 </Layout>

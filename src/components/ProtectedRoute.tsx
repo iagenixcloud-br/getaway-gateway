@@ -5,10 +5,11 @@ import { useAuth } from "../contexts/AuthContext";
 interface Props {
   children: React.ReactNode;
   requireAdmin?: boolean;
+  requireMaster?: boolean;
 }
 
-export function ProtectedRoute({ children, requireAdmin = false }: Props) {
-  const { session, loading, isAdmin } = useAuth();
+export function ProtectedRoute({ children, requireAdmin = false, requireMaster = false }: Props) {
+  const { session, loading, isAdmin, isMaster } = useAuth();
 
   if (loading) {
     return (
@@ -22,6 +23,7 @@ export function ProtectedRoute({ children, requireAdmin = false }: Props) {
   }
 
   if (!session) return <Navigate to="/login" replace />;
+  if (requireMaster && !isMaster) return <Navigate to="/" replace />;
   if (requireAdmin && !isAdmin) return <Navigate to="/" replace />;
 
   return <>{children}</>;
