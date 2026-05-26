@@ -98,9 +98,9 @@ Deno.serve(async (req) => {
     const token = authHeader.replace("Bearer ", "");
 
     const userClient = createClient(SB_URL, SB_ANON, { global: { headers: { Authorization: authHeader } } });
-    const { data: claims, error: claimsErr } = await userClient.auth.getClaims(token);
-    if (claimsErr || !claims?.claims?.sub) {
-      return new Response(JSON.stringify({ error: "Sessão inválida", detail: claimsErr?.message }), {
+    const { data: { user }, error: userErr } = await userClient.auth.getUser(token);
+    if (userErr || !user) {
+      return new Response(JSON.stringify({ error: "Sessão inválida", detail: userErr?.message }), {
         status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
