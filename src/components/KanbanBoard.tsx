@@ -69,6 +69,7 @@ const SUBSTATUS_OPTIONS: Record<string, string[]> = {
     "Sem perfil financeiro",
     "Prazo longo",
     "Fora do momento de compra",
+    "Sem contato",
   ],
   cliente_futuro: [
     "Busca outra região",
