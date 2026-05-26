@@ -93,16 +93,18 @@ Deno.serve(async (req) => {
       });
     }
     const SB_URL = Deno.env.get("SUPABASE_URL")!;
+    const SB_ANON = Deno.env.get("SUPABASE_ANON_KEY")!;
     const SB_SERVICE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const token = authHeader.replace("Bearer ", "");
-    const admin = createClient(SB_URL, SB_SERVICE, { auth: { autoRefreshToken: false, persistSession: false } });
 
-    const { data: { user }, error: userErr } = await admin.auth.getUser(token);
-    if (userErr || !user) {
-      return new Response(JSON.stringify({ error: "Sessão inválida" }), {
+    const userClient = createClient(SB_URL, SB_ANON, { global: { headers: { Authorization: authHeader } } });
+    const { data: claims, error: claimsErr } = await userClient.auth.getClaims(token);
+    if (claimsErr || !claims?.claims?.sub) {
+      return new Response(JSON.stringify({ error: "Sessão inválida", detail: claimsErr?.message }), {
         status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+    const admin = createClient(SB_URL, SB_SERVICE, { auth: { autoRefreshToken: false, persistSession: false } });
 
     const { data: corretores } = await admin
       .from("profiles").select("id, name").eq("is_active", true)
