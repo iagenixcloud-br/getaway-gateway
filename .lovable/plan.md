@@ -1,17 +1,23 @@
-## Objetivo
-Adicionar o motivo "Sem contato" à lista de substatus do modal "Mover para Perda".
+## Mudança
 
-## Alteração
-No arquivo `src/components/KanbanBoard.tsx`, dentro da constante `SUBSTATUS_OPTIONS.perda`, inserir `"Sem contato"` como último item (após `"Fora do momento de compra"`).
+No `supabase/functions/auto-fill-leads/index.ts` (e no template embutido em `supabase/functions/deploy-to-external/index.ts`), substituir:
 
-Lista final:
-- Não gostou da localização
-- Não gostou da planta
-- Sem perfil financeiro
-- Prazo longo
-- Fora do momento de compra
-- Sem contato
+```ts
+const { data: claims, error: claimsErr } = await userClient.auth.getClaims(token);
+if (claimsErr || !claims?.claims?.sub) { ... "Sessão inválida" ... }
+```
 
-## Notas técnicas
-- Nenhuma outra alteração necessária (RLS, schema, tipos, etc.).
-- O modal já renderiza dinamicamente a lista `SUBSTATUS_OPTIONS.perda`.
+por:
+
+```ts
+const { data: { user }, error: userErr } = await userClient.auth.getUser(token);
+if (userErr || !user) { ... "Sessão inválida" ... }
+```
+
+## Passos
+
+1. Atualizar `auto-fill-leads/index.ts` (cópia local do repo).
+2. Atualizar a string `AUTO_FILL_LEADS_SRC` em `deploy-to-external/index.ts` com a mesma troca.
+3. Redeployar `auto-fill-leads` no projeto externo via `deploy-to-external`.
+
+Observação: a versão do SDK (`@supabase/supabase-js@2.57.4`) é mantida — `getUser(token)` funciona em ambas as versões.
