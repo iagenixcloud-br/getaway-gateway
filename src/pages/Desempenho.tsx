@@ -295,7 +295,38 @@ export function Desempenho() {
         </div>
       </div>
 
-      {loading ? (
+      {/* Tabs raiz */}
+      <div className="flex gap-1 mb-5" style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+        {([
+          { k: "overview", label: "Visão Geral" },
+          { k: "conversao", label: "Conversão por Etapa" },
+        ] as const).map((t) => {
+          const active = tab === t.k;
+          return (
+            <button
+              key={t.k}
+              onClick={() => setTab(t.k)}
+              style={{
+                background: "transparent",
+                color: active ? "var(--gold)" : "var(--text-muted)",
+                fontSize: 13,
+                fontWeight: 700,
+                padding: "10px 16px",
+                border: "none",
+                borderBottom: active ? "2px solid var(--gold)" : "2px solid transparent",
+                cursor: "pointer",
+                marginBottom: -1,
+              }}
+            >
+              {t.label}
+            </button>
+          );
+        })}
+      </div>
+
+      {tab === "conversao" ? (
+        <ConversaoPanel />
+      ) : loading ? (
         <p style={{ fontSize: 13, color: "var(--text-muted)" }}>Carregando...</p>
       ) : error ? (
         <p style={{ fontSize: 13, color: "#ef4444" }}>{error}</p>
