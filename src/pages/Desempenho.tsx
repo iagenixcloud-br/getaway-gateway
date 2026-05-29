@@ -20,6 +20,7 @@ import { supabase, LeadRow } from "../lib/supabase";
 import { invokeCloudFunction } from "../lib/cloudFunctions";
 import { LeadStatus } from "../data/mockData";
 import { useCorretores } from "../hooks/useCorretores";
+import { ConversaoPanel } from "../components/conversao/ConversaoPanel";
 
 // ============================================================
 // Página /desempenho
@@ -83,6 +84,7 @@ export function Desempenho() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [range, setRange] = useState<RangeKey>("30d");
+  const [tab, setTab] = useState<"overview" | "conversao">("overview");
 
   useEffect(() => {
     if (!isAdmin) return;
