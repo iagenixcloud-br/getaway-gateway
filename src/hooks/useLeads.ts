@@ -159,6 +159,7 @@ export function useLeads() {
         let query = supabase
           .from("leads")
           .select("*")
+          .eq("arquivado", false)
           .order("created_at", { ascending: false })
           .range(from, from + PAGE_SIZE - 1);
 
