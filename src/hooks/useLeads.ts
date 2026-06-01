@@ -207,15 +207,15 @@ export function useLeads() {
             isAdmin || (row && row.tenant_id === user?.id);
 
           if (payload.eventType === "INSERT") {
-            const row = payload.new as LeadRow;
-            if (!belongsToMe(row)) return;
+            const row = payload.new as LeadRow & { arquivado?: boolean };
+            if (!belongsToMe(row) || row.arquivado === true) return;
             const newLead = rowToLead(row);
             setLeads((prev) => [newLead, ...prev.filter((l) => l.id !== newLead.id)]);
           } else if (payload.eventType === "UPDATE") {
-            const row = payload.new as LeadRow;
+            const row = payload.new as LeadRow & { arquivado?: boolean };
             const updated = rowToLead(row);
-            // Se o lead saiu para outro corretor, removemos da lista local
-            if (!belongsToMe(row)) {
+            // Se o lead foi arquivado ou saiu para outro corretor, remover localmente
+            if (row.arquivado === true || !belongsToMe(row)) {
               setLeads((prev) => prev.filter((l) => l.id !== updated.id));
               return;
             }
