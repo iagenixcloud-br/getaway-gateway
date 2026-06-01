@@ -62,6 +62,8 @@ export function Layout({ children }: LayoutProps) {
       ? { title: "Administradores", subtitle: "Gerencie quem tem acesso total ao sistema" }
       : location.pathname === "/assinaturas"
       ? { title: "Assinaturas", subtitle: "Gestão de licenças e cobranças" }
+      : location.pathname === "/exportar"
+      ? { title: "Exportar & Arquivar", subtitle: "Gerencie, exporte e arquive leads" }
       : { title: "Pipeline de Leads", subtitle: "Gerencie seus leads em tempo real" };
 
   const sidebarContent = (
