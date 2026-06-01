@@ -62,6 +62,8 @@ export function Layout({ children }: LayoutProps) {
       ? { title: "Administradores", subtitle: "Gerencie quem tem acesso total ao sistema" }
       : location.pathname === "/assinaturas"
       ? { title: "Assinaturas", subtitle: "Gestão de licenças e cobranças" }
+      : location.pathname === "/exportar"
+      ? { title: "Exportar & Arquivar", subtitle: "Gerencie, exporte e arquive leads" }
       : { title: "Pipeline de Leads", subtitle: "Gerencie seus leads em tempo real" };
 
   const sidebarContent = (
@@ -157,6 +159,17 @@ export function Layout({ children }: LayoutProps) {
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M3 3v18h18" />
               <path d="M7 14l4-4 4 4 5-5" />
+            </svg>,
+          )}
+
+        {isAdmin &&
+          navItem(
+            "/exportar",
+            "Exportar & Arquivar",
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M21 8v13H3V8" />
+              <path d="M1 3h22v5H1z" />
+              <path d="M10 12h4" />
             </svg>,
           )}
 

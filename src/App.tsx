@@ -10,6 +10,7 @@ import { Corretores } from "./pages/Corretores";
 import { Desempenho } from "./pages/Desempenho";
 import { Roleta } from "./pages/Roleta";
 import { Assinaturas } from "./pages/Assinaturas";
+import { Exportar } from "./pages/Exportar";
 
 import { Integracao } from "./pages/Integracao";
 import { Dashboard } from "./pages/Dashboard";
@@ -98,6 +99,16 @@ export default function App() {
               <ProtectedRoute requireAdmin>
                 <Layout>
                   <Admins />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/exportar"
+            element={
+              <ProtectedRoute requireAdmin>
+                <Layout>
+                  <Exportar />
                 </Layout>
               </ProtectedRoute>
             }
