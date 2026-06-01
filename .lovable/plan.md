@@ -1,83 +1,48 @@
-# Plano — Aba "Conversão por Etapa" em `/desempenho`
+## Exportar & Arquivar — Nova aba admin
 
-## Escopo
-Adicionar uma nova aba dentro da página existente `src/pages/Desempenho.tsx` chamada **"Conversão por Etapa"**, mantendo a tela atual intacta como aba "Visão Geral". A nova aba lê exclusivamente da tabela `metricas_funil` (já criada, com RLS e trigger ativos — não mexer no banco).
+### 1. Roteamento e menu
+- **`src/App.tsx`**: adicionar `<Route path="/exportar">` com `<ProtectedRoute requireAdmin>` envolvendo nova página `Exportar`.
+- **`src/components/Layout.tsx`**: novo item de menu "Exportar & Arquivar" logo abaixo de "Desempenho", visível só com `isAdmin` (ícone de arquivo/caixa).
+- **`src/pages/Exportar.tsx`** (novo): título "Exportar & Arquivar" + subtítulo "Gerencie, exporte e arquive leads".
 
-## Estrutura de arquivos
+### 2. Filtros (topo, lado a lado)
+- **Status** — multiselect com todas as opções (`lead_novo`, `negocio`, `agendamento`, `visita`, `proposta`, `venda`, `perda`, `cliente_futuro`, `curioso`, `follow_up`). Padrão: `venda` + `cliente_futuro`.
+- **Corretor** — dropdown via `useCorretores()` (padrão: "Todos").
+- **Período** — select: mês / trimestre / semestre / ano. Padrão: últimos 90 dias (convertido em `created_at >= now() - 90d`).
+- **Botão "Aplicar filtros"** — dispara fetch.
 
-- `src/pages/Desempenho.tsx` — envolver conteúdo atual em `<Tabs>` com duas abas raiz: **Visão Geral** (atual) e **Conversão por Etapa** (novo).
-- `src/components/conversao/ConversaoPanel.tsx` — componente principal da nova aba (barra superior, KPIs, sub-abas Funil/Perdas).
-- `src/components/conversao/FunilCard.tsx` — card de etapa com barra de progresso, número absoluto, % e conector.
-- `src/components/conversao/PerdasTab.tsx` — listagem de perdas "Sem contato".
-- `src/hooks/useMetricasFunil.ts` — fetch + agregação de `metricas_funil` filtrando por período/corretor, respeitando role.
+### 3. Fetch
+- Query direta em `leads` (Supabase): `select id, name, phone, email, status, substatus, city, interest, created_at, tenant_id` com `.eq('arquivado', false)`, `.in('status', statusSelecionados)`, range de data, e opcional `.eq('tenant_id', corretorId)`.
+- Para coluna "Corretor" da tabela, fazer lookup via `useCorretores()` mapeando `tenant_id` → nome (mantém compatibilidade com o resto do app, que usa `tenant_id` como dono do lead). Observação: o brief menciona `lead_assignments`, mas o app inteiro hoje usa `leads.tenant_id` como corretor (ver `useLeads.ts`); seguir esse padrão para evitar inconsistência.
 
-Nenhum arquivo novo de banco. Nenhuma migration.
+### 4. Card de resumo
+"X leads encontrados com os filtros selecionados" + breakdown: `X Vendas | X Cliente Futuro | X Outros`.
 
-## Comportamento
+### 5. Ações
+- **Exportar CSV** (azul `#185FA5`): gera CSV no cliente com colunas Nome, Telefone, Email, Status, Substatus, Corretor, Data entrada, Cidade, Interesse. Download via `Blob` + `<a download>`. Exporta apenas linhas atualmente filtradas (ou só selecionadas se houver seleção — confirmar com tooltip).
+- **Arquivar selecionados** (vermelho `#D85A30`): habilitado só se houver checkboxes marcados. Abre modal de confirmação obrigatório com input de texto: usuário precisa digitar exatamente `ARQUIVAR` para liberar o botão "Confirmar". Texto exato do brief.
+  - UPDATE: `supabase.from('leads').update({ arquivado: true }).in('id', ids).eq('tenant_id', userId)`.
+  - Após sucesso: toast `"X leads arquivados com sucesso"`, limpa seleção, refaz fetch.
 
-### Filtros (topo da aba)
-- **Período** (default: mês atual). Opções: mês atual, mês anterior, últimos 3 meses. Cada opção vira lista de meses (`date_trunc('month')`) usada como `.in('mes', [...])`.
-- **Corretor** (apenas admin): dropdown com `profiles` (já existe `useCorretores`). Default "Todos".
-- **Badge vermelho**: soma `perdas_sem_contato` do período filtrado.
-- Role lido via `useAuth().isAdmin` (já existente — equivale a `user_roles.role = 'admin'`).
+### 6. Tabela preview
+Colunas: checkbox | Nome | Telefone | Status | Corretor | Data | (sem coluna ações extra — operações em lote). Header com "Selecionar todos". Skeleton (`animate-pulse bg-[#112236]`) enquanto carrega.
 
-### Query base
-```ts
-supabase.from('metricas_funil')
-  .select('leads,negocios,agendamentos,visitas,propostas,vendas,perdas_sem_contato,corretor_id,mes')
-  .in('mes', mesesDoPeriodo)
-  .maybeEq('corretor_id', corretorSelecionado) // admin filtra; corretor RLS já restringe
-```
-Agregação client-side: soma de cada coluna sobre todas as linhas retornadas (vários meses × vários corretores).
+### 7. Filtrar arquivados em todo o app
+Adicionar `.eq('arquivado', false)` em:
+- `src/hooks/useLeads.ts` — query paginada principal. Filtro também no handler de realtime (ignorar UPDATE que torna `arquivado = true` mantém remoção via `eventType` UPDATE: se `row.arquivado === true`, remover da lista local).
+- Verificar se `src/pages/Leads.tsx` faz query própria; se sim, adicionar mesmo filtro. (Vou ler durante implementação.)
 
-### KPIs (6 cards na ordem)
-1. Lead → Negócio — `(negocios/leads)*100` + `negocios` absolutos
-2. Negócio → Agendamento — `(agendamentos/negocios)*100`
-3. Agendamento → Visita — `(visitas/agendamentos)*100`
-4. Visita → Proposta — `(propostas/visitas)*100`
-5. Proposta → Venda — `(vendas/propostas)*100`
-6. Total de leads — `leads` absoluto
+### 8. Design
+- Fundo `#0d1b2a`, cards `#112236`, bordas 0.5px, fonte Inter — consistente com `ConversaoPanel`.
+- Modal: overlay escuro + card `#112236`, input controlado, botão Confirmar desabilitado até `value === "ARQUIVAR"`.
+- Toast via `sonner` (já usado no projeto, se aplicável) ou alert simples seguindo padrão existente — verificar durante build.
 
-Divisões por zero → exibir `—`.
+### 9. Segurança
+- Rota protegida por `ProtectedRoute requireAdmin` (redirect para `/` se não-admin, padrão atual do app — o brief pede `/dashboard` mas o padrão do projeto é `/`; seguir padrão).
+- UPDATE de arquivamento sempre com `.eq('tenant_id', user.id)` no client (RLS no banco continua sendo a defesa real).
+- Sem alterações de schema, migrations, RLS ou triggers — o brief confirma que `arquivado` e trigger já existem.
 
-### Sub-aba "Funil"
-Cards verticais conectados por seta (`ChevronDown`/SVG). Para cada etapa:
-- Header colorido com cor da etapa.
-- Linha principal: número absoluto + origem (ex. "dos 89 negócios").
-- Barra de progresso (`<div>` com largura `%`).
-- % em destaque com cor:
-  - verde `#1D9E75` se ≥ 65
-  - amarelo `#D4AF37` se 50–64
-  - vermelho `#D85A30` se < 50
-- "Não converteu: N" (diff da etapa anterior).
-- Entre cards: texto contextual (ex. "54 agendamentos → quantos compareceram?").
-- Card final **Venda** com borda/glow verde.
-
-### Sub-aba "Perdas"
-- Filtra apenas `perdas_sem_contato`.
-- **Admin**: agrupa por `corretor_id`, faz join com `profiles` para nome, mostra tabela `Corretor | Perdas | % sobre leads`.
-- **Corretor**: mostra um card único com seu total + `% / leads`.
-
-### Loading
-Skeletons (`<div class="animate-pulse bg-[#112236]">`) em cada card e cada KPI enquanto a query roda. Sem fallback "vazio" antes de carregar.
-
-### Cores por etapa (passar via prop)
-`lead_novo #1D9E75`, `negocio #0F6E56`, `agendamento #185FA5`, `visita #534AB7`, `proposta #993556`, `venda #3C3489`, `perda #D85A30`.
-
-### Estilo
-- Fundo painel `#0d1b2a`, cards `#112236`, borda `0.5px solid rgba(255,255,255,0.08)`.
-- Fonte Inter (já default do projeto).
-- Responsivo: KPIs `grid-cols-2 md:grid-cols-3 lg:grid-cols-6`; funil em coluna única centralizada `max-w-2xl`.
-
-## Detalhes técnicos
-
-- **Tabs**: usar `@/components/ui/tabs` (shadcn) — já disponível no projeto via shadcn. Se não existir, fallback para estado local `useState<'overview'|'conversao'>`.
-- **Períodos**: helper `getMesesDoPeriodo(key)` retorna array de strings ISO `YYYY-MM-01`.
-- **Tipos**: criar `MetricaFunilRow` espelhando colunas da tabela.
-- **RLS**: nada extra no client — confiar nas policies (`admin_vê_tudo`, `corretor_vê_próprio`).
-- Sem novas dependências.
-
-## Fora do escopo
-- Criação/alteração de tabelas, triggers ou edge functions.
-- Mudança na aba "Visão Geral" atual.
-- Exportações/PDF.
+### Arquivos
+- Novo: `src/pages/Exportar.tsx`
+- Editado: `src/App.tsx`, `src/components/Layout.tsx`, `src/hooks/useLeads.ts` (filtro `arquivado=false`)
+- Possivelmente editado: `src/pages/Leads.tsx` (se tiver query própria)
