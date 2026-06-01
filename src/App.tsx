@@ -104,6 +104,16 @@ export default function App() {
             }
           />
           <Route
+            path="/exportar"
+            element={
+              <ProtectedRoute requireAdmin>
+                <Layout>
+                  <Exportar />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/assinaturas"
             element={
               <ProtectedRoute requireMaster>
