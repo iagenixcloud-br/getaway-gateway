@@ -908,8 +908,9 @@ function LeadCard({
           <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
             {corretorName || "Não atribuído"}
           </span>
-        </div>
       )}
+
+      {onMoveRequest && <MoveSelect currentStatus={lead.status} onMove={onMoveRequest} />}
     </div>
   );
 }
@@ -920,11 +921,13 @@ function DraggableLeadCard({
   onClick,
   onUpdate,
   corretorName,
+  onMoveRequest,
 }: {
   lead: Lead;
   onClick: () => void;
   onUpdate: (patch: Partial<Lead>) => void;
   corretorName?: string | null;
+  onMoveRequest?: (status: LeadStatus) => void;
 }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: lead.id,
@@ -936,7 +939,7 @@ function DraggableLeadCard({
       ref={setNodeRef}
       {...listeners}
       {...attributes}
-      style={{ touchAction: "none" }}
+      style={{ touchAction: "manipulation" }}
       onPointerDownCapture={(e) => setDownPos({ x: e.clientX, y: e.clientY })}
       onClickCapture={(e) => {
         if (downPos) {
@@ -950,9 +953,9 @@ function DraggableLeadCard({
       }}
     >
       {lead.status === "follow_up" ? (
-        <FollowUpCard lead={lead} isDragging={isDragging} corretorName={corretorName} />
+        <FollowUpCard lead={lead} isDragging={isDragging} corretorName={corretorName} onMoveRequest={onMoveRequest} />
       ) : (
-        <LeadCard lead={lead} isDragging={isDragging} onUpdate={onUpdate} corretorName={corretorName} />
+        <LeadCard lead={lead} isDragging={isDragging} onUpdate={onUpdate} corretorName={corretorName} onMoveRequest={onMoveRequest} />
       )}
     </div>
   );
