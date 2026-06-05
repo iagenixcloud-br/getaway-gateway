@@ -82,7 +82,7 @@ export function PerdasTab({ rows, isAdmin, corretores, loading }: Props) {
         border: "0.5px solid rgba(255,255,255,0.08)",
       }}
     >
-      <div className="px-5 py-4 flex items-center justify-between">
+      <div className="px-4 sm:px-5 py-3 sm:py-4 flex items-center justify-between">
         <div>
           <div style={{ fontSize: 13, fontWeight: 700, color: "#e2e8f0" }}>
             Perdas por "Sem contato" — por corretor
@@ -92,7 +92,31 @@ export function PerdasTab({ rows, isAdmin, corretores, loading }: Props) {
           </div>
         </div>
       </div>
-      <table style={{ width: "100%", borderCollapse: "collapse" }}>
+
+      {/* Mobile cards */}
+      <div className="md:hidden p-3 space-y-2">
+        {agregado.length === 0 ? (
+          <div style={{ padding: 16, textAlign: "center", fontSize: 12, color: "#94a3b8" }}>
+            Nenhuma perda no período.
+          </div>
+        ) : (
+          agregado.map((r) => (
+            <div key={r.id} className="rounded-lg p-3" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
+              <div className="flex items-center justify-between mb-1">
+                <p className="truncate" style={{ fontSize: 13, fontWeight: 600, color: "#e2e8f0" }}>{r.nome}</p>
+                <span style={{ fontSize: 16, fontWeight: 800, color: "#D85A30" }}>{r.perdas}</span>
+              </div>
+              <div className="flex items-center justify-between" style={{ fontSize: 11, color: "#94a3b8" }}>
+                <span>{r.leads} leads</span>
+                <span>{r.pct.toFixed(1)}%</span>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+
+      {/* Desktop table */}
+      <table className="hidden md:table" style={{ width: "100%", borderCollapse: "collapse" }}>
         <thead>
           <tr style={{ background: "rgba(255,255,255,0.03)" }}>
             <Th>Corretor</Th>
