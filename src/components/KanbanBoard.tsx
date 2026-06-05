@@ -1109,7 +1109,6 @@ export function KanbanBoard() {
             <div
               key={col.id}
               className="kanban-column flex-shrink-0 flex flex-col"
-              style={{ minWidth: 280, maxWidth: 300 }}
             >
               {/* Column Header */}
               <div
