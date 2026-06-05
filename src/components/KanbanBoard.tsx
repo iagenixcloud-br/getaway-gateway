@@ -978,8 +978,8 @@ function DroppableArea({
       ref={setNodeRef}
       className="flex-1 overflow-y-auto space-y-0 rounded-xl transition-colors"
       style={{
-        minHeight: 400,
-        maxHeight: "calc(100vh - 340px)",
+        minHeight: 320,
+        maxHeight: "calc(100vh - 240px)",
         background: isOver ? `${color}15` : "transparent",
         outline: isOver ? `2px dashed ${color}80` : "none",
         outlineOffset: -4,
