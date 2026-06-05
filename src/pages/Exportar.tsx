@@ -241,9 +241,9 @@ export function Exportar() {
   };
 
   return (
-    <div style={{ fontFamily: "Inter, sans-serif", color: "#fff", padding: 24 }}>
-      <div style={{ marginBottom: 24 }}>
-        <h1 style={{ fontSize: 24, fontWeight: 700, marginBottom: 4 }}>
+    <div style={{ fontFamily: "Inter, sans-serif", color: "#fff" }} className="p-3 sm:p-6">
+      <div style={{ marginBottom: 20 }}>
+        <h1 className="text-xl sm:text-2xl" style={{ fontWeight: 700, marginBottom: 4 }}>
           Exportar & Arquivar
         </h1>
         <p style={{ fontSize: 13, color: "rgba(255,255,255,0.6)" }}>
@@ -253,22 +253,14 @@ export function Exportar() {
 
       {/* Filtros */}
       <div
+        className="p-4 sm:p-4 mb-4"
         style={{
           background: "#112236",
           border: "0.5px solid rgba(255,255,255,0.08)",
           borderRadius: 12,
-          padding: 16,
-          marginBottom: 16,
         }}
       >
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "2fr 1fr 1fr auto",
-            gap: 12,
-            alignItems: "end",
-          }}
-        >
+        <div className="grid grid-cols-1 md:grid-cols-[2fr_1fr_1fr_auto] gap-3 md:items-end">
           <div>
             <label style={{ fontSize: 11, color: "rgba(255,255,255,0.6)", textTransform: "uppercase", letterSpacing: "0.08em", display: "block", marginBottom: 6 }}>
               Status
@@ -282,11 +274,12 @@ export function Exportar() {
                     onClick={() => toggleStatus(o.value)}
                     style={{
                       ...inputStyle,
-                      padding: "4px 10px",
+                      padding: "6px 10px",
                       fontSize: 11,
                       background: active ? "#185FA5" : "#0d1b2a",
                       borderColor: active ? "#185FA5" : "rgba(255,255,255,0.12)",
                       cursor: "pointer",
+                      minHeight: 32,
                     }}
                   >
                     {o.label}
@@ -334,16 +327,18 @@ export function Exportar() {
           <button
             onClick={fetchLeads}
             disabled={loading}
+            className="w-full md:w-auto"
             style={{
               background: "#185FA5",
               color: "#fff",
               border: "none",
               borderRadius: 8,
-              padding: "10px 18px",
+              padding: "12px 18px",
               fontSize: 13,
               fontWeight: 600,
               cursor: loading ? "wait" : "pointer",
               whiteSpace: "nowrap",
+              minHeight: 44,
             }}
           >
             {loading ? "Buscando..." : "Aplicar filtros"}
