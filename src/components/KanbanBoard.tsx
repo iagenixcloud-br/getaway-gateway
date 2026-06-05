@@ -473,7 +473,7 @@ function LeadModal({
               onChange={(e) => set("property", e.target.value)}
             />
           </div>
-          <div className="col-span-2">
+          <div className="md:col-span-2">
             <label style={labelStyle}>Origem</label>
             <select
               style={inputStyle}
