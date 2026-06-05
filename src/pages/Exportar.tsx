@@ -376,20 +376,22 @@ export function Exportar() {
           )}
         </div>
 
-        <div style={{ display: "flex", gap: 10 }}>
+        <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
           <button
             onClick={exportCsv}
             disabled={loading || rows.length === 0}
+            className="w-full sm:w-auto"
             style={{
               background: "#185FA5",
               color: "#fff",
               border: "none",
               borderRadius: 8,
-              padding: "10px 18px",
+              padding: "12px 18px",
               fontSize: 13,
               fontWeight: 600,
               cursor: "pointer",
               opacity: loading || rows.length === 0 ? 0.5 : 1,
+              minHeight: 44,
             }}
           >
             Exportar CSV{selected.size > 0 ? ` (${selected.size})` : ""}
@@ -397,25 +399,77 @@ export function Exportar() {
           <button
             onClick={openArchiveModal}
             disabled={loading || selected.size === 0}
+            className="w-full sm:w-auto"
             style={{
               background: "#D85A30",
               color: "#fff",
               border: "none",
               borderRadius: 8,
-              padding: "10px 18px",
+              padding: "12px 18px",
               fontSize: 13,
               fontWeight: 600,
               cursor: "pointer",
               opacity: loading || selected.size === 0 ? 0.5 : 1,
+              minHeight: 44,
             }}
           >
-            Arquivar selecionados{selected.size > 0 ? ` (${selected.size})` : ""}
+            Arquivar{selected.size > 0 ? ` (${selected.size})` : ""}
           </button>
         </div>
       </div>
 
-      {/* Tabela */}
+      {/* Mobile card list */}
+      <div className="md:hidden space-y-2">
+        {loading ? (
+          Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} className="animate-pulse" style={{ background: "#112236", borderRadius: 12, height: 88 }} />
+          ))
+        ) : rows.length === 0 ? (
+          <div style={{ background: "#112236", borderRadius: 12, padding: 32, textAlign: "center", color: "rgba(255,255,255,0.5)", fontSize: 13 }}>
+            Nenhum lead encontrado.
+          </div>
+        ) : (
+          rows.map((r) => (
+            <label
+              key={r.id}
+              className="flex items-start gap-3 p-3"
+              style={{
+                background: "#112236",
+                border: `1px solid ${selected.has(r.id) ? "#185FA5" : "rgba(255,255,255,0.08)"}`,
+                borderRadius: 12,
+              }}
+            >
+              <input
+                type="checkbox"
+                checked={selected.has(r.id)}
+                onChange={() => toggleOne(r.id)}
+                style={{ marginTop: 4, width: 18, height: 18 }}
+              />
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="truncate" style={{ fontSize: 14, fontWeight: 700 }}>{r.name}</p>
+                  <span style={{ fontSize: 10, padding: "2px 8px", borderRadius: 999, background: "rgba(24,95,165,0.2)", color: "#7eb6ff", whiteSpace: "nowrap" }}>
+                    {statusLabel(r.status)}
+                  </span>
+                </div>
+                <p style={{ fontSize: 12, color: "rgba(255,255,255,0.7)", marginTop: 2 }}>{r.phone}</p>
+                <div className="flex items-center justify-between gap-2 mt-1">
+                  <span className="truncate" style={{ fontSize: 11, color: "rgba(255,255,255,0.55)" }}>
+                    {r.tenant_id ? corretorNome.get(r.tenant_id) ?? "—" : "—"}
+                  </span>
+                  <span style={{ fontSize: 11, color: "rgba(255,255,255,0.55)" }}>
+                    {new Date(r.created_at).toLocaleDateString("pt-BR")}
+                  </span>
+                </div>
+              </div>
+            </label>
+          ))
+        )}
+      </div>
+
+      {/* Desktop Tabela */}
       <div
+        className="hidden md:block"
         style={{
           background: "#112236",
           border: "0.5px solid rgba(255,255,255,0.08)",
@@ -423,68 +477,70 @@ export function Exportar() {
           overflow: "hidden",
         }}
       >
-        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
-          <thead>
-            <tr style={{ background: "#0d1b2a" }}>
-              <th style={{ padding: 12, textAlign: "left", width: 40 }}>
-                <input
-                  type="checkbox"
-                  checked={allSelected}
-                  onChange={toggleAll}
-                  disabled={rows.length === 0}
-                />
-              </th>
-              <th style={{ padding: 12, textAlign: "left", fontWeight: 600 }}>Nome</th>
-              <th style={{ padding: 12, textAlign: "left", fontWeight: 600 }}>Telefone</th>
-              <th style={{ padding: 12, textAlign: "left", fontWeight: 600 }}>Status</th>
-              <th style={{ padding: 12, textAlign: "left", fontWeight: 600 }}>Corretor</th>
-              <th style={{ padding: 12, textAlign: "left", fontWeight: 600 }}>Data</th>
-            </tr>
-          </thead>
-          <tbody>
-            {loading ? (
-              Array.from({ length: 6 }).map((_, i) => (
-                <tr key={i} style={{ borderTop: "0.5px solid rgba(255,255,255,0.06)" }}>
-                  {Array.from({ length: 6 }).map((__, j) => (
-                    <td key={j} style={{ padding: 12 }}>
-                      <div
-                        className="animate-pulse"
-                        style={{ height: 14, background: "#0d1b2a", borderRadius: 4 }}
+        <div style={{ overflowX: "auto" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+            <thead>
+              <tr style={{ background: "#0d1b2a" }}>
+                <th style={{ padding: 12, textAlign: "left", width: 40 }}>
+                  <input
+                    type="checkbox"
+                    checked={allSelected}
+                    onChange={toggleAll}
+                    disabled={rows.length === 0}
+                  />
+                </th>
+                <th style={{ padding: 12, textAlign: "left", fontWeight: 600 }}>Nome</th>
+                <th style={{ padding: 12, textAlign: "left", fontWeight: 600 }}>Telefone</th>
+                <th style={{ padding: 12, textAlign: "left", fontWeight: 600 }}>Status</th>
+                <th style={{ padding: 12, textAlign: "left", fontWeight: 600 }}>Corretor</th>
+                <th style={{ padding: 12, textAlign: "left", fontWeight: 600 }}>Data</th>
+              </tr>
+            </thead>
+            <tbody>
+              {loading ? (
+                Array.from({ length: 6 }).map((_, i) => (
+                  <tr key={i} style={{ borderTop: "0.5px solid rgba(255,255,255,0.06)" }}>
+                    {Array.from({ length: 6 }).map((__, j) => (
+                      <td key={j} style={{ padding: 12 }}>
+                        <div
+                          className="animate-pulse"
+                          style={{ height: 14, background: "#0d1b2a", borderRadius: 4 }}
+                        />
+                      </td>
+                    ))}
+                  </tr>
+                ))
+              ) : rows.length === 0 ? (
+                <tr>
+                  <td colSpan={6} style={{ padding: 32, textAlign: "center", color: "rgba(255,255,255,0.5)" }}>
+                    Nenhum lead encontrado com os filtros aplicados.
+                  </td>
+                </tr>
+              ) : (
+                rows.map((r) => (
+                  <tr key={r.id} style={{ borderTop: "0.5px solid rgba(255,255,255,0.06)" }}>
+                    <td style={{ padding: 12 }}>
+                      <input
+                        type="checkbox"
+                        checked={selected.has(r.id)}
+                        onChange={() => toggleOne(r.id)}
                       />
                     </td>
-                  ))}
-                </tr>
-              ))
-            ) : rows.length === 0 ? (
-              <tr>
-                <td colSpan={6} style={{ padding: 32, textAlign: "center", color: "rgba(255,255,255,0.5)" }}>
-                  Nenhum lead encontrado com os filtros aplicados.
-                </td>
-              </tr>
-            ) : (
-              rows.map((r) => (
-                <tr key={r.id} style={{ borderTop: "0.5px solid rgba(255,255,255,0.06)" }}>
-                  <td style={{ padding: 12 }}>
-                    <input
-                      type="checkbox"
-                      checked={selected.has(r.id)}
-                      onChange={() => toggleOne(r.id)}
-                    />
-                  </td>
-                  <td style={{ padding: 12 }}>{r.name}</td>
-                  <td style={{ padding: 12, color: "rgba(255,255,255,0.7)" }}>{r.phone}</td>
-                  <td style={{ padding: 12 }}>{statusLabel(r.status)}</td>
-                  <td style={{ padding: 12, color: "rgba(255,255,255,0.7)" }}>
-                    {r.tenant_id ? corretorNome.get(r.tenant_id) ?? "—" : "—"}
-                  </td>
-                  <td style={{ padding: 12, color: "rgba(255,255,255,0.7)" }}>
-                    {new Date(r.created_at).toLocaleDateString("pt-BR")}
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+                    <td style={{ padding: 12 }}>{r.name}</td>
+                    <td style={{ padding: 12, color: "rgba(255,255,255,0.7)" }}>{r.phone}</td>
+                    <td style={{ padding: 12 }}>{statusLabel(r.status)}</td>
+                    <td style={{ padding: 12, color: "rgba(255,255,255,0.7)" }}>
+                      {r.tenant_id ? corretorNome.get(r.tenant_id) ?? "—" : "—"}
+                    </td>
+                    <td style={{ padding: 12, color: "rgba(255,255,255,0.7)" }}>
+                      {new Date(r.created_at).toLocaleDateString("pt-BR")}
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {/* Modal */}
