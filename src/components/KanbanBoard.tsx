@@ -633,11 +633,13 @@ function FollowUpCard({
   onClick,
   isDragging,
   corretorName,
+  onMoveRequest,
 }: {
   lead: Lead;
   onClick?: () => void;
   isDragging?: boolean;
   corretorName?: string | null;
+  onMoveRequest?: (status: LeadStatus) => void;
 }) {
   const FOLLOWUP_COLOR = "#f97316";
   const isUrgent = lead.waitingHours > FOLLOWUP_URGENT_HOURS;
