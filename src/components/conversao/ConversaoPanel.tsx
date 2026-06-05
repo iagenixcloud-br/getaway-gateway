@@ -45,16 +45,16 @@ export function ConversaoPanel() {
     <div style={{ background: "#0d1b2a", marginTop: 8 }}>
       {/* Barra superior */}
       <div
-        className="flex items-center justify-between flex-wrap gap-3 mb-5 p-4 rounded-xl"
+        className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-4 p-3 sm:p-4 rounded-xl"
         style={{
           background: "#112236",
           border: "0.5px solid rgba(255,255,255,0.08)",
         }}
       >
-        <div className="flex items-center gap-3 flex-wrap">
+        <div className="flex items-center gap-2 flex-wrap">
           <h2
             style={{
-              fontSize: 16,
+              fontSize: 15,
               fontWeight: 700,
               color: "#f1f5f9",
               fontFamily: "Inter, sans-serif",
@@ -83,6 +83,7 @@ export function ConversaoPanel() {
               value={corretorId}
               onChange={(e) => setCorretorId(e.target.value)}
               style={selectStyle}
+              className="flex-1 md:flex-none min-w-0"
             >
               <option value="">Todos corretores</option>
               {corretores.map((c) => (
@@ -96,6 +97,7 @@ export function ConversaoPanel() {
             value={periodo}
             onChange={(e) => setPeriodo(e.target.value as PeriodoKey)}
             style={selectStyle}
+            className="flex-1 md:flex-none min-w-0"
           >
             {PERIODOS.map((p) => (
               <option key={p.key} value={p.key}>
@@ -107,7 +109,7 @@ export function ConversaoPanel() {
       </div>
 
       {/* Sub-abas */}
-      <div className="flex gap-1 mb-5">
+      <div className="flex gap-1 mb-4 overflow-x-auto -mx-3 px-3 md:mx-0 md:px-0">
         {(["funil", "perdas"] as SubTab[]).map((s) => {
           const active = sub === s;
           return (
@@ -119,10 +121,12 @@ export function ConversaoPanel() {
                 color: active ? "#f1f5f9" : "#94a3b8",
                 fontSize: 12,
                 fontWeight: 600,
-                padding: "8px 16px",
+                padding: "10px 16px",
                 borderRadius: 8,
                 border: "0.5px solid rgba(255,255,255,0.08)",
                 cursor: "pointer",
+                whiteSpace: "nowrap",
+                minHeight: 40,
               }}
             >
               {s === "funil" ? "Funil" : "Perdas"}
@@ -132,7 +136,7 @@ export function ConversaoPanel() {
       </div>
 
       {/* KPIs */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-3 mb-5">
         <KpiCard
           loading={loading}
           label="Lead → Negócio"
