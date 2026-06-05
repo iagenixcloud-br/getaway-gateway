@@ -393,7 +393,7 @@ function LeadModal({
             </select>
           </div>
 
-          <div className="col-span-2">
+          <div className="md:col-span-2">
             <label style={labelStyle}>Profissão</label>
             <input
               style={inputStyle}
