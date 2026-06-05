@@ -253,75 +253,81 @@ export function Desempenho() {
   return (
     <div>
       {/* Header + filtros */}
-      <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-4 sm:mb-6 gap-3">
         <div>
           <h1
+            className="text-lg sm:text-xl"
             style={{
               fontFamily: "Montserrat",
               fontWeight: 700,
-              fontSize: 22,
               color: "var(--text-primary)",
             }}
           >
             Desempenho
           </h1>
           <p style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 2 }}>
-            Visão geral do pipeline {/* TODO: virar "por corretor" quando a roleta existir */}
+            Visão geral do pipeline
           </p>
         </div>
-        <div className="flex gap-1 p-1 rounded-xl glass" style={{ border: "1px solid var(--glass-border)" }}>
-          {RANGES.map((r) => {
-            const active = range === r.key;
-            return (
-              <button
-                key={r.key}
-                onClick={() => setRange(r.key)}
-                style={{
-                  background: active ? "var(--gold)" : "transparent",
-                  color: active ? "#0a0a0a" : "var(--text-muted)",
-                  fontSize: 12,
-                  fontWeight: 600,
-                  padding: "6px 12px",
-                  borderRadius: 8,
-                  border: "none",
-                  cursor: "pointer",
-                  transition: "all 0.15s",
-                }}
-              >
-                {r.label}
-              </button>
-            );
-          })}
+        <div className="overflow-x-auto -mx-3 px-3 md:mx-0 md:px-0">
+          <div className="flex gap-1 p-1 rounded-xl glass w-max" style={{ border: "1px solid var(--glass-border)" }}>
+            {RANGES.map((r) => {
+              const active = range === r.key;
+              return (
+                <button
+                  key={r.key}
+                  onClick={() => setRange(r.key)}
+                  style={{
+                    background: active ? "var(--gold)" : "transparent",
+                    color: active ? "#0a0a0a" : "var(--text-muted)",
+                    fontSize: 12,
+                    fontWeight: 600,
+                    padding: "8px 12px",
+                    borderRadius: 8,
+                    border: "none",
+                    cursor: "pointer",
+                    transition: "all 0.15s",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  {r.label}
+                </button>
+              );
+            })}
+          </div>
         </div>
       </div>
 
       {/* Tabs raiz */}
-      <div className="flex gap-1 mb-5" style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
-        {([
-          { k: "overview", label: "Visão Geral" },
-          { k: "conversao", label: "Conversão por Etapa" },
-        ] as const).map((t) => {
-          const active = tab === t.k;
-          return (
-            <button
-              key={t.k}
-              onClick={() => setTab(t.k)}
-              style={{
-                background: "transparent",
-                color: active ? "var(--gold)" : "var(--text-muted)",
-                fontSize: 13,
-                fontWeight: 700,
-                padding: "10px 16px",
-                border: "none",
-                borderBottom: active ? "2px solid var(--gold)" : "2px solid transparent",
-                cursor: "pointer",
-                marginBottom: -1,
-              }}
-            >
-              {t.label}
-            </button>
-          );
-        })}
+      <div className="overflow-x-auto -mx-3 px-3 md:mx-0 md:px-0 mb-5" style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+        <div className="flex gap-1 w-max">
+          {([
+            { k: "overview", label: "Visão Geral" },
+            { k: "conversao", label: "Conversão por Etapa" },
+          ] as const).map((t) => {
+            const active = tab === t.k;
+            return (
+              <button
+                key={t.k}
+                onClick={() => setTab(t.k)}
+                style={{
+                  background: "transparent",
+                  color: active ? "var(--gold)" : "var(--text-muted)",
+                  fontSize: 13,
+                  fontWeight: 700,
+                  padding: "10px 16px",
+                  border: "none",
+                  borderBottom: active ? "2px solid var(--gold)" : "2px solid transparent",
+                  cursor: "pointer",
+                  marginBottom: -1,
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {t.label}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       {tab === "conversao" ? (
