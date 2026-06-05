@@ -1,48 +1,57 @@
-## Exportar & Arquivar — Nova aba admin
 
-### 1. Roteamento e menu
-- **`src/App.tsx`**: adicionar `<Route path="/exportar">` com `<ProtectedRoute requireAdmin>` envolvendo nova página `Exportar`.
-- **`src/components/Layout.tsx`**: novo item de menu "Exportar & Arquivar" logo abaixo de "Desempenho", visível só com `isAdmin` (ícone de arquivo/caixa).
-- **`src/pages/Exportar.tsx`** (novo): título "Exportar & Arquivar" + subtítulo "Gerencie, exporte e arquive leads".
+# Ajustes de Responsividade Mobile
 
-### 2. Filtros (topo, lado a lado)
-- **Status** — multiselect com todas as opções (`lead_novo`, `negocio`, `agendamento`, `visita`, `proposta`, `venda`, `perda`, `cliente_futuro`, `curioso`, `follow_up`). Padrão: `venda` + `cliente_futuro`.
-- **Corretor** — dropdown via `useCorretores()` (padrão: "Todos").
-- **Período** — select: mês / trimestre / semestre / ano. Padrão: últimos 90 dias (convertido em `created_at >= now() - 90d`).
-- **Botão "Aplicar filtros"** — dispara fetch.
+Foco em melhorar UX em telas < 768px sem mexer em queries, RLS, triggers ou lógica de banco. Apenas CSS, layouts e pequenas interações de UI.
 
-### 3. Fetch
-- Query direta em `leads` (Supabase): `select id, name, phone, email, status, substatus, city, interest, created_at, tenant_id` com `.eq('arquivado', false)`, `.in('status', statusSelecionados)`, range de data, e opcional `.eq('tenant_id', corretorId)`.
-- Para coluna "Corretor" da tabela, fazer lookup via `useCorretores()` mapeando `tenant_id` → nome (mantém compatibilidade com o resto do app, que usa `tenant_id` como dono do lead). Observação: o brief menciona `lead_assignments`, mas o app inteiro hoje usa `leads.tenant_id` como corretor (ver `useLeads.ts`); seguir esse padrão para evitar inconsistência.
+## 1. Kanban (Pipeline) — `src/components/KanbanBoard.tsx`
 
-### 4. Card de resumo
-"X leads encontrados com os filtros selecionados" + breakdown: `X Vendas | X Cliente Futuro | X Outros`.
+- **Top stats bar**: em mobile usar `grid-cols-2`, fonte menor e padding compacto. Esconder colunas menos críticas em telas < 380px (mantém via scroll do grid).
+- **Colunas**: ajustar `min-width`/`max-width` da `.kanban-column` no `index.css` para `85vw` em mobile (já existe parcialmente) e snap horizontal mais firme (`scroll-snap-type: x mandatory`).
+- **DroppableArea**: trocar `maxHeight: calc(100vh - 340px)` por valor responsivo (`calc(100vh - 240px)` em mobile) para mais espaço vertical de scroll por coluna.
+- **Drag em mobile (touch)**: adicionar `TouchSensor` do @dnd-kit ao lado do `PointerSensor` com `activationConstraint: { delay: 180, tolerance: 8 }` — long-press para iniciar drag sem bloquear scroll lateral.
+- **Fallback "Mover para →"**: novo botão discreto (ícone ⋮) no canto do `LeadCard` e `FollowUpCard`, visível apenas em `md:hidden`. Abre um sheet/popover com a lista de etapas. Ao escolher, chama `moveLeadWithSubstatus` (mesmo fluxo do drag, mesmo modal de substatus para perda/cliente_futuro). Botão com 44×44px de alvo de toque.
+- **Cards**: aumentar padding vertical mínimo e garantir altura ≥ 44px nos botões de ação.
+- **Substatus/Lead modal**: já tem `mx-3`, garantir `max-h-[92vh]` e scroll interno em mobile.
 
-### 5. Ações
-- **Exportar CSV** (azul `#185FA5`): gera CSV no cliente com colunas Nome, Telefone, Email, Status, Substatus, Corretor, Data entrada, Cidade, Interesse. Download via `Blob` + `<a download>`. Exporta apenas linhas atualmente filtradas (ou só selecionadas se houver seleção — confirmar com tooltip).
-- **Arquivar selecionados** (vermelho `#D85A30`): habilitado só se houver checkboxes marcados. Abre modal de confirmação obrigatório com input de texto: usuário precisa digitar exatamente `ARQUIVAR` para liberar o botão "Confirmar". Texto exato do brief.
-  - UPDATE: `supabase.from('leads').update({ arquivado: true }).in('id', ids).eq('tenant_id', userId)`.
-  - Após sucesso: toast `"X leads arquivados com sucesso"`, limpa seleção, refaz fetch.
+## 2. Lista de Leads — `src/pages/Leads.tsx`
 
-### 6. Tabela preview
-Colunas: checkbox | Nome | Telefone | Status | Corretor | Data | (sem coluna ações extra — operações em lote). Header com "Selecionar todos". Skeleton (`animate-pulse bg-[#112236]`) enquanto carrega.
+- Filtros (busca, status, sort): empilhar em coluna em mobile (`flex-col md:flex-row`), inputs `w-full`.
+- Tabela: em < 768px renderizar como **lista de cards** (um card por lead com nome, status badge, telefone, data, ações), escondendo a tabela. Em ≥ md mantém tabela atual.
+- Garantir `overflow-x-auto` no wrapper da tabela para evitar quebra horizontal residual.
 
-### 7. Filtrar arquivados em todo o app
-Adicionar `.eq('arquivado', false)` em:
-- `src/hooks/useLeads.ts` — query paginada principal. Filtro também no handler de realtime (ignorar UPDATE que torna `arquivado = true` mantém remoção via `eventType` UPDATE: se `row.arquivado === true`, remover da lista local).
-- Verificar se `src/pages/Leads.tsx` faz query própria; se sim, adicionar mesmo filtro. (Vou ler durante implementação.)
+## 3. Desempenho — `src/pages/Desempenho.tsx` + `src/components/conversao/*`
 
-### 8. Design
-- Fundo `#0d1b2a`, cards `#112236`, bordas 0.5px, fonte Inter — consistente com `ConversaoPanel`.
-- Modal: overlay escuro + card `#112236`, input controlado, botão Confirmar desabilitado até `value === "ARQUIVAR"`.
-- Toast via `sonner` (já usado no projeto, se aplicável) ou alert simples seguindo padrão existente — verificar durante build.
+- Header/tabs (`Visão Geral` / `Conversão por Etapa`): tabs scrolláveis horizontalmente em mobile, fonte 13px.
+- Filtros (período, corretor): empilhar em coluna, selects `w-full`.
+- KPI grid: `grid-cols-2` em mobile (atualmente algumas grids vão para `grid-cols-3`/`4` muito apertadas).
+- Gráficos Recharts: garantir altura fixa (`h-64`) e `ResponsiveContainer width="100%"`; reduzir tick fontSize e rotacionar labels do eixo X em mobile.
+- `FunilCard`, `PerdasTab`, `ConversaoPanel`: padding reduzido (`p-4` → `p-3` em mobile), número grande com `text-2xl md:text-3xl`, barras de progresso full width.
+- Tabela de perdas por corretor (admin): virar lista de cards em mobile, como na Lista de Leads.
 
-### 9. Segurança
-- Rota protegida por `ProtectedRoute requireAdmin` (redirect para `/` se não-admin, padrão atual do app — o brief pede `/dashboard` mas o padrão do projeto é `/`; seguir padrão).
-- UPDATE de arquivamento sempre com `.eq('tenant_id', user.id)` no client (RLS no banco continua sendo a defesa real).
-- Sem alterações de schema, migrations, RLS ou triggers — o brief confirma que `arquivado` e trigger já existem.
+## 4. Exportar & Arquivar — `src/pages/Exportar.tsx`
 
-### Arquivos
-- Novo: `src/pages/Exportar.tsx`
-- Editado: `src/App.tsx`, `src/components/Layout.tsx`, `src/hooks/useLeads.ts` (filtro `arquivado=false`)
-- Possivelmente editado: `src/pages/Leads.tsx` (se tiver query própria)
+- Filtros (status multiselect, corretor, período): empilhar em coluna em mobile.
+- Botões "Exportar CSV" e "Arquivar selecionados": full-width em mobile, altura 44px, empilhados.
+- Tabela de preview: virar lista de cards em mobile (checkbox + nome + status + corretor + data).
+- Modal de confirmação de arquivamento: `max-w-md`, padding reduzido, input full-width, botões empilhados em mobile.
+
+## 5. Globais — `src/index.css` e `src/components/Layout.tsx`
+
+- Confirmar que o conteúdo principal tem `px-3 md:px-6` e `py-4 md:py-6` para evitar respiro insuficiente.
+- Ajustar `.kanban-column` em mobile (`min-width: 85vw`, snap mandatory).
+- Adicionar utilitário `.no-scrollbar-x` e `overflow-x-hidden` no `<body>` para eliminar scroll horizontal acidental.
+- Garantir headings com `clamp()` ou classes responsivas (`text-lg md:text-2xl`) onde estiverem fixos em px.
+
+## Fora de escopo
+
+- Nenhuma alteração em: `useLeads.ts`, `useMetricasFunil.ts`, hooks de corretores, edge functions, RLS, migrations, lógica de assignment, roleta ou Supabase em geral.
+
+## Arquivos a editar
+
+- `src/components/KanbanBoard.tsx` (TouchSensor + botão "Mover para" + ajustes responsivos)
+- `src/pages/Leads.tsx` (filtros + tabela→cards mobile)
+- `src/pages/Desempenho.tsx` (tabs, filtros, KPIs, charts responsivos)
+- `src/components/conversao/ConversaoPanel.tsx`, `FunilCard.tsx`, `PerdasTab.tsx` (padding/tipografia/lista mobile)
+- `src/pages/Exportar.tsx` (filtros, botões, tabela→cards, modal)
+- `src/index.css` (kanban-column, snap, overflow global)
+- `src/components/Layout.tsx` (paddings do container principal, se necessário)

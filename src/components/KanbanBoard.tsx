@@ -10,6 +10,7 @@ import {
   DragOverlay,
   DragStartEvent,
   PointerSensor,
+  TouchSensor,
   useSensor,
   useSensors,
   useDraggable,
@@ -60,6 +61,49 @@ const columns: { id: LeadStatus; label: string; color: string; icon: string }[] 
   { id: "perda", label: "Perda", color: "#ef4444", icon: "✕" },
   { id: "cliente_futuro", label: "Cliente Futuro", color: "#0ea5e9", icon: "🔄" },
 ];
+
+// ── Mover-para select (mobile fallback para drag) ──────────────
+function MoveSelect({
+  currentStatus,
+  onMove,
+}: {
+  currentStatus: LeadStatus;
+  onMove: (status: LeadStatus) => void;
+}) {
+  return (
+    <select
+      onClick={(e) => e.stopPropagation()}
+      onPointerDown={(e) => e.stopPropagation()}
+      onTouchStart={(e) => e.stopPropagation()}
+      onChange={(e) => {
+        const v = e.target.value as LeadStatus;
+        if (v && v !== currentStatus) onMove(v);
+        e.target.value = "";
+      }}
+      defaultValue=""
+      className="md:hidden w-full mt-3 rounded-lg"
+      style={{
+        background: "rgba(255,255,255,0.08)",
+        border: "1px solid rgba(255,255,255,0.15)",
+        color: "var(--text-primary)",
+        fontSize: 13,
+        fontWeight: 600,
+        padding: "10px 12px",
+        minHeight: 44,
+        cursor: "pointer",
+      }}
+    >
+      <option value="" style={{ background: "#001f3f" }}>↦ Mover para…</option>
+      {columns
+        .filter((c) => c.id !== currentStatus)
+        .map((c) => (
+          <option key={c.id} value={c.id} style={{ background: "#001f3f", color: "#f0f4f8" }}>
+            {c.icon}  {c.label}
+          </option>
+        ))}
+    </select>
+  );
+}
 
 // ── Substatus options ─────────────────────────────────────────
 const SUBSTATUS_OPTIONS: Record<string, string[]> = {
@@ -589,11 +633,13 @@ function FollowUpCard({
   onClick,
   isDragging,
   corretorName,
+  onMoveRequest,
 }: {
   lead: Lead;
   onClick?: () => void;
   isDragging?: boolean;
   corretorName?: string | null;
+  onMoveRequest?: (status: LeadStatus) => void;
 }) {
   const FOLLOWUP_COLOR = "#f97316";
   const isUrgent = lead.waitingHours > FOLLOWUP_URGENT_HOURS;
@@ -738,6 +784,8 @@ function FollowUpCard({
             : corretorName || "Não atribuído"}
         </span>
       </div>
+
+      {onMoveRequest && <MoveSelect currentStatus={lead.status} onMove={onMoveRequest} />}
     </div>
   );
 }
@@ -749,6 +797,7 @@ function LeadCard({
   isDragging,
   onUpdate,
   corretorName,
+  onMoveRequest,
 }: {
   lead: Lead;
   onClick?: () => void;
@@ -756,6 +805,7 @@ function LeadCard({
   onUpdate?: (patch: Partial<Lead>) => void;
   /** Nome do corretor responsável (string vazia/undefined = não atribuído). Quando null, escondemos o chip. */
   corretorName?: string | null;
+  onMoveRequest?: (status: LeadStatus) => void;
 }) {
   const editable = !!onUpdate;
   return (
@@ -860,6 +910,8 @@ function LeadCard({
           </span>
         </div>
       )}
+
+      {onMoveRequest && <MoveSelect currentStatus={lead.status} onMove={onMoveRequest} />}
     </div>
   );
 }
@@ -870,11 +922,13 @@ function DraggableLeadCard({
   onClick,
   onUpdate,
   corretorName,
+  onMoveRequest,
 }: {
   lead: Lead;
   onClick: () => void;
   onUpdate: (patch: Partial<Lead>) => void;
   corretorName?: string | null;
+  onMoveRequest?: (status: LeadStatus) => void;
 }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: lead.id,
@@ -886,7 +940,7 @@ function DraggableLeadCard({
       ref={setNodeRef}
       {...listeners}
       {...attributes}
-      style={{ touchAction: "none" }}
+      style={{ touchAction: "manipulation" }}
       onPointerDownCapture={(e) => setDownPos({ x: e.clientX, y: e.clientY })}
       onClickCapture={(e) => {
         if (downPos) {
@@ -900,9 +954,9 @@ function DraggableLeadCard({
       }}
     >
       {lead.status === "follow_up" ? (
-        <FollowUpCard lead={lead} isDragging={isDragging} corretorName={corretorName} />
+        <FollowUpCard lead={lead} isDragging={isDragging} corretorName={corretorName} onMoveRequest={onMoveRequest} />
       ) : (
-        <LeadCard lead={lead} isDragging={isDragging} onUpdate={onUpdate} corretorName={corretorName} />
+        <LeadCard lead={lead} isDragging={isDragging} onUpdate={onUpdate} corretorName={corretorName} onMoveRequest={onMoveRequest} />
       )}
     </div>
   );
@@ -924,8 +978,8 @@ function DroppableArea({
       ref={setNodeRef}
       className="flex-1 overflow-y-auto space-y-0 rounded-xl transition-colors"
       style={{
-        minHeight: 400,
-        maxHeight: "calc(100vh - 340px)",
+        minHeight: 320,
+        maxHeight: "calc(100vh - 240px)",
         background: isOver ? `${color}15` : "transparent",
         outline: isOver ? `2px dashed ${color}80` : "none",
         outlineOffset: -4,
@@ -969,6 +1023,7 @@ export function KanbanBoard() {
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 220, tolerance: 8 } }),
   );
 
   const getColumnLeads = (status: LeadStatus) =>
@@ -1025,21 +1080,21 @@ export function KanbanBoard() {
       )}
 
       {/* Top Stats Bar */}
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3 mb-6">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-2 sm:gap-3 mb-4 sm:mb-6">
         {columns.map((col) => {
           const count = getColumnLeads(col.id).length;
           return (
             <div
               key={col.id}
-              className="glass rounded-xl px-4 py-3 flex items-center gap-3"
+              className="glass rounded-xl px-3 py-2 sm:px-4 sm:py-3 flex items-center gap-2 sm:gap-3"
             >
               <div
-                className="w-2 h-8 rounded-full"
+                className="w-1.5 sm:w-2 h-6 sm:h-8 rounded-full flex-shrink-0"
                 style={{ background: col.color, opacity: 0.7 }}
               />
-              <div>
-                <p style={{ fontSize: 11, color: "var(--text-muted)" }}>{col.label}</p>
-                <p style={{ fontSize: 18, fontWeight: 700, color: col.color }}>{count}</p>
+              <div className="min-w-0">
+                <p className="truncate" style={{ fontSize: 10, color: "var(--text-muted)" }}>{col.label}</p>
+                <p style={{ fontSize: 16, fontWeight: 700, color: col.color, lineHeight: 1.2 }}>{count}</p>
               </div>
             </div>
           );
@@ -1054,7 +1109,6 @@ export function KanbanBoard() {
             <div
               key={col.id}
               className="kanban-column flex-shrink-0 flex flex-col"
-              style={{ minWidth: 280, maxWidth: 300 }}
             >
               {/* Column Header */}
               <div
@@ -1095,6 +1149,7 @@ export function KanbanBoard() {
                       lead={lead}
                       onClick={() => setSelectedLead(lead)}
                       onUpdate={(patch) => updateLead(lead.id, patch)}
+                      onMoveRequest={(s) => moveLeadWithSubstatus(lead.id, s)}
                       corretorName={
                         isAdmin
                           ? lead.assignedTo

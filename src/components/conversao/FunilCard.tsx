@@ -36,7 +36,7 @@ export function FunilCard({
   return (
     <>
       <div
-        className="rounded-xl p-4"
+        className="rounded-xl p-3 sm:p-4"
         style={{
           background: "#112236",
           border: destaque

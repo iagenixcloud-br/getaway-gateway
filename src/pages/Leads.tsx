@@ -103,16 +103,16 @@ export function Leads() {
   return (
     <div className="space-y-6">
       {/* Toolbar */}
-      <div className="flex flex-wrap items-center gap-4">
+      <div className="flex flex-col md:flex-row md:flex-wrap md:items-center gap-3">
         {/* Search */}
-        <div className="relative flex-1 min-w-[240px]">
+        <div className="relative flex-1 w-full md:min-w-[240px]">
           <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: "var(--text-muted)" }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <circle cx="11" cy="11" r="8" />
             <path d="m21 21-4.35-4.35" />
           </svg>
           <input
             type="text"
-            placeholder="Buscar por nome, telefone, email, cidade…"
+            placeholder="Buscar por nome, telefone, email…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="w-full pl-10 pr-4 py-2.5 rounded-xl text-sm"
@@ -125,32 +125,45 @@ export function Leads() {
           />
         </div>
 
-        {/* Status Filter */}
-        <select
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value as LeadStatus | "all")}
-          className="px-4 py-2.5 rounded-xl text-sm cursor-pointer"
-          style={{
-            background: "rgba(255,255,255,0.06)",
-            border: "1px solid var(--glass-border)",
-            color: "var(--text-primary)",
-            outline: "none",
-          }}
-        >
-          <option value="all" style={{ background: "#001f3f", color: "#f0f4f8" }}>Todos os status</option>
-          {Object.entries(STATUS_LABELS).map(([val, label]) => (
-            <option key={val} value={val} style={{ background: "#001f3f", color: "#f0f4f8" }}>{label}</option>
-          ))}
-        </select>
+        <div className="flex items-center gap-3 w-full md:w-auto">
+          {/* Status Filter */}
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value as LeadStatus | "all")}
+            className="flex-1 md:flex-none px-4 py-2.5 rounded-xl text-sm cursor-pointer"
+            style={{
+              background: "rgba(255,255,255,0.06)",
+              border: "1px solid var(--glass-border)",
+              color: "var(--text-primary)",
+              outline: "none",
+            }}
+          >
+            <option value="all" style={{ background: "#001f3f", color: "#f0f4f8" }}>Todos os status</option>
+            {Object.entries(STATUS_LABELS).map(([val, label]) => (
+              <option key={val} value={val} style={{ background: "#001f3f", color: "#f0f4f8" }}>{label}</option>
+            ))}
+          </select>
 
-        {/* Counter */}
-        <div className="px-4 py-2.5 rounded-xl text-sm font-semibold" style={{ background: "var(--gold-dim)", color: "var(--gold)" }}>
-          {filtered.length} lead{filtered.length !== 1 ? "s" : ""}
+          {/* Counter */}
+          <div className="px-3 py-2.5 rounded-xl text-sm font-semibold whitespace-nowrap" style={{ background: "var(--gold-dim)", color: "var(--gold)" }}>
+            {filtered.length} lead{filtered.length !== 1 ? "s" : ""}
+          </div>
         </div>
       </div>
 
-      {/* Table */}
-      <div className="glass rounded-2xl overflow-hidden">
+      {/* Mobile cards */}
+      <div className="md:hidden space-y-2">
+        {filtered.length === 0 ? (
+          <div className="glass rounded-2xl py-12 text-center" style={{ color: "var(--text-muted)", fontSize: 13 }}>
+            Nenhum lead encontrado
+          </div>
+        ) : (
+          filtered.map((lead) => <LeadCardMobile key={lead.id} lead={lead} />)
+        )}
+      </div>
+
+      {/* Desktop table */}
+      <div className="hidden md:block glass rounded-2xl overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm" style={{ borderCollapse: "separate", borderSpacing: 0 }}>
             <thead>
@@ -181,6 +194,33 @@ export function Leads() {
           </table>
         </div>
       </div>
+    </div>
+  );
+}
+
+function LeadCardMobile({ lead }: { lead: Lead }) {
+  const statusColor = STATUS_COLORS[lead.status] || "#888";
+  const dateStr = lead.createdAt
+    ? format(new Date(lead.createdAt), "dd MMM, HH:mm", { locale: ptBR })
+    : "—";
+  return (
+    <div className="glass rounded-xl p-3" style={{ border: "1px solid var(--glass-border)" }}>
+      <div className="flex items-start justify-between gap-2 mb-2">
+        <div className="min-w-0 flex-1">
+          <p className="truncate" style={{ fontSize: 14, fontWeight: 700, color: "var(--text-primary)" }}>{lead.name}</p>
+          <p style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 2 }}>{lead.phone || "—"}</p>
+        </div>
+        <span
+          className="inline-block px-2 py-1 rounded-md text-[10px] font-semibold flex-shrink-0"
+          style={{ background: `${statusColor}20`, color: statusColor, border: `1px solid ${statusColor}40` }}
+        >
+          {STATUS_LABELS[lead.status] || lead.status}
+        </span>
+      </div>
+      {lead.property && (
+        <p className="truncate" style={{ fontSize: 11, color: "var(--text-muted)" }}>🏠 {lead.property}</p>
+      )}
+      <p style={{ fontSize: 10, color: "var(--text-muted)", marginTop: 4 }}>{dateStr}</p>
     </div>
   );
 }
