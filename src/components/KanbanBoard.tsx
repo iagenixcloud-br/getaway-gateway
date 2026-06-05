@@ -1080,21 +1080,21 @@ export function KanbanBoard() {
       )}
 
       {/* Top Stats Bar */}
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3 mb-6">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-2 sm:gap-3 mb-4 sm:mb-6">
         {columns.map((col) => {
           const count = getColumnLeads(col.id).length;
           return (
             <div
               key={col.id}
-              className="glass rounded-xl px-4 py-3 flex items-center gap-3"
+              className="glass rounded-xl px-3 py-2 sm:px-4 sm:py-3 flex items-center gap-2 sm:gap-3"
             >
               <div
-                className="w-2 h-8 rounded-full"
+                className="w-1.5 sm:w-2 h-6 sm:h-8 rounded-full flex-shrink-0"
                 style={{ background: col.color, opacity: 0.7 }}
               />
-              <div>
-                <p style={{ fontSize: 11, color: "var(--text-muted)" }}>{col.label}</p>
-                <p style={{ fontSize: 18, fontWeight: 700, color: col.color }}>{count}</p>
+              <div className="min-w-0">
+                <p className="truncate" style={{ fontSize: 10, color: "var(--text-muted)" }}>{col.label}</p>
+                <p style={{ fontSize: 16, fontWeight: 700, color: col.color, lineHeight: 1.2 }}>{count}</p>
               </div>
             </div>
           );
