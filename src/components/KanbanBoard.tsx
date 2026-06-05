@@ -784,6 +784,8 @@ function FollowUpCard({
             : corretorName || "Não atribuído"}
         </span>
       </div>
+
+      {onMoveRequest && <MoveSelect currentStatus={lead.status} onMove={onMoveRequest} />}
     </div>
   );
 }
