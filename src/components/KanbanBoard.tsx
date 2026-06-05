@@ -1149,6 +1149,7 @@ export function KanbanBoard() {
                       lead={lead}
                       onClick={() => setSelectedLead(lead)}
                       onUpdate={(patch) => updateLead(lead.id, patch)}
+                      onMoveRequest={(s) => moveLeadWithSubstatus(lead.id, s)}
                       corretorName={
                         isAdmin
                           ? lead.assignedTo
