@@ -465,7 +465,7 @@ function LeadModal({
             />
           </div>
 
-          <div className="col-span-2">
+          <div className="md:col-span-2">
             <label style={labelStyle}>Imóvel de Interesse</label>
             <input
               style={inputStyle}
