@@ -342,8 +342,8 @@ function LeadModal({
         </div>
 
         {/* Form Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
-          <div className="col-span-2">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
+          <div className="md:col-span-2">
             <label style={labelStyle}>Nome</label>
             <input
               style={inputStyle}
@@ -393,7 +393,7 @@ function LeadModal({
             </select>
           </div>
 
-          <div className="col-span-2">
+          <div className="md:col-span-2">
             <label style={labelStyle}>Profissão</label>
             <input
               style={inputStyle}
@@ -465,7 +465,7 @@ function LeadModal({
             />
           </div>
 
-          <div className="col-span-2">
+          <div className="md:col-span-2">
             <label style={labelStyle}>Imóvel de Interesse</label>
             <input
               style={inputStyle}
@@ -473,7 +473,7 @@ function LeadModal({
               onChange={(e) => set("property", e.target.value)}
             />
           </div>
-          <div className="col-span-2">
+          <div className="md:col-span-2">
             <label style={labelStyle}>Origem</label>
             <select
               style={inputStyle}
@@ -489,7 +489,7 @@ function LeadModal({
           </div>
 
           {isAdmin && (
-            <div className="col-span-2">
+            <div className="md:col-span-2">
               <label style={labelStyle}>Corretor responsável</label>
               <select
                 style={inputStyle}
