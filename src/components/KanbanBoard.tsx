@@ -797,6 +797,7 @@ function LeadCard({
   isDragging,
   onUpdate,
   corretorName,
+  onMoveRequest,
 }: {
   lead: Lead;
   onClick?: () => void;
@@ -804,6 +805,7 @@ function LeadCard({
   onUpdate?: (patch: Partial<Lead>) => void;
   /** Nome do corretor responsável (string vazia/undefined = não atribuído). Quando null, escondemos o chip. */
   corretorName?: string | null;
+  onMoveRequest?: (status: LeadStatus) => void;
 }) {
   const editable = !!onUpdate;
   return (
