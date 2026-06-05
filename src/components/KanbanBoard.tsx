@@ -62,6 +62,49 @@ const columns: { id: LeadStatus; label: string; color: string; icon: string }[] 
   { id: "cliente_futuro", label: "Cliente Futuro", color: "#0ea5e9", icon: "🔄" },
 ];
 
+// ── Mover-para select (mobile fallback para drag) ──────────────
+function MoveSelect({
+  currentStatus,
+  onMove,
+}: {
+  currentStatus: LeadStatus;
+  onMove: (status: LeadStatus) => void;
+}) {
+  return (
+    <select
+      onClick={(e) => e.stopPropagation()}
+      onPointerDown={(e) => e.stopPropagation()}
+      onTouchStart={(e) => e.stopPropagation()}
+      onChange={(e) => {
+        const v = e.target.value as LeadStatus;
+        if (v && v !== currentStatus) onMove(v);
+        e.target.value = "";
+      }}
+      defaultValue=""
+      className="md:hidden w-full mt-3 rounded-lg"
+      style={{
+        background: "rgba(255,255,255,0.08)",
+        border: "1px solid rgba(255,255,255,0.15)",
+        color: "var(--text-primary)",
+        fontSize: 13,
+        fontWeight: 600,
+        padding: "10px 12px",
+        minHeight: 44,
+        cursor: "pointer",
+      }}
+    >
+      <option value="" style={{ background: "#001f3f" }}>↦ Mover para…</option>
+      {columns
+        .filter((c) => c.id !== currentStatus)
+        .map((c) => (
+          <option key={c.id} value={c.id} style={{ background: "#001f3f", color: "#f0f4f8" }}>
+            {c.icon}  {c.label}
+          </option>
+        ))}
+    </select>
+  );
+}
+
 // ── Substatus options ─────────────────────────────────────────
 const SUBSTATUS_OPTIONS: Record<string, string[]> = {
   perda: [
