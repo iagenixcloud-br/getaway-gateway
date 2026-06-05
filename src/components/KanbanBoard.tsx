@@ -908,6 +908,7 @@ function LeadCard({
           <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
             {corretorName || "Não atribuído"}
           </span>
+        </div>
       )}
 
       {onMoveRequest && <MoveSelect currentStatus={lead.status} onMove={onMoveRequest} />}
