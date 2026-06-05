@@ -489,7 +489,7 @@ function LeadModal({
           </div>
 
           {isAdmin && (
-            <div className="col-span-2">
+            <div className="md:col-span-2">
               <label style={labelStyle}>Corretor responsável</label>
               <select
                 style={inputStyle}
