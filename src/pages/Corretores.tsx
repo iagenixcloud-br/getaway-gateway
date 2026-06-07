@@ -514,7 +514,7 @@ export function Corretores() {
                             {togglingId === c.id ? "..." : c.is_active ? "Inativar" : "Ativar"}
                           </button>
                         )}
-                        {isMaster && !isSelf && (
+                        {isAdmin && !isSelf && (
                           <button
                             onClick={() => openReset(c)}
                             title="Redefinir senha"
