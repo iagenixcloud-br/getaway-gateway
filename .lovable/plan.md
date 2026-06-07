@@ -1,21 +1,19 @@
-# Corrigir campos cortados no mobile — Editar Lead
+## Mudanças
 
-## Causa
-O modal `EditLeadModal` em `src/components/KanbanBoard.tsx` (linha 345) usa `grid grid-cols-1 sm:grid-cols-2`. O breakpoint `sm:` do Tailwind ativa em ≥640px, então em celulares de 360–430px o layout vai pra 2 colunas quando o navegador reporta ≥640px de CSS width (caso do screenshot), cortando Telefone, E-mail, Entrada/Parcela ideal.
+### 1. `src/pages/Corretores.tsx`
+- Após carregar `profiles` + `user_roles`, montar também um `Set` de `masterIds` (role = "master"). Se o usuário logado **não** for master, filtrar a lista removendo qualquer linha cujo `id` esteja em `masterIds` — assim a linha do Admin Master (iagenixcloud@gmail.com) desaparece para o Bruno.
+- Trocar a condição do botão "Senha" de `{isMaster && !isSelf && ...}` para `{isAdmin && !isSelf && ...}`. Como o filtro acima já remove o Master da lista para o Bruno, ele só vê o botão Senha para seus próprios corretores.
 
-## Mudança (apenas CSS, sem tocar em lógica)
+### 2. `supabase/functions/admin-reset-password/index.ts`
+- Permitir que tanto `admin` quanto `master` redefinam senhas (hoje só `master`):
+  - Buscar todas as roles do caller (`.in("role", ["admin","master"])`).
+  - Se não tiver nenhuma, retorna 403.
+- Camada de segurança: se o caller **não** for master, verificar as roles do `target user_id`. Se o alvo for master, retornar 403 com mensagem "Apenas o Admin Master pode redefinir a senha de outro Admin Master." Isso impede que o Bruno (admin) resete a senha do iagenix mesmo se chamar a função direto.
 
-Arquivo: `src/components/KanbanBoard.tsx`
+## Arquivos afetados
+- `src/pages/Corretores.tsx`
+- `supabase/functions/admin-reset-password/index.ts`
 
-1. Linha 345 — trocar breakpoint do grid:
-   - de: `grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4`
-   - para: `grid grid-cols-1 md:grid-cols-2 gap-3 mb-4`
-
-2. Todos os wrappers `col-span-2` dentro desse grid (Nome, Profissão, Imóvel de Interesse, etc., linhas 346, 396, 468 e demais ocorrências dentro do mesmo grid) — trocar para `md:col-span-2` para que em mobile (coluna única) não tentem ocupar 2 colunas inexistentes.
-
-## Resultado
-- Mobile (<768px): todos os campos em coluna única, largura 100%, sem corte.
-- Desktop (≥768px): pares lado a lado (Telefone/E-mail, Idade/Gênero, Renda/Investimento, Entrada/Parcela, Metragem/Região), exatamente como hoje.
-
-## Fora de escopo
-Nenhuma alteração em queries, hooks, validação, estado do formulário ou estilos inline (`inputStyle`, `labelStyle`).
+## Não vou mexer
+- RLS, schema, AuthContext, Layout, demais rotas.
+- Botões Editar/Inativar/Excluir já estão visíveis para qualquer admin; com o Master filtrado da lista, automaticamente o Bruno não consegue acionar nenhuma ação contra ele.

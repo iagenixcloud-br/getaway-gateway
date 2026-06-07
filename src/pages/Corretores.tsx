@@ -129,18 +129,21 @@ export function Corretores() {
       setLoading(false);
       return;
     }
+    const rolesData = (rolesRes.data as { user_id: string; role: string }[]) ?? [];
     const adminIds = new Set(
-      ((rolesRes.data as { user_id: string; role: string }[]) ?? [])
-        .filter((r) => r.role === "admin")
-        .map((r) => r.user_id),
+      rolesData.filter((r) => r.role === "admin").map((r) => r.user_id),
     );
-    setList(
-      (profilesRes.data ?? []).map((p) => ({
-        ...(p as Omit<Corretor, "is_admin" | "is_active">),
-        is_admin: adminIds.has((p as { id: string }).id),
-        is_active: (p as { is_active?: boolean }).is_active !== false,
-      })),
+    const masterIds = new Set(
+      rolesData.filter((r) => r.role === "master").map((r) => r.user_id),
     );
+    const mapped: Corretor[] = (profilesRes.data ?? []).map((p) => ({
+      ...(p as Omit<Corretor, "is_admin" | "is_active">),
+      is_admin: adminIds.has((p as { id: string }).id),
+      is_active: (p as { is_active?: boolean }).is_active !== false,
+    }));
+    // Admin comum (não-master) não pode ver o Admin Master
+    const filtered = isMaster ? mapped : mapped.filter((p) => !masterIds.has(p.id));
+    setList(filtered);
     setLoading(false);
   };
 
@@ -511,7 +514,7 @@ export function Corretores() {
                             {togglingId === c.id ? "..." : c.is_active ? "Inativar" : "Ativar"}
                           </button>
                         )}
-                        {isMaster && !isSelf && (
+                        {isAdmin && !isSelf && (
                           <button
                             onClick={() => openReset(c)}
                             title="Redefinir senha"

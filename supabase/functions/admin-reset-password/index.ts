@@ -55,12 +55,11 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { data: roleRow, error: roleErr } = await admin
+    const { data: callerRoles, error: roleErr } = await admin
       .from("user_roles")
       .select("role")
       .eq("user_id", user.id)
-      .eq("role", "master")
-      .maybeSingle();
+      .in("role", ["admin", "master"]);
 
     if (roleErr) {
       return new Response(
@@ -68,12 +67,14 @@ Deno.serve(async (req) => {
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
-    if (!roleRow) {
+    const callerRoleSet = new Set((callerRoles ?? []).map((r) => r.role));
+    if (callerRoleSet.size === 0) {
       return new Response(
-        JSON.stringify({ error: "Apenas o usuário Master pode redefinir senhas" }),
+        JSON.stringify({ error: "Apenas administradores podem redefinir senhas" }),
         { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
+    const callerIsMaster = callerRoleSet.has("master");
 
     const body = (await req.json()) as Body;
     const targetUserId = (body.user_id || "").trim();
@@ -89,6 +90,27 @@ Deno.serve(async (req) => {
         JSON.stringify({ error: "A senha precisa ter pelo menos 6 caracteres" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
+    }
+
+    // Admin comum não pode redefinir a senha de um Admin Master
+    if (!callerIsMaster) {
+      const { data: targetRoles, error: targetRoleErr } = await admin
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", targetUserId)
+        .eq("role", "master");
+      if (targetRoleErr) {
+        return new Response(
+          JSON.stringify({ error: `Erro ao verificar usuário alvo: ${targetRoleErr.message}` }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+      if ((targetRoles ?? []).length > 0) {
+        return new Response(
+          JSON.stringify({ error: "Apenas o Admin Master pode redefinir a senha de outro Admin Master." }),
+          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
     }
 
     const { error: updErr } = await admin.auth.admin.updateUserById(targetUserId, {
