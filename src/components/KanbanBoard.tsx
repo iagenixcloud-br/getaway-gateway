@@ -284,6 +284,8 @@ function LeadModal({
       purpose: form.purpose,
       areaSqm: form.areaSqm,
       region: form.region,
+      observacoes: form.observacoes,
+
     });
     onClose();
   };
