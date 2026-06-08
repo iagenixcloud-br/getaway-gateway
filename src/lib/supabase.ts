@@ -42,4 +42,6 @@ export interface LeadRow {
   previous_status: string | null;
   /** Motivo da perda ou cliente futuro */
   substatus: string | null;
+  /** Observações livres (texto longo) */
+  observacoes: string | null;
 }

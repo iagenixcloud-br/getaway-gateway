@@ -135,6 +135,8 @@ export const rowToLead = (row: LeadRow): Lead => ({
   areaSqm: row.area_sqm ?? "",
   region: row.region ?? "",
   substatus: row.substatus ?? "",
+  observacoes: row.observacoes ?? "",
+
 });
 
 export function useLeads() {
@@ -310,6 +312,8 @@ export function useLeads() {
     if (patch.areaSqm !== undefined) dbPatch.area_sqm = toStr(patch.areaSqm);
     if (patch.region !== undefined) dbPatch.region = toStr(patch.region);
     if (patch.substatus !== undefined) dbPatch.substatus = toStr(patch.substatus);
+    if (patch.observacoes !== undefined) dbPatch.observacoes = toStr(patch.observacoes);
+
 
     // Remove chaves marcadas como "não mexer" (undefined)
     Object.keys(dbPatch).forEach((k) => {

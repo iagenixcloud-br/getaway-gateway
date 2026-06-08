@@ -265,7 +265,8 @@ function LeadModal({
     form.installment !== lead.installment ||
     form.purpose !== lead.purpose ||
     form.areaSqm !== lead.areaSqm ||
-    form.region !== lead.region;
+    form.region !== lead.region ||
+    form.observacoes !== lead.observacoes;
 
   const handleSave = () => {
     onUpdate({
@@ -283,6 +284,8 @@ function LeadModal({
       purpose: form.purpose,
       areaSqm: form.areaSqm,
       region: form.region,
+      observacoes: form.observacoes,
+
     });
     onClose();
   };
@@ -471,6 +474,16 @@ function LeadModal({
               style={inputStyle}
               value={form.property}
               onChange={(e) => set("property", e.target.value)}
+            />
+          </div>
+          <div className="md:col-span-2">
+            <label style={labelStyle}>Observações</label>
+            <textarea
+              style={{ ...inputStyle, resize: "vertical", minHeight: 70 }}
+              rows={3}
+              value={form.observacoes}
+              onChange={(e) => set("observacoes", e.target.value)}
+              placeholder="Ex.: Agendamento para 12/06 às 14h | Retornar ligação em 2 dias"
             />
           </div>
           <div className="md:col-span-2">
@@ -725,6 +738,21 @@ function FollowUpCard({
         </span>
       </div>
 
+      {/* Observações */}
+      {lead.observacoes && (
+        <div className="flex items-center gap-2 mb-2">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ color: "var(--text-muted)", flexShrink: 0 }}>
+            <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
+            <path d="M14 2v6h6" />
+            <path d="M8 13h8" />
+            <path d="M8 17h5" />
+          </svg>
+          <span style={{ fontSize: 12, color: "var(--text-secondary, var(--text-muted))", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={lead.observacoes}>
+            {lead.observacoes}
+          </span>
+        </div>
+      )}
+
       {/* Status anterior */}
       {prevCol ? (
         <div
@@ -866,6 +894,25 @@ function LeadCard({
           </span>
         )}
       </div>
+
+      {/* Observações */}
+      {(editable || lead.observacoes) && (
+        <div className="flex items-center gap-2 mb-2">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ color: "var(--text-muted)", flexShrink: 0 }}>
+            <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
+            <path d="M14 2v6h6" />
+            <path d="M8 13h8" />
+            <path d="M8 17h5" />
+          </svg>
+          {editable ? (
+            <EditableField value={lead.observacoes} onSave={(v) => onUpdate!({ observacoes: v })} placeholder="Observações" />
+          ) : (
+            <span style={{ fontSize: 12, color: "var(--text-muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={lead.observacoes}>
+              {lead.observacoes}
+            </span>
+          )}
+        </div>
+      )}
 
       {/* Substatus (perda / cliente futuro) */}
       {needsSubstatus(lead.status) && lead.substatus && (

@@ -1,19 +1,58 @@
+## Objetivo
+Adicionar campo **Observações** (texto livre) ao lead, editável no modal e visível como ícone de nota no card do Kanban.
+
 ## Mudanças
 
-### 1. `src/pages/Corretores.tsx`
-- Após carregar `profiles` + `user_roles`, montar também um `Set` de `masterIds` (role = "master"). Se o usuário logado **não** for master, filtrar a lista removendo qualquer linha cujo `id` esteja em `masterIds` — assim a linha do Admin Master (iagenixcloud@gmail.com) desaparece para o Bruno.
-- Trocar a condição do botão "Senha" de `{isMaster && !isSelf && ...}` para `{isAdmin && !isSelf && ...}`. Como o filtro acima já remove o Master da lista para o Bruno, ele só vê o botão Senha para seus próprios corretores.
+### 1) Banco (Supabase externo — você roda o SQL)
+```sql
+ALTER TABLE public.leads
+  ADD COLUMN IF NOT EXISTS observacoes TEXT;
+```
+Campo opcional, sem default. Nenhuma policy nova necessária (herda as existentes da tabela `leads`).
 
-### 2. `supabase/functions/admin-reset-password/index.ts`
-- Permitir que tanto `admin` quanto `master` redefinam senhas (hoje só `master`):
-  - Buscar todas as roles do caller (`.in("role", ["admin","master"])`).
-  - Se não tiver nenhuma, retorna 403.
-- Camada de segurança: se o caller **não** for master, verificar as roles do `target user_id`. Se o alvo for master, retornar 403 com mensagem "Apenas o Admin Master pode redefinir a senha de outro Admin Master." Isso impede que o Bruno (admin) resete a senha do iagenix mesmo se chamar a função direto.
+### 2) Tipo `Lead` — `src/data/mockData.ts`
+Adicionar: `observacoes: string;` (string vazia = sem observação).
 
-## Arquivos afetados
-- `src/pages/Corretores.tsx`
-- `supabase/functions/admin-reset-password/index.ts`
+### 3) Hook `src/hooks/useLeads.ts`
+- **Leitura (linha ~119):** `observacoes: row.observacoes ?? "",`
+- **Update (próximo à linha 312):** `if (patch.observacoes !== undefined) dbPatch.observacoes = toStr(patch.observacoes);`
+- **Create input type + insert (linhas 333 e 353):** incluir `observacoes` no tipo e gravar `observacoes: input.observacoes?.trim() || null`.
 
-## Não vou mexer
-- RLS, schema, AuthContext, Layout, demais rotas.
-- Botões Editar/Inativar/Excluir já estão visíveis para qualquer admin; com o Master filtrado da lista, automaticamente o Bruno não consegue acionar nenhuma ação contra ele.
+### 4) Modal de edição — `src/components/KanbanBoard.tsx` (LeadModal)
+Logo abaixo do bloco "Imóvel de Interesse" (linha 468–475), adicionar:
+```
+<div className="md:col-span-2">
+  <label>Observações</label>
+  <textarea
+    rows={3}
+    value={form.observacoes}
+    onChange={(e) => set("observacoes", e.target.value)}
+    placeholder="Ex.: Agendamento para 12/06 às 14h | Retornar ligação em 2 dias"
+  />
+</div>
+```
+Incluir `observacoes` na verificação de `dirty` e no payload de `handleSave`/`onUpdate`.
+
+### 5) Card do Kanban (mesmo arquivo)
+Logo abaixo do bloco "Imóvel" (linha ~726, e equivalente na variação editável ~868), renderizar **somente se** `lead.observacoes` não estiver vazio:
+```
+<div className="flex items-center gap-2 mb-2">
+  <svg> {/* ícone de nota (note/sticky) */} </svg>
+  <span style={{fontSize:12,color:'var(--text-muted)',
+    overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
+    {lead.observacoes}
+  </span>
+</div>
+```
+Ícone: linhas horizontais dentro de um retângulo (padrão "note") em `stroke=currentColor`, cor `var(--text-muted)`, mesmas dimensões 12×12 do ícone de imóvel para consistência visual.
+
+Na versão editável do card (Roleta), usar `<EditableField multiline value={lead.observacoes} onSave={(v) => onUpdate!({ observacoes: v })} placeholder="Observações" />`.
+
+## Ordem de execução
+1. Você roda o `ALTER TABLE` no Supabase externo.
+2. Eu aplico as mudanças nos 3 arquivos do frontend (`mockData.ts`, `useLeads.ts`, `KanbanBoard.tsx`).
+3. Validação: abrir um lead, preencher observação, salvar, ver o texto aparecer no card.
+
+## Fora de escopo
+- Sincronização com Alfred / webhook (campo só pelo CRM por enquanto).
+- Histórico de observações (só guarda o texto atual).
