@@ -207,6 +207,31 @@ Deno.serve(async (req) => {
           console.warn("corretor assignment failed:", e);
         }
 
+        // Dedup: se já existe lead com mesmo telefone normalizado, pula
+        const normPhone = normalizePhone(fields.phone);
+        if (normPhone) {
+          const { data: existing } = await crmAdmin
+            .from("leads")
+            .select("id, phone")
+            .limit(2000);
+          const dup = (existing || []).find(
+            (l: any) => normalizePhone(l.phone || "") === normPhone
+          );
+          if (dup) {
+            console.log(`Lead duplicado ignorado (phone=${fields.phone}, existing=${dup.id})`);
+            await logWebhook({
+              event_type: "leadgen",
+              page_id: pageId,
+              leadgen_id: leadgenId,
+              form_id: formId,
+              status: "skipped_duplicate",
+              lead_id: dup.id,
+              payload: { fields, reason: "phone_already_exists" },
+            });
+            continue;
+          }
+        }
+
         // Insere o lead no Supabase do CRM
         const { data: lead, error: insertErr } = await crmAdmin
           .from("leads")
