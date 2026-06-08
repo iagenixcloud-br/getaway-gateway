@@ -155,6 +155,29 @@ Deno.serve(async (req) => {
         const pageId = entry.id || change.value?.page_id || null;
         if (!leadgenId) continue;
 
+        // Dedup por leadgen_id: se já processamos esse evento da Meta, pula
+        // (Meta reenvia o mesmo evento se não receber 200 OK rápido)
+        const { data: prevLog } = await cloudAdmin
+          .from("webhook_logs")
+          .select("id, lead_id, status")
+          .eq("leadgen_id", leadgenId)
+          .in("status", ["success", "skipped_duplicate"])
+          .limit(1)
+          .maybeSingle();
+        if (prevLog) {
+          console.log(`Leadgen ${leadgenId} já processado, pulando`);
+          await logWebhook({
+            event_type: "leadgen",
+            page_id: pageId,
+            leadgen_id: leadgenId,
+            form_id: formId,
+            status: "skipped_duplicate",
+            lead_id: prevLog.lead_id,
+            payload: { reason: "leadgen_id_already_processed" },
+          });
+          continue;
+        }
+
         // Tenta buscar dados completos do lead na Graph API
         const details = await fetchLeadDetails(leadgenId);
 
