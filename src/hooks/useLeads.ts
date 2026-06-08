@@ -135,6 +135,8 @@ export const rowToLead = (row: LeadRow): Lead => ({
   areaSqm: row.area_sqm ?? "",
   region: row.region ?? "",
   substatus: row.substatus ?? "",
+  observacoes: row.observacoes ?? "",
+
 });
 
 export function useLeads() {
