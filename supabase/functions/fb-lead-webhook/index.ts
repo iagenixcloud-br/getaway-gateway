@@ -46,6 +46,14 @@ interface LeadFieldData {
   values: string[];
 }
 
+// Normaliza telefone para comparação (apenas dígitos, sem DDI 55)
+function normalizePhone(phone: string): string {
+  if (!phone) return "";
+  let digits = phone.replace(/\D/g, "");
+  if (digits.startsWith("55") && digits.length > 11) digits = digits.slice(2);
+  return digits;
+}
+
 async function fetchLeadDetails(leadgenId: string) {
   const token = await getFbToken();
   if (!token) return null;
@@ -197,6 +205,31 @@ Deno.serve(async (req) => {
           }
         } catch (e) {
           console.warn("corretor assignment failed:", e);
+        }
+
+        // Dedup: se já existe lead com mesmo telefone normalizado, pula
+        const normPhone = normalizePhone(fields.phone);
+        if (normPhone) {
+          const { data: existing } = await crmAdmin
+            .from("leads")
+            .select("id, phone")
+            .limit(2000);
+          const dup = (existing || []).find(
+            (l: any) => normalizePhone(l.phone || "") === normPhone
+          );
+          if (dup) {
+            console.log(`Lead duplicado ignorado (phone=${fields.phone}, existing=${dup.id})`);
+            await logWebhook({
+              event_type: "leadgen",
+              page_id: pageId,
+              leadgen_id: leadgenId,
+              form_id: formId,
+              status: "skipped_duplicate",
+              lead_id: dup.id,
+              payload: { fields, reason: "phone_already_exists" },
+            });
+            continue;
+          }
         }
 
         // Insere o lead no Supabase do CRM
