@@ -265,7 +265,8 @@ function LeadModal({
     form.installment !== lead.installment ||
     form.purpose !== lead.purpose ||
     form.areaSqm !== lead.areaSqm ||
-    form.region !== lead.region;
+    form.region !== lead.region ||
+    form.observacoes !== lead.observacoes;
 
   const handleSave = () => {
     onUpdate({
