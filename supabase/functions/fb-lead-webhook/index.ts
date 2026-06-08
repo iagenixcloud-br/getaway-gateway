@@ -46,6 +46,14 @@ interface LeadFieldData {
   values: string[];
 }
 
+// Normaliza telefone para comparação (apenas dígitos, sem DDI 55)
+function normalizePhone(phone: string): string {
+  if (!phone) return "";
+  let digits = phone.replace(/\D/g, "");
+  if (digits.startsWith("55") && digits.length > 11) digits = digits.slice(2);
+  return digits;
+}
+
 async function fetchLeadDetails(leadgenId: string) {
   const token = await getFbToken();
   if (!token) return null;
