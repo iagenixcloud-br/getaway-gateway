@@ -271,6 +271,20 @@ Deno.serve(async (req) => {
           .single();
 
         if (insertErr || !lead) {
+          // Erro 23505 = violação do índice único leads_phone_unique → duplicado
+          if (insertErr?.code === "23505") {
+            console.log(`Insert bloqueado pelo índice único (phone=${fields.phone})`);
+            await logWebhook({
+              event_type: "leadgen",
+              page_id: pageId,
+              leadgen_id: leadgenId,
+              form_id: formId,
+              status: "skipped_duplicate",
+              payload: { fields, reason: "unique_constraint_phone" },
+            });
+            continue;
+          }
+
           console.error("insert lead failed:", insertErr);
           errors.push(insertErr?.message || "insert failed");
 
