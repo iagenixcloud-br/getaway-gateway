@@ -477,6 +477,16 @@ function LeadModal({
             />
           </div>
           <div className="md:col-span-2">
+            <label style={labelStyle}>Observações</label>
+            <textarea
+              style={{ ...inputStyle, resize: "vertical", minHeight: 70 }}
+              rows={3}
+              value={form.observacoes}
+              onChange={(e) => set("observacoes", e.target.value)}
+              placeholder="Ex.: Agendamento para 12/06 às 14h | Retornar ligação em 2 dias"
+            />
+          </div>
+          <div className="md:col-span-2">
             <label style={labelStyle}>Origem</label>
             <select
               style={inputStyle}
