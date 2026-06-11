@@ -269,33 +269,35 @@ export function Desempenho() {
             Visão geral do pipeline
           </p>
         </div>
-        <div className="overflow-x-auto -mx-3 px-3 md:mx-0 md:px-0">
-          <div className="flex gap-1 p-1 rounded-xl glass w-max" style={{ border: "1px solid var(--glass-border)" }}>
-            {RANGES.map((r) => {
-              const active = range === r.key;
-              return (
-                <button
-                  key={r.key}
-                  onClick={() => setRange(r.key)}
-                  style={{
-                    background: active ? "var(--gold)" : "transparent",
-                    color: active ? "#0a0a0a" : "var(--text-muted)",
-                    fontSize: 12,
-                    fontWeight: 600,
-                    padding: "8px 12px",
-                    borderRadius: 8,
-                    border: "none",
-                    cursor: "pointer",
-                    transition: "all 0.15s",
-                    whiteSpace: "nowrap",
-                  }}
-                >
-                  {r.label}
-                </button>
-              );
-            })}
+        {tab === "overview" && (
+          <div className="overflow-x-auto -mx-3 px-3 md:mx-0 md:px-0">
+            <div className="flex gap-1 p-1 rounded-xl glass w-max" style={{ border: "1px solid var(--glass-border)" }}>
+              {RANGES.map((r) => {
+                const active = range === r.key;
+                return (
+                  <button
+                    key={r.key}
+                    onClick={() => setRange(r.key)}
+                    style={{
+                      background: active ? "var(--gold)" : "transparent",
+                      color: active ? "#0a0a0a" : "var(--text-muted)",
+                      fontSize: 12,
+                      fontWeight: 600,
+                      padding: "8px 12px",
+                      borderRadius: 8,
+                      border: "none",
+                      cursor: "pointer",
+                      transition: "all 0.15s",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {r.label}
+                  </button>
+                );
+              })}
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
       {/* Tabs raiz */}
