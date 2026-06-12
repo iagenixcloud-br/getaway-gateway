@@ -32,8 +32,33 @@ Deno.serve(async (req) => {
       auth: { autoRefreshToken: false, persistSession: false },
     });
 
-    // TEMP: auth bypass for one-off admin execution from Lovable agent
-    let authorized = true;
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader?.startsWith("Bearer ")) return json({ error: "Não autenticado" }, 401);
+    const token = authHeader.replace("Bearer ", "");
+
+    let authorized = false;
+    const { data: extUser } = await admin.auth.getUser(token);
+    if (extUser?.user) {
+      const { data: roleRow } = await admin
+        .from("user_roles").select("role")
+        .eq("user_id", extUser.user.id)
+        .in("role", ["admin", "master"]).maybeSingle();
+      if (roleRow) authorized = true;
+    }
+
+    if (!authorized) {
+      const lc = createClient(LC_URL, LC_SERVICE, { auth: { autoRefreshToken: false, persistSession: false } });
+      const { data: lcUser } = await lc.auth.getUser(token);
+      if (lcUser?.user) {
+        const { data: lcRole } = await lc
+          .from("user_roles").select("role")
+          .eq("user_id", lcUser.user.id)
+          .eq("role", "admin").maybeSingle();
+        if (lcRole) authorized = true;
+      }
+    }
+
+    if (!authorized) return json({ error: "Não autorizado" }, 403);
 
     const body = await req.json() as {
       lead_id?: string;
