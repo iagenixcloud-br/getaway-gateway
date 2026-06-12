@@ -26,27 +26,41 @@ Deno.serve(async (req) => {
   try {
     const EXT_URL = Deno.env.get("EXTERNAL_SUPABASE_URL")!;
     const EXT_SERVICE = Deno.env.get("EXTERNAL_SUPABASE_SERVICE_ROLE_KEY")!;
+    const LC_URL = Deno.env.get("SUPABASE_URL")!;
+    const LC_SERVICE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const admin = createClient(EXT_URL, EXT_SERVICE, {
       auth: { autoRefreshToken: false, persistSession: false },
     });
 
     const authHeader = req.headers.get("Authorization");
-    const bypass = req.headers.get("x-admin-bypass") === Deno.env.get("EXTERNAL_SUPABASE_SERVICE_ROLE_KEY");
+    if (!authHeader?.startsWith("Bearer ")) return json({ error: "Não autenticado" }, 401);
+    const token = authHeader.replace("Bearer ", "");
 
-    if (!bypass) {
-      if (!authHeader?.startsWith("Bearer ")) return json({ error: "Não autenticado" }, 401);
-      const token = authHeader.replace("Bearer ", "");
-      const { data: { user }, error: userErr } = await admin.auth.getUser(token);
-      if (userErr || !user) return json({ error: "Sessão inválida" }, 401);
-
+    // Try external auth first
+    let authorized = false;
+    const { data: extUser } = await admin.auth.getUser(token);
+    if (extUser?.user) {
       const { data: roleRow } = await admin
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", user.id)
-        .in("role", ["admin", "master"])
-        .maybeSingle();
-      if (!roleRow) return json({ error: "Apenas admin/master" }, 403);
+        .from("user_roles").select("role")
+        .eq("user_id", extUser.user.id)
+        .in("role", ["admin", "master"]).maybeSingle();
+      if (roleRow) authorized = true;
     }
+
+    // Fallback: Lovable Cloud admin (dev/preview)
+    if (!authorized) {
+      const lc = createClient(LC_URL, LC_SERVICE, { auth: { autoRefreshToken: false, persistSession: false } });
+      const { data: lcUser } = await lc.auth.getUser(token);
+      if (lcUser?.user) {
+        const { data: lcRole } = await lc
+          .from("user_roles").select("role")
+          .eq("user_id", lcUser.user.id)
+          .eq("role", "admin").maybeSingle();
+        if (lcRole) authorized = true;
+      }
+    }
+
+    if (!authorized) return json({ error: "Não autorizado" }, 403);
 
     const body = await req.json() as {
       lead_id?: string;
