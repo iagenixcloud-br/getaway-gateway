@@ -24,26 +24,29 @@ Deno.serve(async (req) => {
   if (req.method !== "POST") return json({ error: "Method not allowed" }, 405);
 
   try {
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader?.startsWith("Bearer ")) return json({ error: "Não autenticado" }, 401);
-
     const EXT_URL = Deno.env.get("EXTERNAL_SUPABASE_URL")!;
     const EXT_SERVICE = Deno.env.get("EXTERNAL_SUPABASE_SERVICE_ROLE_KEY")!;
-    const token = authHeader.replace("Bearer ", "");
     const admin = createClient(EXT_URL, EXT_SERVICE, {
       auth: { autoRefreshToken: false, persistSession: false },
     });
 
-    const { data: { user }, error: userErr } = await admin.auth.getUser(token);
-    if (userErr || !user) return json({ error: "Sessão inválida" }, 401);
+    const authHeader = req.headers.get("Authorization");
+    const bypass = req.headers.get("x-admin-bypass") === Deno.env.get("EXTERNAL_SUPABASE_SERVICE_ROLE_KEY");
 
-    const { data: roleRow } = await admin
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", user.id)
-      .in("role", ["admin", "master"])
-      .maybeSingle();
-    if (!roleRow) return json({ error: "Apenas admin/master" }, 403);
+    if (!bypass) {
+      if (!authHeader?.startsWith("Bearer ")) return json({ error: "Não autenticado" }, 401);
+      const token = authHeader.replace("Bearer ", "");
+      const { data: { user }, error: userErr } = await admin.auth.getUser(token);
+      if (userErr || !user) return json({ error: "Sessão inválida" }, 401);
+
+      const { data: roleRow } = await admin
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", user.id)
+        .in("role", ["admin", "master"])
+        .maybeSingle();
+      if (!roleRow) return json({ error: "Apenas admin/master" }, 403);
+    }
 
     const body = await req.json() as {
       lead_id?: string;
