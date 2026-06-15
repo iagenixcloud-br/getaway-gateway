@@ -1173,12 +1173,34 @@ export function KanbanBoard() {
                     {col.label}
                   </span>
                 </div>
-                <span
-                  className="badge"
-                  style={{ background: `${col.color}20`, color: col.color }}
-                >
-                  {colLeads.length}
-                </span>
+                <div className="flex items-center gap-2">
+                  {col.id === "lead_novo" && (
+                    <button
+                      type="button"
+                      onClick={() => setIndicacaoOpen(true)}
+                      title="Cadastrar indicação manual"
+                      style={{
+                        background: "linear-gradient(135deg, rgba(212,175,55,0.18), rgba(212,175,55,0.08))",
+                        border: "1px solid rgba(212,175,55,0.45)",
+                        color: "var(--gold, #D4AF37)",
+                        fontSize: 11,
+                        fontWeight: 700,
+                        padding: "3px 10px",
+                        borderRadius: 999,
+                        cursor: "pointer",
+                        lineHeight: 1.4,
+                      }}
+                    >
+                      + Indicação
+                    </button>
+                  )}
+                  <span
+                    className="badge"
+                    style={{ background: `${col.color}20`, color: col.color }}
+                  >
+                    {colLeads.length}
+                  </span>
+                </div>
               </div>
 
               {/* Cards (droppable) */}
