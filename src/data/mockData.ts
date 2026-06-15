@@ -49,5 +49,6 @@ export interface Lead {
   region: string;         // região desejada
   substatus: string;      // motivo da perda ou cliente futuro
   observacoes: string;    // observações livres
-
+  /** Origem: 'trafego_pago' | 'manual_indicacao' | etc. */
+  origem?: string;
 }

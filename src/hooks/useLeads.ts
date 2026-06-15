@@ -136,7 +136,7 @@ export const rowToLead = (row: LeadRow): Lead => ({
   region: row.region ?? "",
   substatus: row.substatus ?? "",
   observacoes: row.observacoes ?? "",
-
+  origem: row.origem ?? undefined,
 });
 
 export function useLeads() {
