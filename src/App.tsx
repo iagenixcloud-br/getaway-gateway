@@ -22,6 +22,7 @@ export default function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
+        <Toaster theme="dark" position="top-right" richColors closeButton />
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route
