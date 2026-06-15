@@ -4,6 +4,7 @@ import { useLeads } from "../hooks/useLeads";
 import { useCorretores, CorretorOption } from "../hooks/useCorretores";
 import { useAuth } from "../contexts/AuthContext";
 import { EditableField } from "./EditableField";
+import { NovaIndicacaoModal } from "./NovaIndicacaoModal";
 import {
   DndContext,
   DragEndEvent,
