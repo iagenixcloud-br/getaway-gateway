@@ -1042,9 +1042,10 @@ function DroppableArea({
 export function KanbanBoard() {
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [activeLead, setActiveLead] = useState<Lead | null>(null);
+  const [indicacaoOpen, setIndicacaoOpen] = useState(false);
   // Pending substatus: when moving to perda/cliente_futuro, we pause and ask for reason
   const [pendingMove, setPendingMove] = useState<{ leadId: string; status: "perda" | "cliente_futuro" } | null>(null);
-  const { leads: allLeads, loading, error, updateLeadStatus, updateLead, assignLead } = useLeads();
+  const { leads: allLeads, loading, error, updateLeadStatus, updateLead, assignLead, createIndicacao } = useLeads();
   const { isAdmin } = useAuth();
   const { corretores } = useCorretores(isAdmin);
   const corretorNameById = React.useMemo(() => {
