@@ -303,6 +303,20 @@ Deno.serve(async (req) => {
         created.push(lead.id);
         console.log(`Lead ${lead.id} criado no CRM (${fields.name})`);
 
+        // Avança a fila da roleta imediatamente: marca o corretor que recebeu
+        // como o "mais recente", para que rajadas da Meta não caiam todas
+        // no mesmo corretor enquanto este webhook ainda processa.
+        if (assignTo) {
+          try {
+            await crmAdmin
+              .from("profiles")
+              .update({ last_received_at: new Date().toISOString() })
+              .eq("id", assignTo);
+          } catch (e) {
+            console.warn("update last_received_at failed:", e);
+          }
+        }
+
         // Log de sucesso
         await logWebhook({
           event_type: "leadgen",
@@ -315,6 +329,11 @@ Deno.serve(async (req) => {
         });
       }
     }
+
+    // Delay artificial para cadenciar as notificações de rajadas da Meta,
+    // evitando que o mesmo corretor seja bombardeado com dezenas de avisos
+    // simultâneos no WhatsApp/n8n.
+    await new Promise((resolve) => setTimeout(resolve, 3000));
 
     return new Response(JSON.stringify({ ok: true, created, errors }), {
       status: 200,
