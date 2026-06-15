@@ -837,12 +837,40 @@ function LeadCard({
   onMoveRequest?: (status: LeadStatus) => void;
 }) {
   const editable = !!onUpdate;
+  const isIndicacao = lead.origem === "manual_indicacao";
   return (
     <div
       className="glass glass-hover rounded-xl p-4"
       onClick={onClick}
-      style={{ marginBottom: 8, opacity: isDragging ? 0.4 : 1, cursor: "grab" }}
+      style={{
+        marginBottom: 8,
+        opacity: isDragging ? 0.4 : 1,
+        cursor: "grab",
+        position: "relative",
+        borderLeft: isIndicacao ? "3px solid var(--gold, #D4AF37)" : undefined,
+      }}
     >
+      {isIndicacao && (
+        <span
+          style={{
+            position: "absolute",
+            top: 8,
+            right: 8,
+            fontSize: 9,
+            fontWeight: 700,
+            letterSpacing: 0.6,
+            color: "var(--gold, #D4AF37)",
+            background: "rgba(10,10,10,0.55)",
+            border: "1px solid rgba(212,175,55,0.45)",
+            padding: "2px 7px",
+            borderRadius: 999,
+            lineHeight: 1,
+            pointerEvents: "none",
+          }}
+        >
+          INDICAÇÃO
+        </span>
+      )}
       {/* Nome */}
       <div style={{ marginBottom: 8 }}>
         {editable ? (
