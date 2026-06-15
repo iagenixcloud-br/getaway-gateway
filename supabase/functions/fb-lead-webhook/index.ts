@@ -330,6 +330,11 @@ Deno.serve(async (req) => {
       }
     }
 
+    // Delay artificial para cadenciar as notificações de rajadas da Meta,
+    // evitando que o mesmo corretor seja bombardeado com dezenas de avisos
+    // simultâneos no WhatsApp/n8n.
+    await new Promise((resolve) => setTimeout(resolve, 3000));
+
     return new Response(JSON.stringify({ ok: true, created, errors }), {
       status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
