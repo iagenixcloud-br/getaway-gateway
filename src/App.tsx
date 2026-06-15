@@ -1,5 +1,6 @@
 import React from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { Toaster } from "sonner";
 import "./index.css";
 import { Layout } from "./components/Layout";
 import { KanbanBoard } from "./components/KanbanBoard";
@@ -21,6 +22,7 @@ export default function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
+        <Toaster theme="dark" position="top-right" richColors closeButton />
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route

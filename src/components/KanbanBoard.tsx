@@ -4,6 +4,7 @@ import { useLeads } from "../hooks/useLeads";
 import { useCorretores, CorretorOption } from "../hooks/useCorretores";
 import { useAuth } from "../contexts/AuthContext";
 import { EditableField } from "./EditableField";
+import { NovaIndicacaoModal } from "./NovaIndicacaoModal";
 import {
   DndContext,
   DragEndEvent,
@@ -1041,9 +1042,10 @@ function DroppableArea({
 export function KanbanBoard() {
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [activeLead, setActiveLead] = useState<Lead | null>(null);
+  const [indicacaoOpen, setIndicacaoOpen] = useState(false);
   // Pending substatus: when moving to perda/cliente_futuro, we pause and ask for reason
   const [pendingMove, setPendingMove] = useState<{ leadId: string; status: "perda" | "cliente_futuro" } | null>(null);
-  const { leads: allLeads, loading, error, updateLeadStatus, updateLead, assignLead } = useLeads();
+  const { leads: allLeads, loading, error, updateLeadStatus, updateLead, assignLead, createIndicacao } = useLeads();
   const { isAdmin } = useAuth();
   const { corretores } = useCorretores(isAdmin);
   const corretorNameById = React.useMemo(() => {
@@ -1171,12 +1173,34 @@ export function KanbanBoard() {
                     {col.label}
                   </span>
                 </div>
-                <span
-                  className="badge"
-                  style={{ background: `${col.color}20`, color: col.color }}
-                >
-                  {colLeads.length}
-                </span>
+                <div className="flex items-center gap-2">
+                  {col.id === "lead_novo" && (
+                    <button
+                      type="button"
+                      onClick={() => setIndicacaoOpen(true)}
+                      title="Cadastrar indicação manual"
+                      style={{
+                        background: "linear-gradient(135deg, rgba(212,175,55,0.18), rgba(212,175,55,0.08))",
+                        border: "1px solid rgba(212,175,55,0.45)",
+                        color: "var(--gold, #D4AF37)",
+                        fontSize: 11,
+                        fontWeight: 700,
+                        padding: "3px 10px",
+                        borderRadius: 999,
+                        cursor: "pointer",
+                        lineHeight: 1.4,
+                      }}
+                    >
+                      + Indicação
+                    </button>
+                  )}
+                  <span
+                    className="badge"
+                    style={{ background: `${col.color}20`, color: col.color }}
+                  >
+                    {colLeads.length}
+                  </span>
+                </div>
               </div>
 
               {/* Cards (droppable) */}
@@ -1245,6 +1269,13 @@ export function KanbanBoard() {
           onCancel={() => setPendingMove(null)}
         />
       )}
+
+      {/* Modal de nova indicação manual */}
+      <NovaIndicacaoModal
+        open={indicacaoOpen}
+        onClose={() => setIndicacaoOpen(false)}
+        createIndicacao={createIndicacao}
+      />
     </div>
 
     <DragOverlay dropAnimation={null}>

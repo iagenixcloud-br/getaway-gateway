@@ -380,6 +380,60 @@ export function useLeads() {
     return { error: null, lead: null };
   };
 
+  /**
+   * Cria uma indicação manual (entrada fora do tráfego pago).
+   * - Corretor comum: força tenant_id = próprio user.id (ignora input.assignedTo)
+   * - Admin: usa input.assignedTo (obrigatório)
+   * Sempre: status = 'lead_novo', origem = 'manual_indicacao', arquivado = false.
+   */
+  const createIndicacao = async (input: {
+    name: string;
+    phone: string;
+    observacoes?: string;
+    assignedTo?: string | null;
+  }) => {
+    const { data: userData } = await supabase.auth.getUser();
+    const authedUser = userData?.user;
+    if (!authedUser) {
+      return { error: "Não autenticado", lead: null as Lead | null };
+    }
+
+    const tenantId = isAdmin ? (input.assignedTo ?? null) : authedUser.id;
+    if (isAdmin && !tenantId) {
+      return { error: "Admin deve selecionar um corretor", lead: null as Lead | null };
+    }
+
+    const payload = {
+      name: input.name.trim(),
+      phone: sanitizePhone(input.phone),
+      observacoes: input.observacoes?.trim() || null,
+      status: "lead_novo",
+      tenant_id: tenantId,
+      origem: "manual_indicacao",
+      arquivado: false,
+    };
+
+    const { data, error } = await supabase
+      .from("leads")
+      .insert(payload)
+      .select()
+      .single();
+
+    if (error) {
+      setError(`Falha ao criar indicação: ${error.message}`);
+      return { error: error.message, lead: null as Lead | null };
+    }
+
+    if (data) {
+      const newLead = rowToLead(data as LeadRow);
+      setLeads((prev) =>
+        prev.some((l) => l.id === newLead.id) ? prev : [newLead, ...prev],
+      );
+      return { error: null, lead: newLead };
+    }
+    return { error: null, lead: null as Lead | null };
+  };
+
   return {
     leads,
     loading,
@@ -388,5 +442,6 @@ export function useLeads() {
     updateLead,
     assignLead,
     createLead,
+    createIndicacao,
   };
 }
