@@ -11,6 +11,9 @@ interface Props {
   createIndicacao: ReturnType<typeof useLeads>["createIndicacao"];
 }
 
+/* REGRA DE NEGOCIO: Indicacoes manuais ignoram o limite (cap) de 10 leads
+   da roleta automatica do trafego pago para garantir que corretores possam
+   cadastrar seus proprios clientes trazidos por fora. */
 /** Máscara (DD) 9XXXX-XXXX a partir de string digitada. */
 function maskPhone(raw: string): string {
   const d = raw.replace(/\D/g, "").slice(0, 11);
