@@ -44,4 +44,6 @@ export interface LeadRow {
   substatus: string | null;
   /** Observações livres (texto longo) */
   observacoes: string | null;
+  /** Origem do lead: 'trafego_pago' | 'manual_indicacao' | etc. */
+  origem: string | null;
 }
