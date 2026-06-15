@@ -1269,6 +1269,13 @@ export function KanbanBoard() {
           onCancel={() => setPendingMove(null)}
         />
       )}
+
+      {/* Modal de nova indicação manual */}
+      <NovaIndicacaoModal
+        open={indicacaoOpen}
+        onClose={() => setIndicacaoOpen(false)}
+        createIndicacao={createIndicacao}
+      />
     </div>
 
     <DragOverlay dropAnimation={null}>
