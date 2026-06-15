@@ -381,10 +381,9 @@ export function useLeads() {
   };
 
   /**
-   * Cria uma indicação manual (entrada fora do tráfego pago).
-   * - Corretor comum: força tenant_id = próprio user.id (ignora input.assignedTo)
-   * - Admin: usa input.assignedTo (obrigatório)
-   * Sempre: status = 'lead_novo', origem = 'manual_indicacao', arquivado = false.
+   * REGRA DE NEGOCIO: Indicacoes manuais ignoram o limite (cap) de 10 leads
+   * da roleta automatica do trafego pago para garantir que corretores possam
+   * cadastrar seus proprios clientes trazidos por fora.
    */
   const createIndicacao = async (input: {
     name: string;
