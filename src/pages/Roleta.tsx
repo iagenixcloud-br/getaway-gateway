@@ -1,8 +1,12 @@
 import React, { useMemo, useState } from "react";
 import { Navigate } from "react-router-dom";
+import { toast } from "sonner";
+import { FlaskConical } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import { useRoleta } from "../hooks/useRoleta";
 import { useLeads } from "../hooks/useLeads";
+import { invokeCloudFunction } from "../lib/cloudFunctions";
+
 
 const sourceLabel = (s: string) => {
   switch (s) {
@@ -36,6 +40,22 @@ export function Roleta() {
   const { corretores, fila, history, loading, error, toggleActive, redistribute } = useRoleta(isAdmin);
   const { leads } = useLeads();
   const [redistributingId, setRedistributingId] = useState<string | null>(null);
+  const [seeding, setSeeding] = useState(false);
+
+  const handleSeed = async () => {
+    if (!window.confirm("Gerar 100 leads de teste (origem='seed_teste') distribuídos entre todos os corretores ativos?")) return;
+    setSeeding(true);
+    const { data, error } = await invokeCloudFunction("seed-test-leads", { count: 100 });
+    setSeeding(false);
+    if (error) {
+      toast.error(`Falha no seed: ${error.message || "erro desconhecido"}`);
+      return;
+    }
+    const per = data?.perCorretor || {};
+    const breakdown = Object.entries(per).map(([n, q]) => `${n}: ${q}`).join(" • ");
+    toast.success(`${data?.created ?? 0} leads criados${breakdown ? ` — ${breakdown}` : ""}`);
+  };
+
 
   const proximo = fila[0];
   const totalDistribuidos = useMemo(
@@ -55,6 +75,22 @@ export function Roleta() {
           {error}
         </div>
       )}
+
+      {/* Ferramenta temporária de teste (admin) */}
+      <div className="flex justify-end">
+        <button
+          onClick={handleSeed}
+          disabled={seeding}
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium border transition disabled:opacity-60"
+          style={{ background: "rgba(212,175,55,0.08)", borderColor: "#D4AF37", color: "#D4AF37" }}
+          title="Insere 100 leads sintéticos no banco para testar o Kanban (não passa pela roleta)"
+        >
+          <FlaskConical size={16} />
+          {seeding ? "Gerando..." : "Gerar 100 leads de teste"}
+        </button>
+      </div>
+
+
 
       {/* KPIs */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">

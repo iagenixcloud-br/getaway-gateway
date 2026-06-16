@@ -1,49 +1,37 @@
+## Problema
 
-## Plano: Edge function `seed-test-leads` para popular o Kanban
+Disparar a edge function `seed-test-leads` pelo console do navegador não funciona:
+- `import('/src/lib/supabase.ts')` falha porque o console roda em `lovable.dev`, não no preview.
+- `fetch` manual para `gycrprnkuwlzntqvpoxl.supabase.co` é bloqueado por CORS (preflight não passa quando chamado de `lovable.dev`).
 
-### O que faz
-Cria **100 leads de teste** no CRM externo, todos com `status = 'lead_novo'`, distribuídos em round-robin entre **todos os corretores ativos**. Não vai mexer em nada da roleta real (webhook, auto-fill, n8n).
+A chamada precisa partir de dentro do app (origem do preview), usando o `supabase` client que já tem a sessão do admin.
 
-### Arquivo novo
-`supabase/functions/seed-test-leads/index.ts`
+## Solução
 
-### Comportamento
+Adicionar um botão temporário **"Gerar 100 leads de teste"** no topo da página `src/pages/Roleta.tsx`, visível **apenas para admin** (`useAuth().isAdmin`).
 
-1. **Auth**: exige `Authorization: Bearer <token>` e valida que o usuário é admin (consulta `user_roles` no CRM externo). Sem isso, retorna 401/403.
-2. **Lê corretores ativos** no CRM externo (`profiles` onde `is_active = true`).
-3. **Gera 100 leads sintéticos**:
-   - `name`: `"Teste Seed #001"` … `"Teste Seed #100"`
-   - `phone`: `+5511` + timestamp em ms + índice (garante unicidade contra o índice único de telefone)
-   - `email`: `seed-001@teste.local` …
-   - `city`: rotativa entre 4 cidades (São Paulo, Rio, BH, Curitiba)
-   - `interest`: rotativa entre 3 tipos (Apartamento, Casa, Cobertura)
-   - `budget`: aleatório entre 300k e 2M
-   - `status`: `'lead_novo'` (todos)
-   - `origem`: `'seed_teste'` (para você identificar / apagar depois facilmente no Supabase)
-   - `tenant_id`: round-robin entre corretores ativos
-   - `arquivado`: `false`
-4. **Insere em batch único** com `.insert(payload).select('id')` — uma única ida ao banco.
-5. **NÃO atualiza** `last_received_at` dos corretores nem grava em `lead_assignments` — é seed de teste, não passa pela roleta.
-6. Retorna `{ ok: true, created: 100, perCorretor: { "nome1": 25, "nome2": 25, ... } }`.
+### Comportamento do botão
 
-### Como você dispara
-Depois de deploy, no console do navegador (logado como admin) ou via curl:
-```js
-await supabase.functions.invoke('seed-test-leads', { body: { count: 100 } })
-```
-O `count` é opcional (default 100, máx 500 por chamada para segurança).
+1. Confirmação (`window.confirm`) antes de disparar.
+2. Chama `invokeCloudFunction('seed-test-leads', { count: 100 })` (já existe em `src/lib/cloudFunctions.ts` e injeta o Bearer token correto contra o CRM externo — mesmo padrão das outras funções).
+3. Estado de loading no botão (desabilita + texto "Gerando...").
+4. Toast de sucesso mostrando `created` e `perCorretor`, ou toast de erro com a mensagem.
+5. Sem refetch automático da Roleta (o seed não passa pela roleta, então a tela de Roleta não muda — mas o Kanban em `/leads` vai mostrar os 100 leads novos).
 
-### Como limpar depois
-Como você vai zerar tudo pelo Supabase mesmo, sem problema. Mas o `origem='seed_teste'` permite no futuro:
-```sql
-DELETE FROM leads WHERE origem = 'seed_teste';
-```
+### Onde fica
 
-### config.toml
-A função entra com `verify_jwt = false` (padrão Lovable) e fazemos a validação de admin **dentro** do código.
+- Arquivo: `src/pages/Roleta.tsx`
+- Posição: topo da página, ao lado do título, dentro de um bloco `{isAdmin && (...)}`.
+- Visual: botão `variant="outline"` discreto, com ícone `Sparkles` ou `FlaskConical` (lucide-react) para deixar claro que é ferramenta de teste.
 
 ### O que NÃO muda
-- `fb-lead-webhook`, `auto-fill-leads`, `roleta-redistribute`, `useLeads`, `useRoleta`, `NovaIndicacaoModal`, `KanbanBoard` — todos intocados.
-- Cap de 10 da roleta automática continua valendo para o fluxo de tráfego pago. Esse seed simplesmente não passa pela roleta (insere direto, igual à indicação manual).
 
-Posso prosseguir e criar essa edge function?
+- Edge function `seed-test-leads` já está deployada e correta — não mexer.
+- `useLeads`, `useRoleta`, `KanbanBoard`, `NovaIndicacaoModal`, `fb-lead-webhook` — intocados.
+- Nenhum corretor não-admin vê o botão.
+
+### Depois do teste
+
+Quando você terminar de testar o Kanban, é só me pedir "remove o botão de seed" que eu apago em 1 edit.
+
+Posso prosseguir?
