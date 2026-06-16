@@ -5,7 +5,7 @@ import { FlaskConical } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import { useRoleta } from "../hooks/useRoleta";
 import { useLeads } from "../hooks/useLeads";
-import { invokeCloudFunction } from "../lib/cloudFunctions";
+import { supabase } from "../lib/supabase";
 
 
 const sourceLabel = (s: string) => {
