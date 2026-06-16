@@ -45,16 +45,40 @@ export function Roleta() {
   const handleSeed = async () => {
     if (!window.confirm("Gerar 100 leads de teste (origem='seed_teste') distribuídos entre todos os corretores ativos?")) return;
     setSeeding(true);
-    const { data, error } = await invokeCloudFunction("seed-test-leads", { count: 100 });
-    setSeeding(false);
-    if (error) {
-      toast.error(`Falha no seed: ${error.message || "erro desconhecido"}`);
-      return;
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      if (!token) {
+        toast.error("Não autenticado");
+        return;
+      }
+      const res = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/seed-test-leads`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+            apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+          },
+          body: JSON.stringify({ count: 100 }),
+        },
+      );
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        toast.error(`Falha no seed: ${data?.error || res.status}`);
+        return;
+      }
+      const per = data?.perCorretor || {};
+      const breakdown = Object.entries(per).map(([n, q]) => `${n}: ${q}`).join(" • ");
+      toast.success(`${data?.created ?? 0} leads criados${breakdown ? ` — ${breakdown}` : ""}`);
+    } catch (e) {
+      toast.error(`Erro: ${e instanceof Error ? e.message : "desconhecido"}`);
+    } finally {
+      setSeeding(false);
     }
-    const per = data?.perCorretor || {};
-    const breakdown = Object.entries(per).map(([n, q]) => `${n}: ${q}`).join(" • ");
-    toast.success(`${data?.created ?? 0} leads criados${breakdown ? ` — ${breakdown}` : ""}`);
   };
+
 
 
   const proximo = fila[0];
