@@ -40,6 +40,22 @@ export function Roleta() {
   const { corretores, fila, history, loading, error, toggleActive, redistribute } = useRoleta(isAdmin);
   const { leads } = useLeads();
   const [redistributingId, setRedistributingId] = useState<string | null>(null);
+  const [seeding, setSeeding] = useState(false);
+
+  const handleSeed = async () => {
+    if (!window.confirm("Gerar 100 leads de teste (origem='seed_teste') distribuídos entre todos os corretores ativos?")) return;
+    setSeeding(true);
+    const { data, error } = await invokeCloudFunction("seed-test-leads", { count: 100 });
+    setSeeding(false);
+    if (error) {
+      toast.error(`Falha no seed: ${error.message || "erro desconhecido"}`);
+      return;
+    }
+    const per = data?.perCorretor || {};
+    const breakdown = Object.entries(per).map(([n, q]) => `${n}: ${q}`).join(" • ");
+    toast.success(`${data?.created ?? 0} leads criados${breakdown ? ` — ${breakdown}` : ""}`);
+  };
+
 
   const proximo = fila[0];
   const totalDistribuidos = useMemo(
