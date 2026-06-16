@@ -35,3 +35,7 @@ verify_jwt = false
 
 [functions.fb-sync-leads]
 verify_jwt = false
+
+[functions.seed-test-leads]
+verify_jwt = false
+
