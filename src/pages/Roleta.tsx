@@ -76,6 +76,22 @@ export function Roleta() {
         </div>
       )}
 
+      {/* Ferramenta temporária de teste (admin) */}
+      <div className="flex justify-end">
+        <button
+          onClick={handleSeed}
+          disabled={seeding}
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium border transition disabled:opacity-60"
+          style={{ background: "rgba(212,175,55,0.08)", borderColor: "#D4AF37", color: "#D4AF37" }}
+          title="Insere 100 leads sintéticos no banco para testar o Kanban (não passa pela roleta)"
+        >
+          <FlaskConical size={16} />
+          {seeding ? "Gerando..." : "Gerar 100 leads de teste"}
+        </button>
+      </div>
+
+
+
       {/* KPIs */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <KpiCard label="Corretores ativos" value={fila.length} sub={`${corretores.length} cadastrados`} />
