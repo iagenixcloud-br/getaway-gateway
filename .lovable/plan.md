@@ -1,58 +1,39 @@
-## Diagnóstico
+## Ajuste no seed-test-leads
 
-"Failed to fetch" acontece porque o projeto tem **dois Supabase**:
+Trocar o nome fixo `Teste Seed #001` por nomes brasileiros realistas, mantendo um marcador discreto para facilitar a limpeza depois.
 
-- **Lovable Cloud** (`lzgdvvapzmuogtlivzxa`) — onde edge functions são deployadas automaticamente. É para lá que o `seed-test-leads` foi.
-- **CRM externo** (`gycrprnkuwlzntqvpoxl`) — onde fica o banco de dados real (leads, profiles) e onde o usuário se autentica via `src/lib/supabase.ts`.
+### Mudança em `supabase/functions/seed-test-leads/index.ts`
 
-O helper `invokeCloudFunction` em `src/lib/cloudFunctions.ts` aponta para o **CRM externo**, mas a função `seed-test-leads` não existe lá → preflight CORS volta 404 → "Failed to fetch".
+1. Adicionar dois arrays no topo:
+   ```ts
+   const FIRST_NAMES = [
+     "Ana","Bruno","Carla","Daniel","Eduarda","Felipe","Gabriela","Henrique",
+     "Isabela","João","Karina","Lucas","Mariana","Nicolas","Olívia","Pedro",
+     "Queila","Rafael","Sofia","Thiago","Úrsula","Vinícius","Wesley","Yasmin",
+     "Beatriz","Caio","Débora","Otávio","Renata","Sérgio"
+   ];
+   const LAST_NAMES = [
+     "Silva","Souza","Oliveira","Santos","Pereira","Lima","Costa","Almeida",
+     "Ferreira","Rodrigues","Gomes","Martins","Araújo","Ribeiro","Carvalho",
+     "Barbosa","Mendes","Cardoso","Teixeira","Moreira","Nascimento","Cavalcanti"
+   ];
+   ```
 
-## Correção
+2. Dentro do `Array.from(...)`, substituir:
+   ```ts
+   name: `Teste Seed #${idx}`,
+   ```
+   por:
+   ```ts
+   const first = FIRST_NAMES[Math.floor(Math.random() * FIRST_NAMES.length)];
+   const last  = LAST_NAMES[Math.floor(Math.random() * LAST_NAMES.length)];
+   const name  = `${first} ${last}`;
+   ```
+   e usar `name,` no objeto.
 
-### 1. `supabase/config.toml`
-Adicionar bloco para desabilitar `verify_jwt` (a função já faz validação de admin internamente contra o CRM externo):
-```toml
-[functions.seed-test-leads]
-verify_jwt = false
-```
+### O que NÃO muda
 
-### 2. `src/pages/Roleta.tsx` — trocar a invocação
-Em vez de usar `invokeCloudFunction` (que vai pro CRM externo), chamar a função no Lovable Cloud passando o token do CRM externo no header. Igual ao padrão de `auto-fill-leads`, mas com URL e anon key do Lovable Cloud (que estão em `.env` como `VITE_SUPABASE_URL` e `VITE_SUPABASE_PUBLISHABLE_KEY`).
-
-Substituir o `handleSeed` por:
-```ts
-const handleSeed = async () => {
-  if (!window.confirm("Gerar 100 leads...?")) return;
-  setSeeding(true);
-  try {
-    const { data: { session } } = await supabase.auth.getSession();
-    const token = session?.access_token;
-    if (!token) { toast.error("Não autenticado"); return; }
-    const res = await fetch(
-      `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/seed-test-leads`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-          apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-        },
-        body: JSON.stringify({ count: 100 }),
-      }
-    );
-    const data = await res.json();
-    if (!res.ok) { toast.error(`Falha: ${data?.error || res.status}`); return; }
-    const per = data?.perCorretor || {};
-    const breakdown = Object.entries(per).map(([n,q]) => `${n}: ${q}`).join(" • ");
-    toast.success(`${data?.created ?? 0} leads criados${breakdown ? ` — ${breakdown}` : ""}`);
-  } finally { setSeeding(false); }
-};
-```
-Adicionar `import { supabase } from "../lib/supabase";` no topo.
-
-## O que NÃO muda
-
-- `seed-test-leads/index.ts` continua igual — ele já valida admin contra `EXTERNAL_SUPABASE_URL` usando o Bearer recebido, que é exatamente o token do CRM externo que o app usa.
-- `cloudFunctions.ts`, `useLeads`, `useRoleta`, etc. — intocados.
+- Telefones, e-mails, cidades, interesses, budget, `origem: 'seed_teste'`, distribuição round-robin: tudo igual.
+- A limpeza continua simples: `DELETE FROM leads WHERE origem = 'seed_teste'` (o marcador continua no campo `origem`, não no nome).
 
 Posso aplicar?

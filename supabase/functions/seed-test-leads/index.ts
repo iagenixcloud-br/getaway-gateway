@@ -15,6 +15,17 @@ const corsHeaders = {
 
 const CITIES = ["São Paulo", "Rio de Janeiro", "Belo Horizonte", "Curitiba"];
 const INTERESTS = ["Apartamento 2 quartos", "Casa com quintal", "Cobertura"];
+const FIRST_NAMES = [
+  "Ana","Bruno","Carla","Daniel","Eduarda","Felipe","Gabriela","Henrique",
+  "Isabela","João","Karina","Lucas","Mariana","Nicolas","Olívia","Pedro",
+  "Queila","Rafael","Sofia","Thiago","Úrsula","Vinícius","Wesley","Yasmin",
+  "Beatriz","Caio","Débora","Otávio","Renata","Sérgio"
+];
+const LAST_NAMES = [
+  "Silva","Souza","Oliveira","Santos","Pereira","Lima","Costa","Almeida",
+  "Ferreira","Rodrigues","Gomes","Martins","Araújo","Ribeiro","Carvalho",
+  "Barbosa","Mendes","Cardoso","Teixeira","Moreira","Nascimento","Cavalcanti"
+];
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
@@ -88,8 +99,10 @@ Deno.serve(async (req) => {
       const idx = String(i + 1).padStart(3, "0");
       // Telefone sintetico unico: +5511 + (baseTs % 1e7) + idx
       const phoneSuffix = `${(baseTs % 10_000_000)}${idx}`.slice(-9);
+      const first = FIRST_NAMES[Math.floor(Math.random() * FIRST_NAMES.length)];
+      const last = LAST_NAMES[Math.floor(Math.random() * LAST_NAMES.length)];
       return {
-        name: `Teste Seed #${idx}`,
+        name: `${first} ${last}`,
         phone: `+5511${phoneSuffix}`,
         email: `seed-${idx}@teste.local`,
         city: CITIES[i % CITIES.length],
