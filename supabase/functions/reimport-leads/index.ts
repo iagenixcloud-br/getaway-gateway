@@ -84,7 +84,7 @@ async function doImport() {
 
         const { data: inserted, error: insertErr } = await crmAdmin
           .from("leads")
-          .insert({ name, phone, email, city, interest, status: "lead_novo" })
+          .insert({ name, phone: formatPhoneBR(phone) || phone, email, city, interest, status: "lead_novo" })
           .select("id")
           .single();
 
