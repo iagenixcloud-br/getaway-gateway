@@ -106,7 +106,7 @@ Deno.serve(async (req) => {
       const last = LAST_NAMES[Math.floor(Math.random() * LAST_NAMES.length)];
       return {
         name: `${first} ${last}`,
-        phone: `+5511${phoneSuffix}`,
+        phone,
         email: `seed-${idx}@teste.local`,
         city: CITIES[i % CITIES.length],
         interest: INTERESTS[i % INTERESTS.length],
