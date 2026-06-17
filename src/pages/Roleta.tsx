@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from "react";
 import { Navigate } from "react-router-dom";
 import { toast } from "sonner";
-import { FlaskConical } from "lucide-react";
+import { FlaskConical, Phone } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import { useRoleta } from "../hooks/useRoleta";
 import { useLeads } from "../hooks/useLeads";
