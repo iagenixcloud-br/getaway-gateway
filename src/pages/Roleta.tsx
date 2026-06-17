@@ -133,8 +133,18 @@ export function Roleta() {
         </div>
       )}
 
-      {/* Ferramenta temporária de teste (admin) */}
-      <div className="flex justify-end">
+      {/* Ferramentas temporárias (admin) */}
+      <div className="flex justify-end gap-2">
+        <button
+          onClick={handleNormalizePhones}
+          disabled={normalizing}
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium border transition disabled:opacity-60"
+          style={{ background: "rgba(59,130,246,0.08)", borderColor: "#3B82F6", color: "#93c5fd" }}
+          title="Padroniza todos os telefones para +55 DD 9XXXXXXXX"
+        >
+          <Phone size={16} />
+          {normalizing ? "Padronizando..." : "Padronizar telefones"}
+        </button>
         <button
           onClick={handleSeed}
           disabled={seeding}
