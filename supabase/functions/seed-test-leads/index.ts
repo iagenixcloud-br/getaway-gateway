@@ -97,13 +97,16 @@ Deno.serve(async (req) => {
       const c = corretores[i % corretores.length];
       perCorretor[c.name] = (perCorretor[c.name] || 0) + 1;
       const idx = String(i + 1).padStart(3, "0");
-      // Telefone sintetico unico: +5511 + (baseTs % 1e7) + idx
-      const phoneSuffix = `${(baseTs % 10_000_000)}${idx}`.slice(-9);
+      // Telefone sintético no formato +55 DD 9XXXXXXXX
+      const ddds = ["11","21","31","41","47","51","61","71","81","85"];
+      const ddd = ddds[i % ddds.length];
+      const subSuffix = `${(baseTs % 100_000_000)}${idx}`.slice(-8);
+      const phone = `+55 ${ddd} 9${subSuffix}`;
       const first = FIRST_NAMES[Math.floor(Math.random() * FIRST_NAMES.length)];
       const last = LAST_NAMES[Math.floor(Math.random() * LAST_NAMES.length)];
       return {
         name: `${first} ${last}`,
-        phone: `+5511${phoneSuffix}`,
+        phone,
         email: `seed-${idx}@teste.local`,
         city: CITIES[i % CITIES.length],
         interest: INTERESTS[i % INTERESTS.length],

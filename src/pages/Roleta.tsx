@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from "react";
 import { Navigate } from "react-router-dom";
 import { toast } from "sonner";
-import { FlaskConical } from "lucide-react";
+import { FlaskConical, Phone } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import { useRoleta } from "../hooks/useRoleta";
 import { useLeads } from "../hooks/useLeads";
@@ -41,6 +41,39 @@ export function Roleta() {
   const { leads } = useLeads();
   const [redistributingId, setRedistributingId] = useState<string | null>(null);
   const [seeding, setSeeding] = useState(false);
+  const [normalizing, setNormalizing] = useState(false);
+
+  const handleNormalizePhones = async () => {
+    if (!window.confirm("Padronizar TODOS os telefones dos leads para o formato +55 DD 9XXXXXXXX?")) return;
+    setNormalizing(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      if (!token) { toast.error("Não autenticado"); return; }
+      const res = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/normalize-leads-phones`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+            apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+          },
+          body: JSON.stringify({}),
+        },
+      );
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        toast.error(`Falha: ${data?.error || res.status}`);
+        return;
+      }
+      toast.success(`${data.updated} atualizados • ${data.already_ok} já ok • ${data.invalid_count} inválidos`);
+    } catch (e) {
+      toast.error(`Erro: ${e instanceof Error ? e.message : "desconhecido"}`);
+    } finally {
+      setNormalizing(false);
+    }
+  };
 
   const handleSeed = async () => {
     if (!window.confirm("Gerar 100 leads de teste (origem='seed_teste') distribuídos entre todos os corretores ativos?")) return;
@@ -100,8 +133,18 @@ export function Roleta() {
         </div>
       )}
 
-      {/* Ferramenta temporária de teste (admin) */}
-      <div className="flex justify-end">
+      {/* Ferramentas temporárias (admin) */}
+      <div className="flex justify-end gap-2">
+        <button
+          onClick={handleNormalizePhones}
+          disabled={normalizing}
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium border transition disabled:opacity-60"
+          style={{ background: "rgba(59,130,246,0.08)", borderColor: "#3B82F6", color: "#93c5fd" }}
+          title="Padroniza todos os telefones para +55 DD 9XXXXXXXX"
+        >
+          <Phone size={16} />
+          {normalizing ? "Padronizando..." : "Padronizar telefones"}
+        </button>
         <button
           onClick={handleSeed}
           disabled={seeding}
