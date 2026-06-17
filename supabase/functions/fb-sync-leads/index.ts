@@ -84,7 +84,7 @@ function parseLead(lead: any, formName: string) {
 
   return {
     name,
-    phone,
+    phone: formatPhoneBR(phone) || phone,
     email,
     city,
     interest: `${formName}${lead.platform ? ` • ${String(lead.platform).toUpperCase()}` : ""}`,
