@@ -277,7 +277,7 @@ Deno.serve(async (req) => {
           .from("leads")
           .insert({
             name: fields.name,
-            phone: fields.phone,
+            phone: formatPhoneBR(fields.phone) || fields.phone,
             email: fields.email,
             city: fields.city,
             interest: fields.interest,
