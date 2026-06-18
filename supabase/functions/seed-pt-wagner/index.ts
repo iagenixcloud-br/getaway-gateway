@@ -38,6 +38,10 @@ Deno.serve(async (req) => {
     });
   }
 
+  // Remove qualquer lead anterior com o mesmo telefone (variações de formato)
+  const phoneVariants = ["+351912345678", "351912345678", "+351 912345678"];
+  await crm.from("leads").delete().in("phone", phoneVariants);
+
   const { data: lead, error: iErr } = await crm
     .from("leads")
     .insert({
