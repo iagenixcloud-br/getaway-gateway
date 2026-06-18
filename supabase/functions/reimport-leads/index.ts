@@ -18,20 +18,34 @@ function normalizePhone(raw: string): string {
   return raw.replace(/\D/g, "").replace(/^0+/, "");
 }
 
-function formatPhoneBR(raw: string | null | undefined): string | null {
+function formatPhoneE164(raw: string | null | undefined): string | null {
   if (!raw) return null;
-  let d = String(raw).replace(/\D/g, "");
-  if (!d) return null;
-  if (d.startsWith("55") && (d.length === 12 || d.length === 13)) d = d.slice(2);
-  while (d.startsWith("0")) d = d.slice(1);
-  if (d.length < 10 || d.length > 11) return null;
-  const ddd = d.slice(0, 2);
-  let sub = d.slice(2);
-  if (!/^[1-9][1-9]$/.test(ddd)) return null;
-  if (sub.length === 8) sub = "9" + sub;
-  else if (sub.length === 9 && sub[0] !== "9") sub = "9" + sub.slice(1);
-  if (sub.length !== 9) return null;
-  return `+55 ${ddd} ${sub}`;
+  const trimmed = String(raw).trim();
+  const hasPlus = trimmed.startsWith("+");
+  const digits = trimmed.replace(/\D/g, "");
+  if (!digits) return null;
+  const isBR =
+    (hasPlus && digits.startsWith("55") && (digits.length === 12 || digits.length === 13)) ||
+    (!hasPlus && digits.length >= 10 && digits.length <= 13);
+  if (isBR) {
+    let d = digits;
+    if (d.startsWith("55") && (d.length === 12 || d.length === 13)) d = d.slice(2);
+    while (d.startsWith("0")) d = d.slice(1);
+    if (d.length < 10 || d.length > 11) return null;
+    const ddd = d.slice(0, 2);
+    let sub = d.slice(2);
+    if (!/^[1-9][1-9]$/.test(ddd)) return null;
+    if (sub.length === 8) sub = "9" + sub;
+    else if (sub.length === 9 && sub[0] !== "9") sub = "9" + sub.slice(1);
+    if (sub.length !== 9) return null;
+    return `+55 ${ddd} ${sub}`;
+  }
+  if (hasPlus) {
+    if (digits.length < 8 || digits.length > 15) return null;
+    if (!/^[1-9]/.test(digits)) return null;
+    return `+${digits}`;
+  }
+  return null;
 }
 
 function fieldValue(fieldData: Array<{ name: string; values?: string[] }>, keys: string[]) {
@@ -84,7 +98,7 @@ async function doImport() {
 
         const { data: inserted, error: insertErr } = await crmAdmin
           .from("leads")
-          .insert({ name, phone: formatPhoneBR(phone) || phone, email, city, interest, status: "lead_novo" })
+          .insert({ name, phone: formatPhoneE164(phone) || phone, email, city, interest, status: "lead_novo" })
           .select("id")
           .single();
 

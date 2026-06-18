@@ -54,21 +54,40 @@ function normalizePhone(phone: string): string {
   return digits;
 }
 
-// Formata telefone para "+55 DD 9XXXXXXXX". Retorna null se não der.
-function formatPhoneBR(raw: string | null | undefined): string | null {
+// Normaliza telefone: BR -> "+55 DD 9XXXXXXXX", estrangeiro -> "+DDIXXXXXXXX" (E.164).
+// Retorna null se não der para validar (caller cai no fallback do número original).
+function formatPhoneE164(raw: string | null | undefined): string | null {
   if (!raw) return null;
-  let d = String(raw).replace(/\D/g, "");
-  if (!d) return null;
-  if (d.startsWith("55") && (d.length === 12 || d.length === 13)) d = d.slice(2);
-  while (d.startsWith("0")) d = d.slice(1);
-  if (d.length < 10 || d.length > 11) return null;
-  const ddd = d.slice(0, 2);
-  let sub = d.slice(2);
-  if (!/^[1-9][1-9]$/.test(ddd)) return null;
-  if (sub.length === 8) sub = "9" + sub;
-  else if (sub.length === 9 && sub[0] !== "9") sub = "9" + sub.slice(1);
-  if (sub.length !== 9) return null;
-  return `+55 ${ddd} ${sub}`;
+  const trimmed = String(raw).trim();
+  const hasPlus = trimmed.startsWith("+");
+  const digits = trimmed.replace(/\D/g, "");
+  if (!digits) return null;
+
+  const isBR =
+    (hasPlus && digits.startsWith("55") && (digits.length === 12 || digits.length === 13)) ||
+    (!hasPlus && digits.length >= 10 && digits.length <= 13);
+
+  if (isBR) {
+    let d = digits;
+    if (d.startsWith("55") && (d.length === 12 || d.length === 13)) d = d.slice(2);
+    while (d.startsWith("0")) d = d.slice(1);
+    if (d.length < 10 || d.length > 11) return null;
+    const ddd = d.slice(0, 2);
+    let sub = d.slice(2);
+    if (!/^[1-9][1-9]$/.test(ddd)) return null;
+    if (sub.length === 8) sub = "9" + sub;
+    else if (sub.length === 9 && sub[0] !== "9") sub = "9" + sub.slice(1);
+    if (sub.length !== 9) return null;
+    return `+55 ${ddd} ${sub}`;
+  }
+
+  if (hasPlus) {
+    if (digits.length < 8 || digits.length > 15) return null;
+    if (!/^[1-9]/.test(digits)) return null;
+    return `+${digits}`;
+  }
+
+  return null;
 }
 
 async function fetchLeadDetails(leadgenId: string) {
@@ -277,7 +296,7 @@ Deno.serve(async (req) => {
           .from("leads")
           .insert({
             name: fields.name,
-            phone: formatPhoneBR(fields.phone) || fields.phone,
+            phone: formatPhoneE164(fields.phone) || fields.phone,
             email: fields.email,
             city: fields.city,
             interest: fields.interest,
