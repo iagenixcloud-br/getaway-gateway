@@ -63,9 +63,13 @@ function formatPhoneE164(raw: string | null | undefined): string | null {
   const digits = trimmed.replace(/\D/g, "");
   if (!digits) return null;
 
+  // BR: só vira BR quando tem cara de BR (evita confundir 12 dígitos estrangeiros sem + com BR).
   const isBR =
     (hasPlus && digits.startsWith("55") && (digits.length === 12 || digits.length === 13)) ||
-    (!hasPlus && digits.length >= 10 && digits.length <= 13);
+    (!hasPlus && (
+      digits.length === 10 || digits.length === 11 ||
+      ((digits.length === 12 || digits.length === 13) && digits.startsWith("55"))
+    ));
 
   if (isBR) {
     let d = digits;
@@ -81,9 +85,8 @@ function formatPhoneE164(raw: string | null | undefined): string | null {
     return `+55 ${ddd} ${sub}`;
   }
 
-  if (hasPlus) {
-    if (digits.length < 8 || digits.length > 15) return null;
-    if (!/^[1-9]/.test(digits)) return null;
+  // Internacional (com ou sem +): grava SEMPRE com + na frente.
+  if (digits.length >= 8 && digits.length <= 15 && /^[1-9]/.test(digits)) {
     return `+${digits}`;
   }
 

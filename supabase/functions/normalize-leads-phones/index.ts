@@ -22,7 +22,10 @@ export function formatPhoneE164(raw: string | null | undefined): string | null {
   if (!digits) return null;
   const isBR =
     (hasPlus && digits.startsWith("55") && (digits.length === 12 || digits.length === 13)) ||
-    (!hasPlus && digits.length >= 10 && digits.length <= 13);
+    (!hasPlus && (
+      digits.length === 10 || digits.length === 11 ||
+      ((digits.length === 12 || digits.length === 13) && digits.startsWith("55"))
+    ));
   if (isBR) {
     let d = digits;
     if (d.startsWith("55") && (d.length === 12 || d.length === 13)) d = d.slice(2);
@@ -36,9 +39,7 @@ export function formatPhoneE164(raw: string | null | undefined): string | null {
     if (sub.length !== 9) return null;
     return `+55 ${ddd} ${sub}`;
   }
-  if (hasPlus) {
-    if (digits.length < 8 || digits.length > 15) return null;
-    if (!/^[1-9]/.test(digits)) return null;
+  if (digits.length >= 8 && digits.length <= 15 && /^[1-9]/.test(digits)) {
     return `+${digits}`;
   }
   return null;
