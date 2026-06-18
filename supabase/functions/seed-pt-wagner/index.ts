@@ -62,11 +62,27 @@ Deno.serve(async (req) => {
     });
   }
 
+  // Diagnóstico: relê o lead recém-criado + amostras BR/PT pra ver o que o CRM realmente gravou
+  const { data: justInserted } = await crm
+    .from("leads").select("id, name, phone, tenant_id, status")
+    .eq("id", lead.id).single();
+
+  const { data: brSamples } = await crm
+    .from("leads").select("id, name, phone")
+    .like("phone", "+55%").limit(3);
+
+  const { data: ptSamples } = await crm
+    .from("leads").select("id, name, phone")
+    .or("phone.like.%351%,name.ilike.%TEST_E164_PT%,name.ilike.%TEST_PT%")
+    .limit(10);
+
   return new Response(JSON.stringify({
     ok: true,
     wagner: { id: wagner.id, name: wagner.name, email: wagner.email },
-    lead: { id: lead.id, name: lead.name, phone: lead.phone, tenant_id: lead.tenant_id, status: lead.status },
-  }), {
+    inserted_attempt: { sent_phone: "+351912345678", got_back: justInserted },
+    br_samples: brSamples,
+    pt_samples: ptSamples,
+  }, null, 2), {
     status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
 });
