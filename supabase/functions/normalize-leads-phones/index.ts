@@ -13,40 +13,35 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
-// Retorna telefone no formato "+55 DD 9XXXXXXXX" ou null se não der para normalizar.
-export function formatPhoneBR(raw: string | null | undefined): string | null {
+// BR -> "+55 DD 9XXXXXXXX"; estrangeiro -> "+DDIXXXXXXXX" (E.164). null se não der.
+export function formatPhoneE164(raw: string | null | undefined): string | null {
   if (!raw) return null;
-  let d = String(raw).replace(/\D/g, "");
-  if (!d) return null;
-
-  // Tira DDI 55 inicial (se já tiver e o resto fizer sentido)
-  if (d.startsWith("55") && (d.length === 12 || d.length === 13)) {
-    d = d.slice(2);
+  const trimmed = String(raw).trim();
+  const hasPlus = trimmed.startsWith("+");
+  const digits = trimmed.replace(/\D/g, "");
+  if (!digits) return null;
+  const isBR =
+    (hasPlus && digits.startsWith("55") && (digits.length === 12 || digits.length === 13)) ||
+    (!hasPlus && digits.length >= 10 && digits.length <= 13);
+  if (isBR) {
+    let d = digits;
+    if (d.startsWith("55") && (d.length === 12 || d.length === 13)) d = d.slice(2);
+    while (d.startsWith("0")) d = d.slice(1);
+    if (d.length < 10 || d.length > 11) return null;
+    const ddd = d.slice(0, 2);
+    let sub = d.slice(2);
+    if (!/^[1-9][1-9]$/.test(ddd)) return null;
+    if (sub.length === 8) sub = "9" + sub;
+    else if (sub.length === 9 && sub[0] !== "9") sub = "9" + sub.slice(1);
+    if (sub.length !== 9) return null;
+    return `+55 ${ddd} ${sub}`;
   }
-  // Tira 0 inicial (ex: 021...)
-  while (d.startsWith("0")) d = d.slice(1);
-
-  // Agora esperamos DDD (2) + assinante (8 ou 9)
-  if (d.length < 10 || d.length > 11) return null;
-
-  const ddd = d.slice(0, 2);
-  let sub = d.slice(2);
-
-  // DDD válido brasileiro: 11..99, não começa com 0
-  if (!/^[1-9][1-9]$/.test(ddd)) return null;
-
-  if (sub.length === 8) {
-    sub = "9" + sub;
-  } else if (sub.length === 9) {
-    if (sub[0] !== "9") {
-      // Fixo de 9 dígitos é improvável; forçamos prefixo 9 para padronizar móvel.
-      sub = "9" + sub.slice(1);
-    }
-  } else {
-    return null;
+  if (hasPlus) {
+    if (digits.length < 8 || digits.length > 15) return null;
+    if (!/^[1-9]/.test(digits)) return null;
+    return `+${digits}`;
   }
-
-  return `+55 ${ddd} ${sub}`;
+  return null;
 }
 
 Deno.serve(async (req) => {
@@ -110,7 +105,7 @@ Deno.serve(async (req) => {
 
     for (const l of leads || []) {
       const original = String(l.phone || "");
-      const formatted = formatPhoneBR(original);
+      const formatted = formatPhoneE164(original);
       if (!formatted) {
         invalid.push({ id: l.id, phone: original });
         continue;
