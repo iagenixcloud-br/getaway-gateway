@@ -308,6 +308,8 @@ Deno.serve(async (req) => {
             email: fields.email,
             city: fields.city,
             interest: fields.interest,
+            entrada_desejada: fields.entrada_desejada,
+            ja_investe_em_imoveis: fields.ja_investe_em_imoveis,
             status: "lead_novo",
             tenant_id: assignTo,
           })
