@@ -287,6 +287,8 @@ function LeadModal({
       purpose: form.purpose,
       areaSqm: form.areaSqm,
       region: form.region,
+      entradaDesejada: form.entradaDesejada,
+      jaInvesteImoveis: form.jaInvesteImoveis,
       observacoes: form.observacoes,
 
     });
