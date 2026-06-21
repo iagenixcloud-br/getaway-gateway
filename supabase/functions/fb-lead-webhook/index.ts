@@ -233,10 +233,13 @@ Deno.serve(async (req) => {
             email: t.email || null,
             city: t.city || null,
             interest: t.interest || null,
+            entrada_desejada: t.entrada_desejada || null,
+            ja_investe_em_imoveis: t.ja_investe_em_imoveis || null,
           };
         } else {
-          fields = { name: "Lead Facebook", phone: "", email: null, city: null, interest: null };
+          fields = { name: "Lead Facebook", phone: "", email: null, city: null, interest: null, entrada_desejada: null, ja_investe_em_imoveis: null };
         }
+
 
         // Determine next corretor (max 10 leads with status "lead_novo" each)
         const MAX_LEADS = 10;
