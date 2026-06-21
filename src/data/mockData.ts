@@ -51,4 +51,8 @@ export interface Lead {
   observacoes: string;    // observações livres
   /** Origem: 'trafego_pago' | 'manual_indicacao' | etc. */
   origem?: string;
+  /** Valor de entrada desejada (vem preenchido do form do Facebook) */
+  entradaDesejada: string;
+  /** Já investe em imóveis? (vem preenchido do form do Facebook) */
+  jaInvesteImoveis: string;
 }
