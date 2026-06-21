@@ -137,6 +137,8 @@ export const rowToLead = (row: LeadRow): Lead => ({
   substatus: row.substatus ?? "",
   observacoes: row.observacoes ?? "",
   origem: row.origem ?? undefined,
+  entradaDesejada: row.entrada_desejada ?? "",
+  jaInvesteImoveis: row.ja_investe_em_imoveis ?? "",
 });
 
 export function useLeads() {
@@ -313,6 +315,8 @@ export function useLeads() {
     if (patch.region !== undefined) dbPatch.region = toStr(patch.region);
     if (patch.substatus !== undefined) dbPatch.substatus = toStr(patch.substatus);
     if (patch.observacoes !== undefined) dbPatch.observacoes = toStr(patch.observacoes);
+    if (patch.entradaDesejada !== undefined) dbPatch.entrada_desejada = toStr(patch.entradaDesejada);
+    if (patch.jaInvesteImoveis !== undefined) dbPatch.ja_investe_em_imoveis = toStr(patch.jaInvesteImoveis);
 
 
     // Remove chaves marcadas como "não mexer" (undefined)

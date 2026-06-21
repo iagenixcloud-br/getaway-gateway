@@ -267,6 +267,8 @@ function LeadModal({
     form.purpose !== lead.purpose ||
     form.areaSqm !== lead.areaSqm ||
     form.region !== lead.region ||
+    form.entradaDesejada !== lead.entradaDesejada ||
+    form.jaInvesteImoveis !== lead.jaInvesteImoveis ||
     form.observacoes !== lead.observacoes;
 
   const handleSave = () => {
@@ -285,6 +287,8 @@ function LeadModal({
       purpose: form.purpose,
       areaSqm: form.areaSqm,
       region: form.region,
+      entradaDesejada: form.entradaDesejada,
+      jaInvesteImoveis: form.jaInvesteImoveis,
       observacoes: form.observacoes,
 
     });
@@ -468,6 +472,27 @@ function LeadModal({
               placeholder="Ex.: Zona Sul"
             />
           </div>
+
+          <div>
+            <label style={labelStyle}>Entrada desejada (form FB)</label>
+            <input
+              style={inputStyle}
+              value={form.entradaDesejada}
+              onChange={(e) => set("entradaDesejada", e.target.value)}
+              placeholder="Ex.: R$ 40 mil"
+            />
+          </div>
+          <div>
+            <label style={labelStyle}>Já investe em imóveis? (form FB)</label>
+            <input
+              style={inputStyle}
+              value={form.jaInvesteImoveis}
+              onChange={(e) => set("jaInvesteImoveis", e.target.value)}
+              placeholder="Ex.: Já sou investidor"
+            />
+          </div>
+
+
 
           <div className="md:col-span-2">
             <label style={labelStyle}>Imóvel de Interesse</label>

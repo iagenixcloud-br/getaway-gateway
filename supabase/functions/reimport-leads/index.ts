@@ -90,6 +90,8 @@ async function doImport() {
         const phone = fieldValue(fieldData, ["phone_number", "phone", "telefone", "celular"]) || whatsapp || "";
         const email = fieldValue(fieldData, ["email", "e-mail"]);
         const city = fieldValue(fieldData, ["city", "cidade"]);
+        const entradaDesejada = fieldValue(fieldData, ["entrada"]);
+        const jaInvesteImoveis = fieldValue(fieldData, ["investe", "investidor"]);
 
         const normPhone = normalizePhone(phone);
         if (normPhone && seenPhones.has(normPhone)) { result.skipped++; continue; }
@@ -99,7 +101,7 @@ async function doImport() {
 
         const { data: inserted, error: insertErr } = await crmAdmin
           .from("leads")
-          .insert({ name, phone: formatPhoneE164(phone) || phone, email, city, interest, status: "lead_novo" })
+          .insert({ name, phone: formatPhoneE164(phone) || phone, email, city, interest, entrada_desejada: entradaDesejada, ja_investe_em_imoveis: jaInvesteImoveis, status: "lead_novo" })
           .select("id")
           .single();
 
