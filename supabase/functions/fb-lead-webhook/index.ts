@@ -116,6 +116,8 @@ function parseFields(fieldData: LeadFieldData[]) {
     email: get(["email", "e-mail"]),
     city: get(["city", "cidade"]),
     interest: get(["property", "imovel", "interesse", "message"]),
+    entrada_desejada: get(["entrada"]),
+    ja_investe_em_imoveis: get(["investe", "investidor"]),
   };
 }
 
