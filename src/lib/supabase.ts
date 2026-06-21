@@ -46,4 +46,8 @@ export interface LeadRow {
   observacoes: string | null;
   /** Origem do lead: 'trafego_pago' | 'manual_indicacao' | etc. */
   origem: string | null;
+  /** Valor de entrada desejada (texto livre vindo do form do Facebook) */
+  entrada_desejada: string | null;
+  /** Já investe em imóveis? (texto livre vindo do form do Facebook) */
+  ja_investe_em_imoveis: string | null;
 }
