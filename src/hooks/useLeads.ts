@@ -137,6 +137,8 @@ export const rowToLead = (row: LeadRow): Lead => ({
   substatus: row.substatus ?? "",
   observacoes: row.observacoes ?? "",
   origem: row.origem ?? undefined,
+  entradaDesejada: row.entrada_desejada ?? "",
+  jaInvesteImoveis: row.ja_investe_em_imoveis ?? "",
 });
 
 export function useLeads() {
