@@ -267,6 +267,8 @@ function LeadModal({
     form.purpose !== lead.purpose ||
     form.areaSqm !== lead.areaSqm ||
     form.region !== lead.region ||
+    form.entradaDesejada !== lead.entradaDesejada ||
+    form.jaInvesteImoveis !== lead.jaInvesteImoveis ||
     form.observacoes !== lead.observacoes;
 
   const handleSave = () => {
