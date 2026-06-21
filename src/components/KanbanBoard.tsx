@@ -473,6 +473,27 @@ function LeadModal({
             />
           </div>
 
+          <div>
+            <label style={labelStyle}>Entrada desejada (form FB)</label>
+            <input
+              style={inputStyle}
+              value={form.entradaDesejada}
+              onChange={(e) => set("entradaDesejada", e.target.value)}
+              placeholder="Ex.: R$ 40 mil"
+            />
+          </div>
+          <div>
+            <label style={labelStyle}>Já investe em imóveis? (form FB)</label>
+            <input
+              style={inputStyle}
+              value={form.jaInvesteImoveis}
+              onChange={(e) => set("jaInvesteImoveis", e.target.value)}
+              placeholder="Ex.: Já sou investidor"
+            />
+          </div>
+
+
+
           <div className="md:col-span-2">
             <label style={labelStyle}>Imóvel de Interesse</label>
             <input
