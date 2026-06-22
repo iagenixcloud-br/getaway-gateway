@@ -18,8 +18,14 @@ export function formatPhoneE164(raw: string | null | undefined): string | null {
   if (!raw) return null;
   const trimmed = String(raw).trim();
   const hasPlus = trimmed.startsWith("+");
-  const digits = trimmed.replace(/\D/g, "");
+  let digits = trimmed.replace(/\D/g, "");
   if (!digits) return null;
+
+  // Desfaz DDI 55 duplicado: "+5555..." (13–14 dígitos começando com "5555")
+  if ((digits.length === 13 || digits.length === 14) && digits.startsWith("5555")) {
+    digits = digits.slice(2);
+  }
+
   const isBR =
     (hasPlus && digits.startsWith("55") && (digits.length === 12 || digits.length === 13)) ||
     (!hasPlus && (

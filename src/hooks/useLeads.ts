@@ -3,12 +3,23 @@ import { supabase, LeadRow } from "../lib/supabase";
 import { invokeCloudFunction } from "../lib/cloudFunctions";
 import { Lead, LeadStatus, LeadOrigin, LeadPurpose } from "../data/mockData";
 import { useAuth } from "../contexts/AuthContext";
+import { normalizeBRPhone } from "../lib/phoneUtils";
 
-/** Remove caracteres não numéricos e garante formato +55… */
+/**
+ * Sanitiza telefone delegando à única fonte de verdade `normalizeBRPhone`.
+ * Se o número não bater com padrão BR, faz fallback E.164 sem duplicar DDI:
+ * remove zeros à esquerda, e SÓ prefixa "55" se ainda não começar com "55".
+ */
 function sanitizePhone(raw: string): string {
-  const digits = raw.replace(/\D/g, "");
-  const withCountry = digits.startsWith("55") ? digits : `55${digits}`;
-  return `+${withCountry}`;
+  const normalized = normalizeBRPhone(raw);
+  if (normalized.startsWith("+")) return normalized;
+  let digits = String(normalized).replace(/\D/g, "").replace(/^0+/, "");
+  if (!digits) return "";
+  // Evita duplicar 55: só prefixa se não tiver DDI BR já
+  if (!digits.startsWith("55") && (digits.length === 10 || digits.length === 11)) {
+    digits = "55" + digits;
+  }
+  return `+${digits}`;
 }
 
 // Valores oficiais salvos no banco (coluna `status` da tabela leads):
