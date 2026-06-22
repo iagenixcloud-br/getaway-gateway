@@ -251,32 +251,37 @@ Deno.serve(async (req) => {
       }
     }
 
-    // 3. Batch insert leads into CRM (chunks of 50)
-    const BATCH_SIZE = 50;
-    for (let i = 0; i < leadsToInsert.length; i += BATCH_SIZE) {
-      const chunk = leadsToInsert.slice(i, i + BATCH_SIZE);
-      const crmRows = chunk.map(({ _leadgen_id, _form_id, _form_name, _platform, _created_time, ...rest }) => rest);
+    // 3. Insert leads one-by-one (evita perder lote inteiro por duplicidade intra-batch)
+    for (const src of leadsToInsert) {
+      const { _leadgen_id, _form_id, _form_name, _platform, _created_time, ...row } = src;
       const { data: inserted, error: insertErr } = await crmAdmin
         .from("leads")
-        .insert(crmRows)
-        .select("id");
+        .insert(row)
+        .select("id")
+        .single();
 
       if (insertErr || !inserted) {
-        const ids = chunk.map(l => l._leadgen_id).join(", ");
-        result.errors.push(`Batch error: ${insertErr?.message || "falha"} (${ids})`);
-        result.created -= chunk.length;
+        // 23505 = unique violation (telefone duplicado) — conta como skip, não como erro
+        if ((insertErr as any)?.code === "23505") {
+          result.skipped++;
+          result.created--;
+          logsToInsert.push({
+            event_type: "leadgen_sync", page_id: PAGE_ID, leadgen_id: _leadgen_id,
+            form_id: _form_id, status: "skipped_duplicate",
+            payload: { form_name: _form_name, reason: "unique_constraint_phone" },
+          });
+          continue;
+        }
+        result.errors.push(`insert err (${_leadgen_id}): ${insertErr?.message || "falha"}`);
+        result.created--;
         continue;
       }
 
-      // Build webhook log entries for successful inserts
-      for (let j = 0; j < inserted.length; j++) {
-        const src = chunk[j];
-        logsToInsert.push({
-          event_type: "leadgen_sync", page_id: PAGE_ID, leadgen_id: src._leadgen_id,
-          form_id: src._form_id, status: "success", lead_id: inserted[j].id,
-          payload: { form_name: src._form_name, platform: src._platform, fields: { name: src.name, phone: src.phone, email: src.email, city: src.city, interest: src.interest }, created_time: src._created_time },
-        });
-      }
+      logsToInsert.push({
+        event_type: "leadgen_sync", page_id: PAGE_ID, leadgen_id: _leadgen_id,
+        form_id: _form_id, status: "success", lead_id: inserted.id,
+        payload: { form_name: _form_name, platform: _platform, fields: { name: row.name, phone: row.phone, email: row.email, city: row.city, interest: row.interest }, created_time: _created_time },
+      });
     }
 
     // 4. Batch insert webhook logs (chunks of 100)
