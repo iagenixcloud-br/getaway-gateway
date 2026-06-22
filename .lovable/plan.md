@@ -1,60 +1,26 @@
-## Badge "Telefone divergente" em leads brasileiros fora do padrão
+Ajustar o layout do badge "Telefone divergente" para que fique sempre na mesma linha do número de telefone, sem quebrar o card.
 
-### Regra de detecção
+Problema atual
+--------------
+O componente `PhoneDivergentBadge` já usa `display: inline-flex` internamente, mas nos cards ele é colocado dentro de containers `flex` com `flexWrap: "wrap"` e `gap`. Em larguras pequenas o badge quebra para uma nova linha, empurrando o conteúdo abaixo e aumentando a altura do card.
 
-Criar um helper `isBRPhoneDivergent(phone)` em `src/lib/phoneUtils.ts` (novo arquivo):
+Onde aplicar
+------------
+1. `src/pages/Leads.tsx`
+   - Card mobile (linha ~215): o telefone e o badge estão em uma `<div>` com `display: "flex"`, `flexWrap: "wrap"`.  
+     → Remover `flexWrap: "wrap"` e garantir que o número e o badge fiquem em linha única.
+   - Tabela desktop (linha ~276): já está em `display: "inline-flex"`, mas o container `<td>` usa `whiteSpace: "nowrap"`. Verificar se está OK; se o badge estiver quebrando, aplicar o mesmo padrão inline.
 
-- **Considera brasileiro** se: começa com `+55` OU não tem `+` (apenas dígitos/máscara) e tem entre 10–13 dígitos.
-- **É padrão correto** se: bate com `+55 DD 9XXXXXXXX` (com ou sem espaços) → 13 dígitos totais após o `+`, DDD válido (11–99), nono dígito = `9`.
-- **Retorna `true`** (divergente) se for brasileiro mas não bate com o padrão.
-- **Retorna `false`** para internacionais (`+1`, `+353`, `+351`, etc.) — não exibe badge.
+2. `src/components/KanbanBoard.tsx`
+   - Card do kanban (linha ~755): o telefone e o badge estão dentro de `<div className="flex items-center gap-1.5 flex-wrap">` (ícone + telefone + badge).  
+     → Agrupar o número e o badge em um wrapper inline (por exemplo `<span style={{ display: "inline-flex", alignItems: "center", gap: 4, whiteSpace: "nowrap" }}>`) e deixar o ícone fora desse wrapper, ou remover `flex-wrap` do container e garantir que o wrapper interno não quebre.
+   - Modal/detalhes do lead (linha ~938): o telefone e o badge estão dentro de `<div className="flex items-center gap-2 mb-2 flex-wrap">`.  
+     → Mesmo ajuste: telefone + badge dentro de um wrapper inline, mantendo o ícone no container externo, para evitar que o badge vá para nova linha sozinho.
 
-Exemplos:
-- `+5521990027771` → ok (false)
-- `+55 21 990027771` → ok (false)
-- `021990027771` → divergente (true)
-- `+55219823236274` → divergente (true, 14 dígitos)
-- `+353871234567` → não-BR (false, sem badge)
-- `+12125551234` → não-BR (false, sem badge)
+Técnico
+-------
+- Manter o componente `PhoneDivergentBadge` inalterado (ele já é inline-flex).
+- Usar `display: inline-flex`, `alignItems: "center"`, `gap` pequeno e `whiteSpace: "nowrap"` no wrapper que junta telefone + badge.
+- Verificar visualmente no preview que o badge não aumenta a altura do card nem empurra outros elementos.
 
-### Onde renderizar o badge
-
-Pequeno badge inline ao lado do telefone, com ícone `AlertTriangle` (lucide) + texto "Telefone divergente". Estilo: fundo `bg-amber-500/10`, texto `text-amber-600 dark:text-amber-400`, padding pequeno, rounded.
-
-Locais que mostram o telefone:
-
-1. **`src/pages/Leads.tsx`**
-   - Linha 211 (card mobile)
-   - Linha 268 (tabela desktop)
-
-2. **`src/components/KanbanBoard.tsx`**
-   - Linha 752 (card do kanban)
-   - Linha 934 (modal de detalhe, modo visualização)
-   - Linha 932 também (EditableField, modo edição) — adicionar badge ao lado quando o valor atual for divergente
-
-### Componente novo
-
-`src/components/PhoneDivergentBadge.tsx`:
-
-```tsx
-import { AlertTriangle } from "lucide-react";
-import { isBRPhoneDivergent } from "@/lib/phoneUtils";
-
-export function PhoneDivergentBadge({ phone }: { phone: string | null | undefined }) {
-  if (!isBRPhoneDivergent(phone)) return null;
-  return (
-    <span title="Telefone fora do padrão +55 DD 9XXXXXXXX" style={{...}}>
-      <AlertTriangle size={10} /> Telefone divergente
-    </span>
-  );
-}
-```
-
-### Arquivos criados/alterados
-
-- **novo:** `src/lib/phoneUtils.ts`
-- **novo:** `src/components/PhoneDivergentBadge.tsx`
-- **alterado:** `src/pages/Leads.tsx` (2 pontos)
-- **alterado:** `src/components/KanbanBoard.tsx` (3 pontos)
-
-Sem mudanças em backend, banco, ou edge functions — é apenas UI de alerta visual.
+Não envolve backend, banco de dados ou edge functions.
