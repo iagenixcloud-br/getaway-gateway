@@ -3,6 +3,8 @@ import { useLeads } from "../hooks/useLeads";
 import { Lead, LeadStatus } from "../data/mockData";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { PhoneDivergentBadge } from "../components/PhoneDivergentBadge";
+
 
 const STATUS_LABELS: Record<LeadStatus, string> = {
   lead_novo: "Lead Novo",
@@ -208,7 +210,10 @@ function LeadCardMobile({ lead }: { lead: Lead }) {
       <div className="flex items-start justify-between gap-2 mb-2">
         <div className="min-w-0 flex-1">
           <p className="truncate" style={{ fontSize: 14, fontWeight: 700, color: "var(--text-primary)" }}>{lead.name}</p>
-          <p style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 2 }}>{lead.phone || "—"}</p>
+          <div style={{ marginTop: 2, display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+            <p style={{ fontSize: 12, color: "var(--text-muted)" }}>{lead.phone || "—"}</p>
+            <PhoneDivergentBadge phone={lead.phone} compact />
+          </div>
         </div>
         <span
           className="inline-block px-2 py-1 rounded-md text-[10px] font-semibold flex-shrink-0"
@@ -265,7 +270,12 @@ function LeadRow({ lead }: { lead: Lead }) {
           <span className="font-medium" style={{ color: "var(--text-primary)" }}>{lead.name}</span>
         </div>
       </td>
-      <td className="px-4 py-3" style={{ color: "var(--text-muted)", whiteSpace: "nowrap" }}>{lead.phone || "—"}</td>
+      <td className="px-4 py-3" style={{ color: "var(--text-muted)", whiteSpace: "nowrap" }}>
+        <div style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+          <span>{lead.phone || "—"}</span>
+          <PhoneDivergentBadge phone={lead.phone} compact />
+        </div>
+      </td>
       <td className="px-4 py-3" style={{ color: "var(--text-muted)", maxWidth: 180, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{lead.email || "—"}</td>
       <td className="px-4 py-3" style={{ color: "var(--text-muted)" }}>{lead.city}</td>
       <td className="px-4 py-3">

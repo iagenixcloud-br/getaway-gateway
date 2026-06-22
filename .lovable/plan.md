@@ -1,47 +1,60 @@
-## Corrigir telefones com `0` na frente do DDD
+## Badge "Telefone divergente" em leads brasileiros fora do padrão
 
-### 1. Ajustar `formatPhoneE164` (fb-sync-leads e normalize-leads-phones)
+### Regra de detecção
 
-Adicionar tratamento pro caso de 12 dígitos sem `+` que começam com `0`:
+Criar um helper `isBRPhoneDivergent(phone)` em `src/lib/phoneUtils.ts` (novo arquivo):
 
-- Se `digits.length === 12` e começa com `0` → remover o `0` inicial → vira 11 dígitos BR → segue o fluxo normal.
-- Exemplo: `021990027771` → `21990027771` → `+55 21 990027771`.
+- **Considera brasileiro** se: começa com `+55` OU não tem `+` (apenas dígitos/máscara) e tem entre 10–13 dígitos.
+- **É padrão correto** se: bate com `+55 DD 9XXXXXXXX` (com ou sem espaços) → 13 dígitos totais após o `+`, DDD válido (11–99), nono dígito = `9`.
+- **Retorna `true`** (divergente) se for brasileiro mas não bate com o padrão.
+- **Retorna `false`** para internacionais (`+1`, `+353`, `+351`, etc.) — não exibe badge.
 
-Aplicar essa mesma lógica nas duas funções pra ficarem consistentes.
+Exemplos:
+- `+5521990027771` → ok (false)
+- `+55 21 990027771` → ok (false)
+- `021990027771` → divergente (true)
+- `+55219823236274` → divergente (true, 14 dígitos)
+- `+353871234567` → não-BR (false, sem badge)
+- `+12125551234` → não-BR (false, sem badge)
 
-### 2. Corrigir o lead do Bruno no banco
+### Onde renderizar o badge
 
-Update direto via insert tool:
+Pequeno badge inline ao lado do telefone, com ícone `AlertTriangle` (lucide) + texto "Telefone divergente". Estilo: fundo `bg-amber-500/10`, texto `text-amber-600 dark:text-amber-400`, padding pequeno, rounded.
 
-```sql
-UPDATE leads
-SET phone = '+55 21 990027771'
-WHERE id = '9383b82d-969f-4065-83e4-99823151a43d';
-```
+Locais que mostram o telefone:
 
-### 3. Lead do Erick (`+55219823236274`)
+1. **`src/pages/Leads.tsx`**
+   - Linha 211 (card mobile)
+   - Linha 268 (tabela desktop)
 
-Telefone inválido de fato (14 dígitos). Vou **deixar como está** — não dá pra adivinhar qual é o correto. Se quiser corrigir depois, me passa o número certo.
+2. **`src/components/KanbanBoard.tsx`**
+   - Linha 752 (card do kanban)
+   - Linha 934 (modal de detalhe, modo visualização)
+   - Linha 932 também (EditableField, modo edição) — adicionar badge ao lado quando o valor atual for divergente
 
-### 4. Redeploy
+### Componente novo
 
-Redesployar `fb-sync-leads` e `normalize-leads-phones` pra que a correção valha pros próximos sync.
+`src/components/PhoneDivergentBadge.tsx`:
 
-### Detalhes técnicos
+```tsx
+import { AlertTriangle } from "lucide-react";
+import { isBRPhoneDivergent } from "@/lib/phoneUtils";
 
-Mudança em `formatPhoneE164` (ambos arquivos):
-
-```ts
-// novo: tratar 12 dígitos com 0 inicial (ex: 021990027771)
-if (!hasPlus && digits.length === 12 && digits.startsWith("0")) {
-  const d = digits.slice(1); // remove o 0 → 21990027771
-  // segue fluxo BR normal de 11 dígitos
-  ...
+export function PhoneDivergentBadge({ phone }: { phone: string | null | undefined }) {
+  if (!isBRPhoneDivergent(phone)) return null;
+  return (
+    <span title="Telefone fora do padrão +55 DD 9XXXXXXXX" style={{...}}>
+      <AlertTriangle size={10} /> Telefone divergente
+    </span>
+  );
 }
 ```
 
-Arquivos alterados:
-- `supabase/functions/fb-sync-leads/index.ts`
-- `supabase/functions/normalize-leads-phones/index.ts`
+### Arquivos criados/alterados
 
-E um UPDATE no lead do Bruno.
+- **novo:** `src/lib/phoneUtils.ts`
+- **novo:** `src/components/PhoneDivergentBadge.tsx`
+- **alterado:** `src/pages/Leads.tsx` (2 pontos)
+- **alterado:** `src/components/KanbanBoard.tsx` (3 pontos)
+
+Sem mudanças em backend, banco, ou edge functions — é apenas UI de alerta visual.
