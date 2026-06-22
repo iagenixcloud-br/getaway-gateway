@@ -6,6 +6,7 @@ import { useAuth } from "../contexts/AuthContext";
 import { EditableField } from "./EditableField";
 import { NovaIndicacaoModal } from "./NovaIndicacaoModal";
 import { PhoneDivergentBadge } from "./PhoneDivergentBadge";
+import { normalizeBRPhone } from "../lib/phoneUtils";
 import {
   DndContext,
   DragEndEvent,
