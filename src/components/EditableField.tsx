@@ -11,6 +11,8 @@ interface Props {
   className?: string;
   /** Se true, ocupa toda a largura disponível */
   fullWidth?: boolean;
+  /** Se true, exibe o conteúdo completo sem reticências */
+  noTruncate?: boolean;
 }
 
 /**
@@ -27,6 +29,7 @@ export function EditableField({
   multiline = false,
   className = "",
   fullWidth = true,
+  noTruncate = false,
 }: Props) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(value);
@@ -111,8 +114,8 @@ export function EditableField({
         cursor: "text",
         display: "inline-block",
         width: fullWidth ? "100%" : "auto",
-        overflow: "hidden",
-        textOverflow: "ellipsis",
+        overflow: noTruncate ? "visible" : "hidden",
+        textOverflow: noTruncate ? "clip" : "ellipsis",
         whiteSpace: multiline ? "normal" : "nowrap",
         borderRadius: 4,
         padding: "1px 4px",
