@@ -89,6 +89,11 @@ function formatPhoneE164(raw: string | null | undefined): string | null {
   return null;
 }
 
+function cleanFbValue(v: string | null): string | null {
+  if (!v) return v;
+  return v.replace(/[_-]+/g, " ").replace(/\s+/g, " ").trim();
+}
+
 function parseLead(lead: any, formName: string) {
   const fieldData = Array.isArray(lead.field_data) ? lead.field_data : [];
   const name = fieldValue(fieldData, ["full_name", "first_name", "nome", "name"]) || "Lead Facebook";
@@ -96,6 +101,8 @@ function parseLead(lead: any, formName: string) {
   const phone = fieldValue(fieldData, ["phone_number", "phone", "telefone", "celular"]) || whatsapp || "";
   const email = fieldValue(fieldData, ["email", "e-mail"]);
   const city = fieldValue(fieldData, ["city", "cidade"]);
+  const entrada_desejada = cleanFbValue(fieldValue(fieldData, ["entrada"]));
+  const ja_investe_em_imoveis = cleanFbValue(fieldValue(fieldData, ["investe", "investidor"]));
 
   return {
     name,
@@ -103,6 +110,8 @@ function parseLead(lead: any, formName: string) {
     email,
     city,
     interest: `${formName}${lead.platform ? ` • ${String(lead.platform).toUpperCase()}` : ""}`,
+    entrada_desejada,
+    ja_investe_em_imoveis,
   };
 }
 
