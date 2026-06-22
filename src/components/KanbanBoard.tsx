@@ -618,8 +618,8 @@ function LeadModal({
             type="button"
             onClick={(e) => {
               e.stopPropagation();
-              const rawDigits = lead.phone.replace(/[^\d]/g, "").replace(/^0+/, "");
-              const digits = rawDigits.startsWith("55") ? rawDigits : `55${rawDigits}`;
+              const rawDigits = normalizeBRPhone(lead.phone).replace(/\D/g, "");
+              const digits = rawDigits.startsWith("55") ? rawDigits : `55${rawDigits.replace(/^0+/, "")}`;
               if (!rawDigits) { alert("Telefone não disponível"); return; }
               window.location.href = `https://api.whatsapp.com/send/?phone=${digits}&text&type=phone_number&app_absent=0`;
             }}
