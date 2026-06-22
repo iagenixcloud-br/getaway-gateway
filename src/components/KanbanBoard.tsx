@@ -934,7 +934,7 @@ function LeadCard({
         </svg>
         <span style={{ display: "inline-flex", alignItems: "center", gap: 4, whiteSpace: "nowrap" }}>
           {editable ? (
-            <EditableField value={lead.phone} onSave={(v) => onUpdate!({ phone: v })} placeholder="Telefone" />
+            <EditableField value={lead.phone} onSave={(v) => onUpdate!({ phone: v })} placeholder="Telefone" noTruncate />
           ) : (
             <span style={{ fontSize: 12, color: "var(--text-muted)" }}>{lead.phone}</span>
           )}
