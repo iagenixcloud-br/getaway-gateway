@@ -68,6 +68,7 @@ function formatPhoneE164(raw: string | null | undefined): string | null {
     (hasPlus && digits.startsWith("55") && (digits.length === 12 || digits.length === 13)) ||
     (!hasPlus && (
       digits.length === 10 || digits.length === 11 ||
+      (digits.length === 12 && digits.startsWith("0")) ||
       ((digits.length === 12 || digits.length === 13) && digits.startsWith("55"))
     ));
   if (isBR) {
