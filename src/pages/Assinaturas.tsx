@@ -37,22 +37,25 @@ export function Assinaturas() {
       const ids = data.map((r: any) => r.user_id);
       const { data: profiles } = await supabase
         .from("profiles")
-        .select("id, name, email")
+        .select("id, name, email, is_active")
         .in("id", ids);
 
       const profileMap = new Map(
         (profiles ?? []).map((p: any) => [p.id, p])
       );
 
-      const merged: Corretor[] = data.map((r: any) => {
-        const p = profileMap.get(r.user_id);
-        return {
-          user_id: r.user_id,
-          created_at: r.created_at,
-          name: p?.name ?? null,
-          email: p?.email ?? null,
-        };
-      });
+      const merged: Corretor[] = data
+        .map((r: any) => {
+          const p = profileMap.get(r.user_id);
+          return {
+            user_id: r.user_id,
+            created_at: r.created_at,
+            name: p?.name ?? null,
+            email: p?.email ?? null,
+            is_active: p?.is_active ?? true,
+          };
+        })
+        .filter((c: any) => c.is_active !== false);
 
       setCorretores(merged);
       setLoading(false);
