@@ -745,12 +745,12 @@ function FollowUpCard({
         >
           {lead.name}
         </p>
-        <div className="flex items-center gap-1.5" style={{ flexWrap: "nowrap", minWidth: 0 }}>
+        <div className="flex items-center gap-1.5" style={{ flexWrap: "nowrap" }}>
           <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ color: FOLLOWUP_COLOR, flexShrink: 0 }}>
             <path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 014.8 11.5a19.79 19.79 0 01-3.07-8.67A2 2 0 013.7 1h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L7.91 8.2a16 16 0 006.29 6.29l1.46-1.46a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 15.24v1.68z" />
           </svg>
-          <span style={{ display: "inline-flex", alignItems: "center", gap: 6, whiteSpace: "nowrap", minWidth: 0, overflow: "hidden" }}>
-            <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text-primary)", letterSpacing: 0.2, overflow: "hidden", textOverflow: "ellipsis" }}>
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 4, whiteSpace: "nowrap" }}>
+            <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text-primary)", letterSpacing: 0.2 }}>
               {lead.phone}
             </span>
             <PhoneDivergentBadge phone={lead.phone} compact />
@@ -928,15 +928,15 @@ function LeadCard({
       </div>
 
       {/* Telefone */}
-      <div className="flex items-center gap-2 mb-2" style={{ flexWrap: "nowrap", minWidth: 0 }}>
+      <div className="flex items-center gap-2 mb-2" style={{ flexWrap: "nowrap" }}>
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ color: "var(--text-muted)", flexShrink: 0 }}>
           <path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 014.8 11.5a19.79 19.79 0 01-3.07-8.67A2 2 0 013.7 1h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L7.91 8.2a16 16 0 006.29 6.29l1.46-1.46a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 15.24v1.68z" />
         </svg>
-        <span style={{ display: "inline-flex", alignItems: "center", gap: 8, whiteSpace: "nowrap", minWidth: 0, overflow: "hidden" }}>
+        <span style={{ display: "inline-flex", alignItems: "center", gap: 4, whiteSpace: "nowrap" }}>
           {editable ? (
             <EditableField value={lead.phone} onSave={(v) => onUpdate!({ phone: v })} placeholder="Telefone" />
           ) : (
-            <span style={{ fontSize: 12, color: "var(--text-muted)", overflow: "hidden", textOverflow: "ellipsis" }}>{lead.phone}</span>
+            <span style={{ fontSize: 12, color: "var(--text-muted)" }}>{lead.phone}</span>
           )}
           <PhoneDivergentBadge phone={lead.phone} />
         </span>

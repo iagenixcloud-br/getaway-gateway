@@ -1,26 +1,31 @@
-Ajustar o layout do badge "Telefone divergente" para que fique sempre na mesma linha do número de telefone, sem quebrar o card.
+Ajustar badge de telefone divergente para ícone-only e garantir que números sem divergência apareçam completos, sem truncamento.
 
-Problema atual
---------------
-O componente `PhoneDivergentBadge` já usa `display: inline-flex` internamente, mas nos cards ele é colocado dentro de containers `flex` com `flexWrap: "wrap"` e `gap`. Em larguras pequenas o badge quebra para uma nova linha, empurrando o conteúdo abaixo e aumentando a altura do card.
+## Problema
+1. Números de telefone sem badge estão sendo truncados com "..." (ex: +5554981227...).
+2. O badge de "Telefone divergente" está ocupando muito espaço no card, empurrando o layout.
 
-Onde aplicar
-------------
-1. `src/pages/Leads.tsx`
-   - Card mobile (linha ~215): o telefone e o badge estão em uma `<div>` com `display: "flex"`, `flexWrap: "wrap"`.  
-     → Remover `flexWrap: "wrap"` e garantir que o número e o badge fiquem em linha única.
-   - Tabela desktop (linha ~276): já está em `display: "inline-flex"`, mas o container `<td>` usa `whiteSpace: "nowrap"`. Verificar se está OK; se o badge estiver quebrando, aplicar o mesmo padrão inline.
+## Mudanças propostas
 
-2. `src/components/KanbanBoard.tsx`
-   - Card do kanban (linha ~755): o telefone e o badge estão dentro de `<div className="flex items-center gap-1.5 flex-wrap">` (ícone + telefone + badge).  
-     → Agrupar o número e o badge em um wrapper inline (por exemplo `<span style={{ display: "inline-flex", alignItems: "center", gap: 4, whiteSpace: "nowrap" }}>`) e deixar o ícone fora desse wrapper, ou remover `flex-wrap` do container e garantir que o wrapper interno não quebre.
-   - Modal/detalhes do lead (linha ~938): o telefone e o badge estão dentro de `<div className="flex items-center gap-2 mb-2 flex-wrap">`.  
-     → Mesmo ajuste: telefone + badge dentro de um wrapper inline, mantendo o ícone no container externo, para evitar que o badge vá para nova linha sozinho.
+### 1. Componente `PhoneDivergentBadge.tsx`
+- Remover o texto "Telefone divergente" / "Divergente".
+- Manter apenas o ícone `AlertTriangle` pequeno.
+- Preservar o `title` com a explicação completa para hover/touch.
+- Ajustar estilos (padding, gap, border radius) para um badge compacto de ícone apenas.
 
-Técnico
--------
-- Manter o componente `PhoneDivergentBadge` inalterado (ele já é inline-flex).
-- Usar `display: inline-flex`, `alignItems: "center"`, `gap` pequeno e `whiteSpace: "nowrap"` no wrapper que junta telefone + badge.
-- Verificar visualmente no preview que o badge não aumenta a altura do card nem empurra outros elementos.
+### 2. `src/pages/Leads.tsx`
+- **Mobile card (linhas ~213-216):** manter telefone e badge em linha única (`inline-flex`), mas remover qualquer `overflow: hidden` / `textOverflow: "ellipsis"` no número para que ele apareça completo.
+- **Desktop table (linhas ~273-277):** remover truncamento do telefone na célula; garantir que o número seja exibido por completo. A célula já tem `whiteSpace: "nowrap"`, então a tabela pode rolar horizontalmente se necessário, mas o número não será cortado.
 
-Não envolve backend, banco de dados ou edge functions.
+### 3. `src/components/KanbanBoard.tsx`
+- **Kanban card (linhas ~748-757):** remover `overflow: hidden` e `textOverflow: "ellipsis"` do span do telefone. O telefone deve aparecer completo ao lado do ícone-only. O card pode expandir horizontalmente conforme o conteúdo, mas o badge ícone minimiza o impacto.
+- **Lead detail modal (linhas ~930-942):** mesma alteração — telefone completo sem truncamento, badge como ícone-only ao lado.
+
+### 4. Verificação visual
+- Revisar preview para confirmar:
+  - Cards sem badge mostram telefone completo.
+  - Cards com badge mostram apenas o triângulo de alerta pequeno ao lado do número.
+  - Hover/touch no ícone exibe tooltip explicativo.
+
+## Escopo
+- Apenas frontend: componente de badge e locais onde ele é renderizado.
+- Nenhuma alteração em lógica de validação (`phoneUtils.ts`), backend, banco ou edge functions.
