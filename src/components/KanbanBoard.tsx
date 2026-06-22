@@ -935,9 +935,9 @@ function LeadCard({
         </svg>
         <span style={{ display: "inline-flex", alignItems: "center", gap: 4, whiteSpace: "nowrap" }}>
           {editable ? (
-            <EditableField value={lead.phone} onSave={(v) => onUpdate!({ phone: v })} placeholder="Telefone" noTruncate />
+            <EditableField value={normalizeBRPhone(lead.phone)} onSave={(v) => onUpdate!({ phone: normalizeBRPhone(v) })} placeholder="Telefone" noTruncate />
           ) : (
-            <span style={{ fontSize: 12, color: "var(--text-muted)" }}>{lead.phone}</span>
+            <span style={{ fontSize: 12, color: "var(--text-muted)" }}>{normalizeBRPhone(lead.phone)}</span>
           )}
           <PhoneDivergentBadge phone={lead.phone} />
         </span>
