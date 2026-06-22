@@ -133,10 +133,7 @@ async function doImport() {
         const normPhone = normalizePhone(phone);
         const normEmail = (email || "").toLowerCase().trim();
 
-        // Dedup vs banco
-        if (normPhone && existingPhones.has(normPhone)) { (result as any).skipped_phone_dup_db++; continue; }
-        if (normEmail && existingEmails.has(normEmail)) { (result as any).skipped_email_dup_db++; continue; }
-        // Dedup dentro do batch
+        // Dedup dentro do batch (banco zerado, ent\u00e3o n\u00e3o checa DB)
         if (normPhone && seenPhonesBatch.has(normPhone)) { (result as any).skipped_dup_batch++; continue; }
         if (normEmail && seenEmailsBatch.has(normEmail)) { (result as any).skipped_dup_batch++; continue; }
         if (normPhone) seenPhonesBatch.add(normPhone);
