@@ -1,39 +1,47 @@
-## Objetivo
+## Corrigir telefones com `0` na frente do DDD
 
-Verificar se os campos `qual_entrada_desejada` e `ja_investe_em_imoveis` (e variações) existem nos formulários do Facebook e se estão chegando preenchidos nos leads. **Read-only, sem mexer no CRM.**
+### 1. Ajustar `formatPhoneE164` (fb-sync-leads e normalize-leads-phones)
 
-## Passos
+Adicionar tratamento pro caso de 12 dígitos sem `+` que começam com `0`:
 
-### 1. Criar edge function temporária `fb-inspect-fields` (só leitura)
+- Se `digits.length === 12` e começa com `0` → remover o `0` inicial → vira 11 dígitos BR → segue o fluxo normal.
+- Exemplo: `021990027771` → `21990027771` → `+55 21 990027771`.
 
-GET endpoint que, usando o `FB_PAGE_TOKEN` já salvo:
+Aplicar essa mesma lógica nas duas funções pra ficarem consistentes.
 
-- Lista forms ativos da página `101491475744542` via `GET /{PAGE_ID}/leadgen_forms?fields=id,name,status`.
-- Pra cada form ativo:
-  - **Schema do form:** `GET /{FORM_ID}?fields=questions{key,label,type}` — mostra os campos configurados no Facebook (independente de ter lead).
-  - **3 leads mais recentes:** `GET /{FORM_ID}/leads?fields=id,created_time,field_data&limit=3` — mostra o que os usuários preencheram.
-- Marca no JSON de retorno:
-  - `has_qual_entrada` + key/label exatos encontrados
-  - `has_ja_investe` + key/label exatos encontrados
-  - Exemplo de `value` preenchido (se houver lead)
+### 2. Corrigir o lead do Bruno no banco
 
-### 2. Deploy + chamada
+Update direto via insert tool:
 
-Faço deploy, chamo a função, te trago um resumo legível tipo:
-
-```
-Form: Recreio 01 - Parcela Alta
-  qual_entrada_desejada → SIM (key: "qual_o_valor_da_entrada", exemplo: "R$ 30.000")
-  ja_investe_em_imoveis → NÃO está no form
-  campos extras: full_name, phone, email, ...
+```sql
+UPDATE leads
+SET phone = '+55 21 990027771'
+WHERE id = '9383b82d-969f-4065-83e4-99823151a43d';
 ```
 
-### 3. Apago a função
+### 3. Lead do Erick (`+55219823236274`)
 
-`fb-inspect-fields` é descartável. Removo depois de te mostrar o resultado.
+Telefone inválido de fato (14 dígitos). Vou **deixar como está** — não dá pra adivinhar qual é o correto. Se quiser corrigir depois, me passa o número certo.
 
-## O que NÃO faço
+### 4. Redeploy
 
-- Não escrevo em lead nenhum.
-- Não mexo em `parseFields`, webhook, trigger, schema do CRM.
-- Não toco no plano do trigger do `+` (continua separado).
+Redesployar `fb-sync-leads` e `normalize-leads-phones` pra que a correção valha pros próximos sync.
+
+### Detalhes técnicos
+
+Mudança em `formatPhoneE164` (ambos arquivos):
+
+```ts
+// novo: tratar 12 dígitos com 0 inicial (ex: 021990027771)
+if (!hasPlus && digits.length === 12 && digits.startsWith("0")) {
+  const d = digits.slice(1); // remove o 0 → 21990027771
+  // segue fluxo BR normal de 11 dígitos
+  ...
+}
+```
+
+Arquivos alterados:
+- `supabase/functions/fb-sync-leads/index.ts`
+- `supabase/functions/normalize-leads-phones/index.ts`
+
+E um UPDATE no lead do Bruno.
