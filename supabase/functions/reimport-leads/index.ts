@@ -105,8 +105,11 @@ async function doImport() {
     await cloudAdmin.from("webhook_logs").insert({ event_type: "reimport_result", status: "error", payload: result });
     return;
   }
-  const activeForms = (formsData.data || []).filter((f: any) => f.status === "ACTIVE");
+  const activeForms = (formsData.data || [])
+    .filter((f: any) => f.status === "ACTIVE")
+    .filter((f: any) => String(f.name || "").toLowerCase().includes("patrimar"));
   result.forms_checked = activeForms.length;
+  (result as any).form_names = activeForms.map((f: any) => f.name);
 
   const seenPhonesBatch = new Set<string>();
   const seenEmailsBatch = new Set<string>();
