@@ -6,6 +6,7 @@ import { useAuth } from "../contexts/AuthContext";
 import { EditableField } from "./EditableField";
 import { NovaIndicacaoModal } from "./NovaIndicacaoModal";
 import { PhoneDivergentBadge } from "./PhoneDivergentBadge";
+import { normalizeBRPhone } from "../lib/phoneUtils";
 import {
   DndContext,
   DragEndEvent,
@@ -275,7 +276,7 @@ function LeadModal({
   const handleSave = () => {
     onUpdate({
       name: form.name,
-      phone: form.phone,
+      phone: normalizeBRPhone(form.phone),
       email: form.email,
       property: form.property,
       origin: form.origin,
@@ -617,8 +618,8 @@ function LeadModal({
             type="button"
             onClick={(e) => {
               e.stopPropagation();
-              const rawDigits = lead.phone.replace(/[^\d]/g, "").replace(/^0+/, "");
-              const digits = rawDigits.startsWith("55") ? rawDigits : `55${rawDigits}`;
+              const rawDigits = normalizeBRPhone(lead.phone).replace(/\D/g, "");
+              const digits = rawDigits.startsWith("55") ? rawDigits : `55${rawDigits.replace(/^0+/, "")}`;
               if (!rawDigits) { alert("Telefone não disponível"); return; }
               window.location.href = `https://api.whatsapp.com/send/?phone=${digits}&text&type=phone_number&app_absent=0`;
             }}
@@ -751,7 +752,7 @@ function FollowUpCard({
           </svg>
           <span style={{ display: "inline-flex", alignItems: "center", gap: 4, whiteSpace: "nowrap" }}>
             <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text-primary)", letterSpacing: 0.2 }}>
-              {lead.phone}
+              {normalizeBRPhone(lead.phone)}
             </span>
             <PhoneDivergentBadge phone={lead.phone} compact />
           </span>
@@ -934,9 +935,9 @@ function LeadCard({
         </svg>
         <span style={{ display: "inline-flex", alignItems: "center", gap: 4, whiteSpace: "nowrap" }}>
           {editable ? (
-            <EditableField value={lead.phone} onSave={(v) => onUpdate!({ phone: v })} placeholder="Telefone" noTruncate />
+            <EditableField value={normalizeBRPhone(lead.phone)} onSave={(v) => onUpdate!({ phone: normalizeBRPhone(v) })} placeholder="Telefone" noTruncate />
           ) : (
-            <span style={{ fontSize: 12, color: "var(--text-muted)" }}>{lead.phone}</span>
+            <span style={{ fontSize: 12, color: "var(--text-muted)" }}>{normalizeBRPhone(lead.phone)}</span>
           )}
           <PhoneDivergentBadge phone={lead.phone} />
         </span>
