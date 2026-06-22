@@ -3,6 +3,8 @@ import { useLeads } from "../hooks/useLeads";
 import { Lead, LeadStatus } from "../data/mockData";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { PhoneDivergentBadge } from "../components/PhoneDivergentBadge";
+
 
 const STATUS_LABELS: Record<LeadStatus, string> = {
   lead_novo: "Lead Novo",
