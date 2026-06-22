@@ -94,7 +94,7 @@ async function doImport() {
 
   // 3) Cutoff = últimas 48h (hoje + ontem)
 
-  const cutoff = Math.floor((Date.now() - 24 * 60 * 60 * 1000) / 1000);
+  const cutoff = Math.floor((Date.now() - 48 * 60 * 60 * 1000) / 1000);
   const filtering = encodeURIComponent(JSON.stringify([{ field: "time_created", operator: "GREATER_THAN", value: cutoff }]));
 
   // 5) Lista forms ativos
