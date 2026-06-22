@@ -4,6 +4,7 @@ import { Lead, LeadStatus } from "../data/mockData";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { PhoneDivergentBadge } from "../components/PhoneDivergentBadge";
+import { normalizeBRPhone } from "../lib/phoneUtils";
 
 
 const STATUS_LABELS: Record<LeadStatus, string> = {
