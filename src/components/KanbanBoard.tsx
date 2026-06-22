@@ -752,7 +752,7 @@ function FollowUpCard({
           </svg>
           <span style={{ display: "inline-flex", alignItems: "center", gap: 4, whiteSpace: "nowrap" }}>
             <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text-primary)", letterSpacing: 0.2 }}>
-              {lead.phone}
+              {normalizeBRPhone(lead.phone)}
             </span>
             <PhoneDivergentBadge phone={lead.phone} compact />
           </span>
