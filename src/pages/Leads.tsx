@@ -270,7 +270,12 @@ function LeadRow({ lead }: { lead: Lead }) {
           <span className="font-medium" style={{ color: "var(--text-primary)" }}>{lead.name}</span>
         </div>
       </td>
-      <td className="px-4 py-3" style={{ color: "var(--text-muted)", whiteSpace: "nowrap" }}>{lead.phone || "—"}</td>
+      <td className="px-4 py-3" style={{ color: "var(--text-muted)", whiteSpace: "nowrap" }}>
+        <div style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+          <span>{lead.phone || "—"}</span>
+          <PhoneDivergentBadge phone={lead.phone} compact />
+        </div>
+      </td>
       <td className="px-4 py-3" style={{ color: "var(--text-muted)", maxWidth: 180, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{lead.email || "—"}</td>
       <td className="px-4 py-3" style={{ color: "var(--text-muted)" }}>{lead.city}</td>
       <td className="px-4 py-3">
