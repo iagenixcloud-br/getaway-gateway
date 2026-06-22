@@ -102,6 +102,11 @@ async function fetchLeadDetails(leadgenId: string) {
   return await res.json();
 }
 
+function cleanFbValue(v: string | null): string | null {
+  if (!v) return v;
+  return v.replace(/[_-]+/g, " ").replace(/\s+/g, " ").trim();
+}
+
 function parseFields(fieldData: LeadFieldData[]) {
   const get = (keys: string[]) => {
     for (const k of keys) {
@@ -116,8 +121,8 @@ function parseFields(fieldData: LeadFieldData[]) {
     email: get(["email", "e-mail"]),
     city: get(["city", "cidade"]),
     interest: get(["property", "imovel", "interesse", "message"]),
-    entrada_desejada: get(["entrada"]),
-    ja_investe_em_imoveis: get(["investe", "investidor"]),
+    entrada_desejada: cleanFbValue(get(["entrada"])),
+    ja_investe_em_imoveis: cleanFbValue(get(["investe", "investidor"])),
   };
 }
 

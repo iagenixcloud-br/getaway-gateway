@@ -65,6 +65,11 @@ function fieldValue(fieldData: Array<{ name: string; values?: string[] }>, keys:
   return null;
 }
 
+function cleanFbValue(v: string | null): string | null {
+  if (!v) return v;
+  return v.replace(/[_-]+/g, " ").replace(/\s+/g, " ").trim();
+}
+
 async function doImport() {
   const result: Record<string, unknown> = {
     deleted_all: 0, forms_checked: 0, fetched: 0, created: 0,
@@ -130,8 +135,8 @@ async function doImport() {
         const phone = fieldValue(fieldData, ["phone_number", "phone", "telefone", "celular"]) || whatsapp || "";
         const email = fieldValue(fieldData, ["email", "e-mail"]);
         const city = fieldValue(fieldData, ["city", "cidade"]);
-        const entradaDesejada = fieldValue(fieldData, ["entrada"]);
-        const jaInvesteImoveis = fieldValue(fieldData, ["investe", "investidor"]);
+        const entradaDesejada = cleanFbValue(fieldValue(fieldData, ["entrada"]));
+        const jaInvesteImoveis = cleanFbValue(fieldValue(fieldData, ["investe", "investidor"]));
 
         const normPhone = normalizePhone(phone);
         const normEmail = (email || "").toLowerCase().trim();
