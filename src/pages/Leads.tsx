@@ -273,7 +273,7 @@ function LeadRow({ lead }: { lead: Lead }) {
       </td>
       <td className="px-4 py-3" style={{ color: "var(--text-muted)", whiteSpace: "nowrap" }}>
         <div style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
-          <span>{lead.phone || "—"}</span>
+          <span>{lead.phone ? normalizeBRPhone(lead.phone) : "—"}</span>
           <PhoneDivergentBadge phone={lead.phone} compact />
         </div>
       </td>
