@@ -31,3 +31,51 @@ export function isBRPhoneDivergent(phone: string | null | undefined): boolean {
 
   return false;
 }
+
+// Normaliza telefones BR para o padrão +55 DDD 9XXXXXXXX (celular) ou +55 DDD XXXXXXXX (fixo).
+// Retorna o valor original se não for "BR-like" ou se não conseguir normalizar com segurança.
+export function normalizeBRPhone(phone: string | null | undefined): string {
+  if (!phone) return (phone ?? "") as string;
+  const original = String(phone);
+  const trimmed = original.trim();
+  if (!trimmed) return original;
+
+  const hasPlus = trimmed.startsWith("+");
+  let digits = trimmed.replace(/\D/g, "");
+  if (!digits) return original;
+
+  // Internacional explícito não-BR → não mexe
+  if (hasPlus && !digits.startsWith("55")) return original;
+
+  // Remove zeros de tronco à esquerda
+  digits = digits.replace(/^0+/, "");
+  if (!digits) return original;
+
+  // Garante DDI 55
+  if (digits.startsWith("55") && (digits.length === 12 || digits.length === 13)) {
+    // ok, já com DDI
+  } else if (digits.length === 10 || digits.length === 11) {
+    digits = "55" + digits;
+  } else {
+    return original;
+  }
+
+  // Valida DDD
+  const ddd = digits.slice(2, 4);
+  if (!/^[1-9][1-9]$/.test(ddd)) return original;
+
+  let sub = digits.slice(4);
+
+  if (sub.length === 8 && /^[6-9]/.test(sub)) {
+    // celular antigo sem 9
+    sub = "9" + sub;
+  } else if (sub.length === 9 && sub[0] === "9") {
+    // celular ok
+  } else if (sub.length === 8 && /^[2-5]/.test(sub)) {
+    // fixo ok
+  } else {
+    return original;
+  }
+
+  return `+55${ddd}${sub}`;
+}
