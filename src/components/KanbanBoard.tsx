@@ -5,6 +5,7 @@ import { useCorretores, CorretorOption } from "../hooks/useCorretores";
 import { useAuth } from "../contexts/AuthContext";
 import { EditableField } from "./EditableField";
 import { NovaIndicacaoModal } from "./NovaIndicacaoModal";
+import { PhoneDivergentBadge } from "./PhoneDivergentBadge";
 import {
   DndContext,
   DragEndEvent,
