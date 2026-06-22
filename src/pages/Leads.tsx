@@ -212,7 +212,7 @@ function LeadCardMobile({ lead }: { lead: Lead }) {
         <div className="min-w-0 flex-1">
           <p className="truncate" style={{ fontSize: 14, fontWeight: 700, color: "var(--text-primary)" }}>{lead.name}</p>
           <div style={{ marginTop: 2, display: "inline-flex", alignItems: "center", gap: 4, whiteSpace: "nowrap" }}>
-            <span style={{ fontSize: 12, color: "var(--text-muted)" }}>{lead.phone || "—"}</span>
+            <span style={{ fontSize: 12, color: "var(--text-muted)" }}>{lead.phone ? normalizeBRPhone(lead.phone) : "—"}</span>
             <PhoneDivergentBadge phone={lead.phone} compact />
           </div>
         </div>
