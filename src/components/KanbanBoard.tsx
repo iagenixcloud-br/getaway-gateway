@@ -276,7 +276,7 @@ function LeadModal({
   const handleSave = () => {
     onUpdate({
       name: form.name,
-      phone: form.phone,
+      phone: normalizeBRPhone(form.phone),
       email: form.email,
       property: form.property,
       origin: form.origin,
