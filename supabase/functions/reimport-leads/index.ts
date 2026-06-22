@@ -67,17 +67,20 @@ function fieldValue(fieldData: Array<{ name: string; values?: string[] }>, keys:
 
 async function doImport() {
   const result: Record<string, unknown> = {
-    deleted_dups: 0, forms_checked: 0, fetched: 0, created: 0,
-    skipped_phone_dup_db: 0, skipped_email_dup_db: 0, skipped_dup_batch: 0,
-    errors: 0, error_messages: [] as string[],
+    deleted_all: 0, forms_checked: 0, fetched: 0, created: 0,
+    skipped_dup_batch: 0, errors: 0, error_messages: [] as string[],
   };
 
-  // 1) Apaga os 2 duplicados criados pela execução anterior
+  // 1) Apaga TODOS os leads do CRM
   try {
-    const { data: deleted } = await crmAdmin.from("leads").delete().in("id", DUPS_TO_DELETE).select("id");
-    result.deleted_dups = deleted?.length || 0;
+    const { data: deleted } = await crmAdmin
+      .from("leads")
+      .delete()
+      .neq("id", "00000000-0000-0000-0000-000000000000")
+      .select("id");
+    result.deleted_all = deleted?.length || 0;
   } catch (e) {
-    (result.error_messages as string[]).push(`delete dups failed: ${e instanceof Error ? e.message : "unknown"}`);
+    (result.error_messages as string[]).push(`delete all failed: ${e instanceof Error ? e.message : "unknown"}`);
   }
 
   // 2) Token FB
@@ -89,26 +92,9 @@ async function doImport() {
     return;
   }
 
-  // 3) Carrega telefones + emails do banco UMA vez (set para dedup)
-  const existingPhones = new Set<string>();
-  const existingEmails = new Set<string>();
-  let from = 0;
-  const PAGE = 1000;
-  while (true) {
-    const { data, error } = await crmAdmin.from("leads").select("phone, email").range(from, from + PAGE - 1);
-    if (error || !data || data.length === 0) break;
-    data.forEach((l: any) => {
-      const np = normalizePhone(l.phone || "");
-      if (np) existingPhones.add(np);
-      const em = (l.email || "").toLowerCase().trim();
-      if (em) existingEmails.add(em);
-    });
-    if (data.length < PAGE) break;
-    from += PAGE;
-  }
+  // 3) Cutoff = últimas 48h (hoje + ontem)
 
-  // 4) Cutoff = últimas 24h (unix seconds)
-  const cutoff = Math.floor((Date.now() - 24 * 60 * 60 * 1000) / 1000);
+  const cutoff = Math.floor((Date.now() - 48 * 60 * 60 * 1000) / 1000);
   const filtering = encodeURIComponent(JSON.stringify([{ field: "time_created", operator: "GREATER_THAN", value: cutoff }]));
 
   // 5) Lista forms ativos
@@ -147,10 +133,7 @@ async function doImport() {
         const normPhone = normalizePhone(phone);
         const normEmail = (email || "").toLowerCase().trim();
 
-        // Dedup vs banco
-        if (normPhone && existingPhones.has(normPhone)) { (result as any).skipped_phone_dup_db++; continue; }
-        if (normEmail && existingEmails.has(normEmail)) { (result as any).skipped_email_dup_db++; continue; }
-        // Dedup dentro do batch
+        // Dedup dentro do batch (banco zerado, ent\u00e3o n\u00e3o checa DB)
         if (normPhone && seenPhonesBatch.has(normPhone)) { (result as any).skipped_dup_batch++; continue; }
         if (normEmail && seenEmailsBatch.has(normEmail)) { (result as any).skipped_dup_batch++; continue; }
         if (normPhone) seenPhonesBatch.add(normPhone);
