@@ -12,6 +12,7 @@ interface Corretor {
   created_at: string;
   name: string | null;
   email: string | null;
+  is_active: boolean;
 }
 
 export function Assinaturas() {
