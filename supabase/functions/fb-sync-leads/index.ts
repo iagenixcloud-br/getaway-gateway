@@ -223,9 +223,7 @@ Deno.serve(async (req) => {
       let nextUrl: string | null = baseUrl;
 
       for (let page = 0; nextUrl && page < maxPages; page++) {
-        const res = await fetch(nextUrl);
-        const data = await res.json();
-        if (!res.ok || data.error) throw new Error(data.error?.message || `Erro formulário ${form.id}`);
+        const data = await fbFetchJson(nextUrl, `leads do formulário ${form.id}`);
 
         for (const lead of data.data || []) {
           result.fetched++;
