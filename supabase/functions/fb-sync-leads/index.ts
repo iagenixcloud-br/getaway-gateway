@@ -145,11 +145,27 @@ Deno.serve(async (req) => {
 
   const result = { forms_checked: 0, fetched: 0, created: 0, skipped: 0, errors: [] as string[] };
 
+  async function fbFetchJson(url: string, context: string) {
+    const res = await fetch(url);
+    const text = await res.text();
+    let data: any;
+    try { data = JSON.parse(text); }
+    catch {
+      const snippet = text.slice(0, 200).replace(/\s+/g, " ");
+      throw new Error(`${context}: resposta não-JSON do Facebook (HTTP ${res.status}). Token provavelmente inválido/expirado. Prévia: ${snippet}`);
+    }
+    if (!res.ok || data?.error) {
+      throw new Error(`${context}: ${data?.error?.message || `HTTP ${res.status}`}`);
+    }
+    return data;
+  }
+
   try {
     // 1. Get active forms
-    const formsRes = await fetch(`https://graph.facebook.com/v21.0/${PAGE_ID}/leadgen_forms?fields=id,name,status&limit=100&access_token=${encodeURIComponent(token)}`);
-    const formsData = await formsRes.json();
-    if (!formsRes.ok || formsData.error) throw new Error(formsData.error?.message || "Erro ao listar formulários");
+    const formsData = await fbFetchJson(
+      `https://graph.facebook.com/v21.0/${PAGE_ID}/leadgen_forms?fields=id,name,status&limit=100&access_token=${encodeURIComponent(token)}`,
+      "listar formulários"
+    );
 
     const activeForms = (formsData.data || []).filter((f: any) => f.status === "ACTIVE");
     result.forms_checked = activeForms.length;
@@ -207,9 +223,7 @@ Deno.serve(async (req) => {
       let nextUrl: string | null = baseUrl;
 
       for (let page = 0; nextUrl && page < maxPages; page++) {
-        const res = await fetch(nextUrl);
-        const data = await res.json();
-        if (!res.ok || data.error) throw new Error(data.error?.message || `Erro formulário ${form.id}`);
+        const data = await fbFetchJson(nextUrl, `leads do formulário ${form.id}`);
 
         for (const lead of data.data || []) {
           result.fetched++;
