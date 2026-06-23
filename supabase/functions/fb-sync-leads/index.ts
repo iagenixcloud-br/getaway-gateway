@@ -146,18 +146,40 @@ Deno.serve(async (req) => {
   const result = { forms_checked: 0, fetched: 0, created: 0, skipped: 0, errors: [] as string[] };
 
   async function fbFetchJson(url: string, context: string) {
-    const res = await fetch(url);
-    const text = await res.text();
-    let data: any;
-    try { data = JSON.parse(text); }
-    catch {
-      const snippet = text.slice(0, 200).replace(/\s+/g, " ");
-      throw new Error(`${context}: resposta não-JSON do Facebook (HTTP ${res.status}). Token provavelmente inválido/expirado. Prévia: ${snippet}`);
+    let lastErr: unknown = null;
+    for (let attempt = 1; attempt <= 4; attempt++) {
+      try {
+        const res = await fetch(url);
+        const text = await res.text();
+        let data: any;
+        try { data = JSON.parse(text); }
+        catch {
+          const snippet = text.slice(0, 200).replace(/\s+/g, " ");
+          throw new Error(`${context}: resposta não-JSON do Facebook (HTTP ${res.status}). Token provavelmente inválido/expirado. Prévia: ${snippet}`);
+        }
+        if (!res.ok || data?.error) {
+          const code = data?.error?.code;
+          const isTransient = res.status >= 500 || code === 1 || code === 2 || code === 4 || code === 17 || code === 32 || code === 613;
+          if (isTransient && attempt < 4) {
+            await new Promise((r) => setTimeout(r, 500 * attempt));
+            continue;
+          }
+          throw new Error(`${context}: ${data?.error?.message || `HTTP ${res.status}`}`);
+        }
+        return data;
+      } catch (e) {
+        lastErr = e;
+        const msg = e instanceof Error ? e.message : String(e);
+        // Erros de rede: connection reset, EOF, timeout, etc.
+        const isNetErr = /connection (reset|error|closed)|client error \(SendRequest\)|error sending request|UnexpectedEof|os error|timed out|ECONNRESET|network/i.test(msg);
+        if (isNetErr && attempt < 4) {
+          await new Promise((r) => setTimeout(r, 500 * attempt));
+          continue;
+        }
+        throw e;
+      }
     }
-    if (!res.ok || data?.error) {
-      throw new Error(`${context}: ${data?.error?.message || `HTTP ${res.status}`}`);
-    }
-    return data;
+    throw lastErr instanceof Error ? lastErr : new Error(String(lastErr));
   }
 
   try {
