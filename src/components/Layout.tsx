@@ -64,6 +64,8 @@ export function Layout({ children }: LayoutProps) {
       ? { title: "Assinaturas", subtitle: "Gestão de licenças e cobranças" }
       : location.pathname === "/exportar"
       ? { title: "Exportar & Arquivar", subtitle: "Gerencie, exporte e arquive leads" }
+      : location.pathname === "/logs"
+      ? { title: "Logs de Webhook", subtitle: "Acompanhe os leads recebidos do Facebook" }
       : { title: "Pipeline de Leads", subtitle: "Gerencie seus leads em tempo real" };
 
   const sidebarContent = (
