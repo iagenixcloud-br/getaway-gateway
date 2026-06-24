@@ -169,7 +169,23 @@ async function doImport() {
           (result.error_messages as string[]).push(`insert err: ${insertErr.message}`);
           continue;
         }
-        try { await crmAdmin.rpc("distribute_lead", { _lead_id: inserted.id }); } catch (_) {}
+        try {
+          await crmAdmin.rpc("distribute_lead", { _lead_id: inserted.id });
+          // distribute_lead já inseriu em lead_assignments com source='roleta'
+          // e carimbou tenant_id. Aqui só incrementamos total_received +
+          // last_received_at via RPC (p_skip_assignment=true para evitar
+          // dupla linha em lead_assignments).
+          const { data: assigned } = await crmAdmin
+            .from("leads").select("tenant_id").eq("id", inserted.id).single();
+          if (assigned?.tenant_id) {
+            await crmAdmin.rpc("registrar_atribuicao_roleta", {
+              p_lead_id: inserted.id,
+              p_corretor_id: assigned.tenant_id,
+              p_source: "reimport",
+              p_skip_assignment: true,
+            });
+          }
+        } catch (_) {}
 
         await cloudAdmin.from("webhook_logs").insert({
           event_type: "leadgen_sync", page_id: PAGE_ID, leadgen_id: lead.id,
