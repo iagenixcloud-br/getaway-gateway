@@ -394,8 +394,6 @@ export function Admins() {
           </form>
         </div>
       )}
-        </>
-      )}
     </div>
   );
 }
