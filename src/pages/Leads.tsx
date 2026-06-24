@@ -132,6 +132,7 @@ export function Leads() {
         <div className="flex items-center gap-3 w-full md:w-auto">
           {/* Status Filter */}
           <select
+            aria-label="Filtrar por status"
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value as LeadStatus | "all")}
             className="flex-1 md:flex-none px-4 py-2.5 rounded-xl text-sm cursor-pointer"
