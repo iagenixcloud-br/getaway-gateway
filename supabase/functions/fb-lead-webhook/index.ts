@@ -354,17 +354,19 @@ Deno.serve(async (req) => {
         created.push(lead.id);
         console.log(`Lead ${lead.id} criado no CRM (${fields.name})`);
 
-        // Avança a fila da roleta imediatamente: marca o corretor que recebeu
-        // como o "mais recente", para que rajadas da Meta não caiam todas
-        // no mesmo corretor enquanto este webhook ainda processa.
+        // Registra a atribuição da roleta de forma atômica:
+        // - profiles.last_received_at = now() (avança a fila)
+        // - profiles.total_received += 1
+        // - insert em lead_assignments com source='webhook'
         if (assignTo) {
           try {
-            await crmAdmin
-              .from("profiles")
-              .update({ last_received_at: new Date().toISOString() })
-              .eq("id", assignTo);
+            await crmAdmin.rpc("registrar_atribuicao_roleta", {
+              p_lead_id: lead.id,
+              p_corretor_id: assignTo,
+              p_source: "webhook",
+            });
           } catch (e) {
-            console.warn("update last_received_at failed:", e);
+            console.warn("registrar_atribuicao_roleta (webhook) failed:", e);
           }
         }
 
