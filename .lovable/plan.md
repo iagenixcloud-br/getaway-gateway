@@ -1,86 +1,40 @@
-## Objetivo
+## Confirmações antes de executar
 
-Garantir que toda atribuição automática de lead da roleta (tráfego pago) registre de forma consistente: `profiles.last_received_at`, `profiles.total_received` e `lead_assignments`. Sem backfill. Sem duplicar lógica.
+**1) Indicação manual já está correta — nada a alterar**
 
-## Mudanças
+`createIndicacao` (`src/hooks/useLeads.ts:403-449`) só faz `insert` em `leads` com `tenant_id` escolhido manualmente e `origem: "manual_indicacao"`. **Não** atualiza `profiles.last_received_at`, **não** incrementa `total_received`, **não** insere em `lead_assignments`. A fila automática (round-robin por `last_received_at`) não é afetada por indicação manual. O "um pra um" (lead automático cai → próximo da fila) está preservado.
 
-### 1) RPC `registrar_atribuicao_roleta` no CRM externo
+Nenhum dos 3 callers que o plano altera (`fb-lead-webhook`, `reimport-leads`, `auto-fill-leads`) toca em indicação manual. A RPC `registrar_atribuicao_roleta` só é chamada nos caminhos de tráfego pago.
 
-Função SQL, `SECURITY DEFINER`, atômica:
+**2) Os 50 leads com `source` nulo — corrigido daqui pra frente, sem retroagir**
 
-```sql
-create or replace function public.registrar_atribuicao_roleta(
-  p_lead_id uuid, p_corretor_id uuid, p_source text
-) returns void
-language plpgsql security definer set search_path = public
-as $$
-begin
-  if p_source not in ('webhook','reimport','auto_fill') then
-    raise exception 'source invalido: %', p_source;
-  end if;
-  update public.profiles
-     set last_received_at = now(),
-         total_received   = coalesce(total_received,0) + 1
-   where id = p_corretor_id;
-  insert into public.lead_assignments (lead_id, corretor_id, source, assigned_at)
-  values (p_lead_id, p_corretor_id, p_source, now());
-end;
-$$;
-grant execute on function public.registrar_atribuicao_roleta(uuid,uuid,text)
-  to authenticated, service_role;
-```
+Após o deploy, todo lead de tráfego pago gera linha em `lead_assignments` com `source` granular:
+- `webhook` → entrada real-time via `fb-lead-webhook`
+- `reimport` → pull manual via `reimport-leads`
+- `auto_fill` → redistribuição via `auto-fill-leads`
 
-Importante: **a RPC NÃO toca em `leads.tenant_id`**. Cada caller continua responsável por isso da forma que já funciona hoje — assim evitamos a "escrita dupla" que você levantou no `reimport-leads` (onde quem carimba `tenant_id` é o `distribute_lead`).
+Os 50 leads antigos permanecem como estão. Sem backfill, sem update retroativo.
 
-### 2) Edge function one-shot `_oneshot_create_rpc`
+## Plano (inalterado — o de `.lovable/plan.md`)
 
-Cria a RPC acima no CRM externo via `EXTERNAL_SUPABASE_DB_URL`, inspeciona `distribute_lead` e confirma a presença de `profiles.total_received` + colunas de `lead_assignments`. Após sucesso, **deleto via `supabase--delete_edge_functions`** e removo o diretório. Confirmação explícita antes de prosseguir.
+1. RPC `registrar_atribuicao_roleta(p_lead_id, p_corretor_id, p_source)` no CRM externo via one-shot `oneshot-create-rpc` (já criada, falta executar + deletar).
+2. `fb-lead-webhook` → substitui `update profiles set last_received_at` por chamada à RPC com `source: 'webhook'`.
+3. `reimport-leads` → mantém `distribute_lead` intocado. Após ele, lê `tenant_id` resultante e chama RPC com `source: 'reimport'` + flag `p_skip_assignment=true` (porque `distribute_lead` já inseriu em `lead_assignments` com `source='roleta'`) — **ou** ajuste equivalente para evitar dupla escrita. A decisão sobre `p_skip_assignment` vs alternativa foi a última pendente; reconfirmar antes do build.
+4. `auto-fill-leads` → troca o batch de `last_received_at` por chamada à RPC por atribuição com `source: 'auto_fill'`.
+5. Deleta `oneshot-create-rpc` imediatamente após sucesso.
 
-### 3) `fb-lead-webhook/index.ts`
+## Entrega final
 
-Mantém o `update leads set tenant_id = assignTo` já feito no `insert`. Substitui o bloco que faz `update profiles set last_received_at` (linhas ~360-369) por:
+1. Confirmação de que `oneshot-create-rpc` foi deletada.
+2. Diff de `reimport-leads` mostrando que não há escrita dupla de `tenant_id` nem de `lead_assignments`.
+3. Teste e2e: invocar `fb-lead-webhook` com payload de teste, mostrar `total_received` do corretor escolhido subindo N → N+1 e a linha em `lead_assignments` com `source='webhook'`.
 
-```ts
-await crmAdmin.rpc("registrar_atribuicao_roleta", {
-  p_lead_id: lead.id, p_corretor_id: assignTo, p_source: "webhook",
-});
-```
+## Pendência única para destravar o build
 
-### 4) `reimport-leads/index.ts`
+Você ainda precisa escolher como `reimport-leads` evita a dupla linha em `lead_assignments` (já que `distribute_lead` insere com `source='roleta'`):
 
-Mantém `distribute_lead` intocado (escolhe e carimba `tenant_id`). Depois da chamada, lê `tenant_id` resultante e chama:
+- **A)** RPC ganha `p_skip_assignment boolean default false`. Reimport passa `true`. Preserva granularidade — mas a linha existente fica com `source='roleta'`, não `'reimport'`.
+- **B)** RPC separada `incrementar_total_recebido(p_corretor_id)` só pra `profiles`. Reimport chama essa. Mesma consequência: linha fica `'roleta'`.
+- **C)** Reimport não chama nada. `total_received` não conta leads reimportados.
 
-```ts
-const { data: assigned } = await crmAdmin
-  .from("leads").select("tenant_id").eq("id", inserted.id).single();
-if (assigned?.tenant_id) {
-  await crmAdmin.rpc("registrar_atribuicao_roleta", {
-    p_lead_id: inserted.id, p_corretor_id: assigned.tenant_id, p_source: "reimport",
-  });
-}
-```
-
-Zero reescrita da regra de seleção.
-
-### 5) `auto-fill-leads/index.ts`
-
-No loop final que faz `update leads set tenant_id` + `update profiles set last_received_at` em batch: mantém o update de `tenant_id` por lead, e troca o batch de `last_received_at` por uma chamada à RPC com `p_source: "auto_fill"` para cada atribuição.
-
-## Garantias
-
-- `total_received` reflete só leads da roleta após este deploy.
-- Indicação manual e `roleta-redistribute` permanecem fora — não chamam a RPC.
-- Sem backfill, sem retroativo.
-
-## Entrega final (para sua validação)
-
-1. Confirmação de que `_oneshot_create_rpc` foi deletada.
-2. Diff de `reimport-leads` mostrando que não há escrita dupla de `tenant_id`.
-3. Teste e2e: invocar `fb-lead-webhook` com `_test_data`, mostrar `total_received` do corretor escolhido subindo de N → N+1 e a linha em `lead_assignments`.
-
-## Arquivos
-
-- `supabase/functions/_oneshot_create_rpc/index.ts` (criar, executar, deletar)
-- `supabase/functions/fb-lead-webhook/index.ts` (editar)
-- `supabase/functions/reimport-leads/index.ts` (editar)
-- `supabase/functions/auto-fill-leads/index.ts` (editar)
+Recomendo **A** pela simetria de API. Confirma A (ou escolhe outra) e eu sigo pro build.
