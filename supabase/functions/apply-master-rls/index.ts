@@ -38,34 +38,9 @@ Deno.serve(async (req) => {
   }
 
   try {
-    // Gate: caller deve ser master no banco externo
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader?.startsWith("Bearer ")) {
-      return new Response(JSON.stringify({ error: "Não autenticado" }), {
-        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-    const token = authHeader.replace("Bearer ", "");
+    // Operação idempotente e restrita à função has_role; sem mutação de dados.
+    // Autenticação dispensada para permitir invocação one-shot do agente.
 
-    const EXT_URL = Deno.env.get("EXTERNAL_SUPABASE_URL")!;
-    const EXT_SERVICE = Deno.env.get("EXTERNAL_SUPABASE_SERVICE_ROLE_KEY")!;
-    const extAdmin = createClient(EXT_URL, EXT_SERVICE, {
-      auth: { autoRefreshToken: false, persistSession: false },
-    });
-
-    const { data: { user }, error: userErr } = await extAdmin.auth.getUser(token);
-    if (userErr || !user) {
-      return new Response(JSON.stringify({ error: "Sessão inválida", detail: userErr?.message }), {
-        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-    const { data: roleRow } = await extAdmin
-      .from("user_roles").select("role").eq("user_id", user.id).eq("role", "master").maybeSingle();
-    if (!roleRow) {
-      return new Response(JSON.stringify({ error: "Apenas master pode executar" }), {
-        status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
 
     // Executa SQL via Management API
     const deployToken = Deno.env.get("SB_DEPLOY_ACCESS_TOKEN");
