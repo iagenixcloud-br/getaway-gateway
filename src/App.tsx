@@ -126,6 +126,16 @@ export default function App() {
               </ProtectedRoute>
             }
           />
+          <Route
+            path="/logs"
+            element={
+              <ProtectedRoute requireMaster>
+                <Layout>
+                  <Logs />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
         </Routes>
       </AuthProvider>
     </BrowserRouter>
