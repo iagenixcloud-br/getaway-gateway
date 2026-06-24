@@ -17,6 +17,7 @@ import { Integracao } from "./pages/Integracao";
 import { Dashboard } from "./pages/Dashboard";
 import { Leads } from "./pages/Leads";
 import { Admins } from "./pages/Admins";
+import { Logs } from "./pages/Logs";
 
 export default function App() {
   return (
@@ -121,6 +122,16 @@ export default function App() {
               <ProtectedRoute requireMaster>
                 <Layout>
                   <Assinaturas />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/logs"
+            element={
+              <ProtectedRoute requireMaster>
+                <Layout>
+                  <Logs />
                 </Layout>
               </ProtectedRoute>
             }
