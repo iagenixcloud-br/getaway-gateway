@@ -89,7 +89,8 @@ Deno.serve(async (req) => {
      order by table_name, ordinal_position;
   `);
 
-  // 3) Cria a RPC
+  // 3) Cria a RPC (dropa assinatura antiga sem boolean)
+  out.drop_old = await runSql(SQL_DROP_OLD);
   out.create_rpc = await runSql(SQL_CREATE);
   out.grant = await runSql(SQL_GRANT);
 
