@@ -14,7 +14,6 @@ interface UserWithRole {
 
 export function Admins() {
   const { isAdmin, isMaster, loading: authLoading, user } = useAuth();
-  const [tab, setTab] = useState<"admins" | "logs">("admins");
   const [users, setUsers] = useState<UserWithRole[]>([]);
   const [loading, setLoading] = useState(true);
   const [toggling, setToggling] = useState<string | null>(null);
