@@ -151,8 +151,6 @@ Deno.serve(async (req) => {
     }
 
     const brokerIds = [...new Set(assignments.map((a) => a.corretor_id))];
-    const totalAssigned_ = assignments.length;
-    void totalAssigned_;
     console.log(`Auto-fill: ${totalAssigned} leads distribuídos para ${brokerIds.length} corretores`);
 
     return new Response(JSON.stringify({ ok: true, assigned: totalAssigned, brokers: brokerIds.length }), {
