@@ -7,8 +7,34 @@ const corsHeaders = {
 
 const EXTERNAL_PROJECT_REF = "gycrprnkuwlzntqvpoxl";
 
+const CLOUD_URL = Deno.env.get("SUPABASE_URL")!;
+const CLOUD_ANON = Deno.env.get("SUPABASE_ANON_KEY")!;
+const CLOUD_SERVICE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+
+async function requireMaster(req: Request): Promise<Response | null> {
+  const authHeader = req.headers.get("Authorization");
+  if (!authHeader?.startsWith("Bearer ")) {
+    return new Response(JSON.stringify({ error: "Não autenticado" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+  }
+  const token = authHeader.slice("Bearer ".length);
+  const userClient = createClient(CLOUD_URL, CLOUD_ANON, { global: { headers: { Authorization: `Bearer ${token}` } } });
+  const { data: claims, error } = await userClient.auth.getClaims(token);
+  if (error || !claims?.claims?.sub) {
+    return new Response(JSON.stringify({ error: "Sessão inválida" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+  }
+  const admin = createClient(CLOUD_URL, CLOUD_SERVICE, { auth: { autoRefreshToken: false, persistSession: false } });
+  const { data: roles } = await admin.from("user_roles").select("role").eq("user_id", claims.claims.sub);
+  if (!(roles ?? []).some((r: any) => r.role === "master")) {
+    return new Response(JSON.stringify({ error: "Apenas o Admin Master pode executar esta operação" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+  }
+  return null;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+
+  const denied = await requireMaster(req);
+  if (denied) return denied;
 
   const deployToken = Deno.env.get("SB_DEPLOY_ACCESS_TOKEN");
   if (!deployToken) {
@@ -17,14 +43,9 @@ Deno.serve(async (req) => {
     });
   }
 
-  const cloudAdmin = createClient(
-    Deno.env.get("SUPABASE_URL")!,
-    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
-    { auth: { autoRefreshToken: false, persistSession: false } }
-  );
+  const cloudAdmin = createClient(CLOUD_URL, CLOUD_SERVICE, { auth: { autoRefreshToken: false, persistSession: false } });
 
-  // Read FB_PAGE_TOKEN from integration_secrets table (the valid one)
-  const { data: tokenRow, error: dbErr } = await cloudAdmin
+  const { data: tokenRow } = await cloudAdmin
     .from("integration_secrets")
     .select("value")
     .eq("name", "FB_PAGE_TOKEN")
@@ -32,7 +53,6 @@ Deno.serve(async (req) => {
 
   const dbToken = tokenRow?.value;
 
-  // Build secrets list: FB_PAGE_TOKEN from DB, rest from env
   const secrets: { name: string; value: string }[] = [];
   const missing: string[] = [];
 
@@ -57,7 +77,6 @@ Deno.serve(async (req) => {
     });
   }
 
-  // Push to external Supabase via Management API
   const res = await fetch(
     `https://api.supabase.com/v1/projects/${EXTERNAL_PROJECT_REF}/secrets`,
     {
@@ -80,8 +99,6 @@ Deno.serve(async (req) => {
   return new Response(JSON.stringify({
     ok: true,
     copied: secrets.map(s => s.name),
-    token_source: "integration_secrets table",
-    token_preview: dbToken!.slice(0, 12) + "...",
     message: `✅ ${secrets.length} secrets copiados para o Supabase externo!`,
   }), {
     headers: { ...corsHeaders, "Content-Type": "application/json" },

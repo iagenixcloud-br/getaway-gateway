@@ -204,11 +204,33 @@ async function doImport() {
   console.log("Reimport 24h completed", JSON.stringify(result));
 }
 
+const CLOUD_ANON = Deno.env.get("SUPABASE_ANON_KEY")!;
+async function requireMaster(req: Request): Promise<Response | null> {
+  const authHeader = req.headers.get("Authorization");
+  if (!authHeader?.startsWith("Bearer ")) {
+    return new Response(JSON.stringify({ error: "Não autenticado" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+  }
+  const token = authHeader.slice("Bearer ".length);
+  const userClient = createClient(CLOUD_URL, CLOUD_ANON, { global: { headers: { Authorization: `Bearer ${token}` } } });
+  const { data: claims, error } = await userClient.auth.getClaims(token);
+  if (error || !claims?.claims?.sub) {
+    return new Response(JSON.stringify({ error: "Sessão inválida" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+  }
+  const { data: roles } = await cloudAdmin.from("user_roles").select("role").eq("user_id", claims.claims.sub);
+  if (!(roles ?? []).some((r: any) => r.role === "master")) {
+    return new Response(JSON.stringify({ error: "Apenas o Admin Master pode executar esta operação" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+  }
+  return null;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+  const denied = await requireMaster(req);
+  if (denied) return denied;
   (globalThis as any).EdgeRuntime.waitUntil(doImport());
   return new Response(JSON.stringify({ ok: true, message: "Reimport (last 24h, com dedup DB) started. Veja webhook_logs.reimport_result." }), {
     status: 202,
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
 });
+

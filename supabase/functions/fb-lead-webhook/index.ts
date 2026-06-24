@@ -187,7 +187,40 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const payload = await req.json();
+    // Verify Facebook HMAC signature (X-Hub-Signature-256) before processing
+    const rawBody = await req.text();
+    const FB_APP_SECRET = Deno.env.get("FB_APP_SECRET") || "";
+    const sigHeader = req.headers.get("x-hub-signature-256") || "";
+    if (!FB_APP_SECRET) {
+      console.error("FB_APP_SECRET not configured");
+      await logWebhook({ event_type: "system", status: "error", error_message: "FB_APP_SECRET not configured" });
+      return new Response(JSON.stringify({ error: "server misconfigured" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+    if (!sigHeader.startsWith("sha256=")) {
+      await logWebhook({ event_type: "leadgen", status: "error", error_message: "missing x-hub-signature-256" });
+      return new Response(JSON.stringify({ error: "invalid signature" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+    const provided = sigHeader.slice("sha256=".length).toLowerCase();
+    const key = await crypto.subtle.importKey(
+      "raw",
+      new TextEncoder().encode(FB_APP_SECRET),
+      { name: "HMAC", hash: "SHA-256" },
+      false,
+      ["sign"],
+    );
+    const sigBuf = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(rawBody));
+    const expected = Array.from(new Uint8Array(sigBuf)).map((b) => b.toString(16).padStart(2, "0")).join("");
+    if (expected.length !== provided.length) {
+      await logWebhook({ event_type: "leadgen", status: "error", error_message: "signature length mismatch" });
+      return new Response(JSON.stringify({ error: "invalid signature" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+    let diff = 0;
+    for (let i = 0; i < expected.length; i++) diff |= expected.charCodeAt(i) ^ provided.charCodeAt(i);
+    if (diff !== 0) {
+      await logWebhook({ event_type: "leadgen", status: "error", error_message: "invalid signature" });
+      return new Response(JSON.stringify({ error: "invalid signature" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+    const payload = JSON.parse(rawBody);
     const entries = payload?.entry ?? [];
     const created: string[] = [];
     const errors: unknown[] = [];
