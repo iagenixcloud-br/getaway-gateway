@@ -1,40 +1,57 @@
-## Confirmações antes de executar
+## Diagnóstico inicial (já feito)
 
-**1) Indicação manual já está correta — nada a alterar**
+Olhando `webhook_logs` dos últimos 7 dias:
 
-`createIndicacao` (`src/hooks/useLeads.ts:403-449`) só faz `insert` em `leads` com `tenant_id` escolhido manualmente e `origem: "manual_indicacao"`. **Não** atualiza `profiles.last_received_at`, **não** incrementa `total_received`, **não** insere em `lead_assignments`. A fila automática (round-robin por `last_received_at`) não é afetada por indicação manual. O "um pra um" (lead automático cai → próximo da fila) está preservado.
+- **789 eventos `success`** — mas ao filtrar `event_type='leadgen'` excluindo testes sintéticos (`__TEST_*`, `e2e_*`), o resultado é **zero eventos reais do Facebook**.
+- Todos os leads "reais" que entraram vieram via `event_type='leadgen_sync'` — ou seja, **somente pelo pull manual do `reimport-leads` / `fb-sync-leads`**.
+- A função `fb-lead-webhook` está respondendo (testes sintéticos passam), mas **a Meta nunca chamou ela com lead real**.
 
-Nenhum dos 3 callers que o plano altera (`fb-lead-webhook`, `reimport-leads`, `auto-fill-leads`) toca em indicação manual. A RPC `registrar_atribuicao_roleta` só é chamada nos caminhos de tráfego pago.
+Conclusão: o endpoint está vivo, mas a Meta não está enviando eventos. É um problema de **configuração do webhook no lado do Facebook**, não do código.
 
-**2) Os 50 leads com `source` nulo — corrigido daqui pra frente, sem retroagir**
+## Plano — diagnosticar e consertar o webhook real-time
 
-Após o deploy, todo lead de tráfego pago gera linha em `lead_assignments` com `source` granular:
-- `webhook` → entrada real-time via `fb-lead-webhook`
-- `reimport` → pull manual via `reimport-leads`
-- `auto_fill` → redistribuição via `auto-fill-leads`
+### 1) Rodar `fb-token-check` e ler o resultado
 
-Os 50 leads antigos permanecem como estão. Sem backfill, sem update retroativo.
+Já existe. Invocar via `supabase--curl_edge_functions` e checar:
+- `me` → identifica se é user token ou page token, e qual página
+- `permissions` → precisa ter `leads_retrieval`, `pages_manage_metadata`, `pages_show_list`, `pages_read_engagement`
+- `debug_token` → validade (não pode estar expirado) e tipo
+- `pages` → quais páginas o token alcança
 
-## Plano (inalterado — o de `.lovable/plan.md`)
+Se faltar permissão ou o token estiver expirado, **esse já é o motivo** — webhook não dispara sem `leads_retrieval` + `pages_manage_metadata`.
 
-1. RPC `registrar_atribuicao_roleta(p_lead_id, p_corretor_id, p_source)` no CRM externo via one-shot `oneshot-create-rpc` (já criada, falta executar + deletar).
-2. `fb-lead-webhook` → substitui `update profiles set last_received_at` por chamada à RPC com `source: 'webhook'`.
-3. `reimport-leads` → mantém `distribute_lead` intocado. Após ele, lê `tenant_id` resultante e chama RPC com `source: 'reimport'` + flag `p_skip_assignment=true` (porque `distribute_lead` já inseriu em `lead_assignments` com `source='roleta'`) — **ou** ajuste equivalente para evitar dupla escrita. A decisão sobre `p_skip_assignment` vs alternativa foi a última pendente; reconfirmar antes do build.
-4. `auto-fill-leads` → troca o batch de `last_received_at` por chamada à RPC por atribuição com `source: 'auto_fill'`.
-5. Deleta `oneshot-create-rpc` imediatamente após sucesso.
+### 2) Verificar subscription da página no app
 
-## Entrega final
+Chamar Graph API direto (dentro de uma checagem read-only):
+```
+GET /{page_id}/subscribed_apps?access_token={PAGE_TOKEN}
+```
+Se o app não estiver na lista, ou estiver sem o campo `leadgen` subscrito, a Meta não envia nada. Conserto: `fb-subscribe` (já existe na codebase) faz o `POST /{page_id}/subscribed_apps` com `subscribed_fields=leadgen`.
 
-1. Confirmação de que `oneshot-create-rpc` foi deletada.
-2. Diff de `reimport-leads` mostrando que não há escrita dupla de `tenant_id` nem de `lead_assignments`.
-3. Teste e2e: invocar `fb-lead-webhook` com payload de teste, mostrar `total_received` do corretor escolhido subindo N → N+1 e a linha em `lead_assignments` com `source='webhook'`.
+### 3) Verificar webhook no nível do App (App Dashboard)
 
-## Pendência única para destravar o build
+Isso só é visível pelo painel do Meta for Developers — não dá pra checar via Graph API com page token. Vou listar pro usuário **o que ele precisa conferir manualmente** no painel:
+- App → Webhooks → Page → callback URL apontando pra `https://lzgdvvapzmuogtlivzxa.supabase.co/functions/v1/fb-lead-webhook`
+- Verify token bate com `FB_VERIFY_TOKEN` (secret)
+- Campo `leadgen` marcado como subscribed
+- Status "Active" (não "Inactive" nem com erro de entrega)
 
-Você ainda precisa escolher como `reimport-leads` evita a dupla linha em `lead_assignments` (já que `distribute_lead` insere com `source='roleta'`):
+### 4) Diagnóstico final + recomendação
 
-- **A)** RPC ganha `p_skip_assignment boolean default false`. Reimport passa `true`. Preserva granularidade — mas a linha existente fica com `source='roleta'`, não `'reimport'`.
-- **B)** RPC separada `incrementar_total_recebido(p_corretor_id)` só pra `profiles`. Reimport chama essa. Mesma consequência: linha fica `'roleta'`.
-- **C)** Reimport não chama nada. `total_received` não conta leads reimportados.
+Com base no resultado de 1) e 2), classificar:
+- **Token expirado/sem permissão** → renovar token (`fb-token-extend` ou re-OAuth via `fb-oauth-callback`)
+- **Página não subscrita no app** → rodar `fb-subscribe`
+- **App não subscrito ao campo leadgen no Dashboard** → instruir o usuário a corrigir no painel da Meta (não há como fazer via API com permissões normais)
+- **Tudo certo, mas eventos não chegam** → checar se a página de fato está gerando leads (formulário ativo, anúncio rodando) e pedir que dispare um lead de teste pela ferramenta da Meta (Lead Ads Testing Tool)
 
-Recomendo **A** pela simetria de API. Confirma A (ou escolhe outra) e eu sigo pro build.
+## Detalhe técnico
+
+Tudo read-only nessa primeira passada. Nenhuma escrita em banco, nenhuma mudança de código. Se algum item precisar de correção (rodar `fb-subscribe`, renovar token, mexer em secret), volto com um segundo plano específico antes de executar.
+
+## Entrega
+
+Um relatório no chat com:
+1. Saída resumida do `fb-token-check` (permissões OK/faltando, validade, página)
+2. Resultado do `GET /{page_id}/subscribed_apps` (app subscrito? campo leadgen?)
+3. Checklist do que o usuário precisa conferir no Meta App Dashboard
+4. Diagnóstico final + próximo passo recomendado
