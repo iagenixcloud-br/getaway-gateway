@@ -1,16 +1,37 @@
 import { corsHeaders } from "https://esm.sh/@supabase/supabase-js@2.95.0/cors";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.95.0";
 
-const PAGE_ID = "101491475744542"; // Salles Imóveis
-const FORM_ID = "849013068226913"; // Recreio 01 - Parcela Alta
-console.log("fb-subscribe diagnostic function loaded", { page_id: PAGE_ID });
+const PAGE_ID = "101491475744542";
+const FORM_ID = "849013068226913";
+
+const CLOUD_URL = Deno.env.get("SUPABASE_URL")!;
+const CLOUD_ANON = Deno.env.get("SUPABASE_ANON_KEY")!;
+const CLOUD_SERVICE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+
+async function requireAdmin(req: Request): Promise<Response | null> {
+  const authHeader = req.headers.get("Authorization");
+  if (!authHeader?.startsWith("Bearer ")) {
+    return new Response(JSON.stringify({ error: "Não autenticado" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+  }
+  const token = authHeader.slice("Bearer ".length);
+  const userClient = createClient(CLOUD_URL, CLOUD_ANON, { global: { headers: { Authorization: `Bearer ${token}` } } });
+  const { data: claims, error } = await userClient.auth.getClaims(token);
+  if (error || !claims?.claims?.sub) {
+    return new Response(JSON.stringify({ error: "Sessão inválida" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+  }
+  const admin = createClient(CLOUD_URL, CLOUD_SERVICE, { auth: { autoRefreshToken: false, persistSession: false } });
+  const { data: roles } = await admin.from("user_roles").select("role").eq("user_id", claims.claims.sub);
+  const set = new Set((roles ?? []).map((r: any) => r.role));
+  if (!(set.has("admin") || set.has("master"))) {
+    return new Response(JSON.stringify({ error: "Acesso negado" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+  }
+  return null;
+}
 
 async function getFbToken(): Promise<string | null> {
   try {
-    const url = Deno.env.get("SUPABASE_URL");
-    const key = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-    if (url && key) {
-      const admin = createClient(url, key);
+    if (CLOUD_URL && CLOUD_SERVICE) {
+      const admin = createClient(CLOUD_URL, CLOUD_SERVICE);
       const { data } = await admin.from("integration_secrets").select("value").eq("name", "FB_PAGE_TOKEN").maybeSingle();
       if (data?.value) return data.value;
     }
@@ -20,6 +41,9 @@ async function getFbToken(): Promise<string | null> {
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+
+  const denied = await requireAdmin(req);
+  if (denied) return denied;
 
   const token = await getFbToken();
   if (!token) {
@@ -34,7 +58,6 @@ Deno.serve(async (req) => {
 
   try {
     if (action === "list") {
-      // Lista apps inscritos atualmente
       const res = await fetch(
         `https://graph.facebook.com/v21.0/${PAGE_ID}/subscribed_apps?access_token=${token}`,
       );
@@ -49,14 +72,12 @@ Deno.serve(async (req) => {
     }
 
     if (action === "subscribe") {
-      // Inscreve o app atual no campo leadgen (NÃO remove outros apps)
       const res = await fetch(
         `https://graph.facebook.com/v21.0/${PAGE_ID}/subscribed_apps?subscribed_fields=leadgen&access_token=${token}`,
         { method: "POST" },
       );
       const data = await res.json();
 
-      // Lista de novo pra confirmar que outros apps continuam
       const listRes = await fetch(
         `https://graph.facebook.com/v21.0/${PAGE_ID}/subscribed_apps?access_token=${token}`,
       );
