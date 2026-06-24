@@ -1,40 +1,86 @@
-# Plano: corrigir telefones com DDI 55 duplicado
+## Objetivo
 
-## Resumo
-- O bug é que números salvos com `+55` duplicado (`+5555...`) passam pela validação de DDD atual (`[1-9][1-9]` aceita `55`) e a normalização desiste calada, devolvendo o original.
-- Corrigir `normalizeBRPhone` para detectar/desfazer o duplo-55 e usar a lista real de DDDs brasileiros.
-- Unificar `sanitizePhone` (em `useLeads.ts`) para reaproveitar `normalizeBRPhone` — uma única fonte de verdade.
-- Replicar o mesmo guard na edge function `normalize-leads-phones` e rodar para limpar a base.
-- Manter o badge de divergência quando o número, mesmo após tirar o duplo-55, não bater com padrão BR válido (ex.: dígito faltando). Esse é o comportamento certo: só some quando alguém corrigir o cadastro.
+Garantir que toda atribuição automática de lead da roleta (tráfego pago) registre de forma consistente: `profiles.last_received_at`, `profiles.total_received` e `lead_assignments`. Sem backfill. Sem duplicar lógica.
 
 ## Mudanças
 
-### 1) `src/lib/phoneUtils.ts`
-- No começo do fluxo de `normalizeBRPhone` e `isBRPhoneDivergent` (após extrair `digits` e remover zeros à esquerda):
-  - Se `digits.length` ∈ {13, 14} e começa com `"5555"`, tirar o primeiro `"55"`.
-- Trocar `if (!/^[1-9][1-9]$/.test(ddd)) return original` por checagem contra a lista oficial de DDDs:
-  `11,12,13,14,15,16,17,18,19,21,22,24,27,28,31,32,33,34,35,37,38,41,42,43,44,45,46,47,48,49,51,53,54,55,61,62,63,64,65,66,67,68,69,71,73,74,75,77,79,81,82,83,84,85,86,87,88,89,91,92,93,94,95,96,97,98,99`.
-- Resto da função permanece igual. Números com dígito faltando continuam caindo no `return original` final → badge aparece. ✔
+### 1) RPC `registrar_atribuicao_roleta` no CRM externo
 
-### 2) `src/hooks/useLeads.ts`
-- Substituir `sanitizePhone(raw)` por uma versão que delega: pega `normalizeBRPhone(raw)`; se o retorno ainda não bater com padrão E.164 (`+` + 11+ dígitos), devolve um fallback razoável (`+` + dígitos) só pra não quebrar inserts, mas SEM duplicar `55`. Aplicado em `updateLead`, `createLead`, `createIndicacao`.
+Função SQL, `SECURITY DEFINER`, atômica:
 
-### 3) `supabase/functions/normalize-leads-phones/index.ts`
-- Adicionar o mesmo guard de duplo-55 no início de `formatPhoneE164`.
-- Manter `dry_run` para revisão prévia.
+```sql
+create or replace function public.registrar_atribuicao_roleta(
+  p_lead_id uuid, p_corretor_id uuid, p_source text
+) returns void
+language plpgsql security definer set search_path = public
+as $$
+begin
+  if p_source not in ('webhook','reimport','auto_fill') then
+    raise exception 'source invalido: %', p_source;
+  end if;
+  update public.profiles
+     set last_received_at = now(),
+         total_received   = coalesce(total_received,0) + 1
+   where id = p_corretor_id;
+  insert into public.lead_assignments (lead_id, corretor_id, source, assigned_at)
+  values (p_lead_id, p_corretor_id, p_source, now());
+end;
+$$;
+grant execute on function public.registrar_atribuicao_roleta(uuid,uuid,text)
+  to authenticated, service_role;
+```
 
-### 4) Limpar a base
-- Rodar a edge function 2x:
-  - primeiro `dry_run=true` para você ver `update_sample` e `invalid_sample`,
-  - depois `dry_run=false` para aplicar.
-- Resultado esperado para o card mostrado: `+5555218200691` → após tirar duplo-55 vira `+55218200691` (11 dígitos), tenta validar → DDD `21` ok, mas `sub` começa com `2`/comprimento errado → `formatPhoneE164` devolve `null` → fica como **inválido**, lead aparece em `invalid_sample` e o badge continua marcando divergência. Comportamento conforme o que você pediu.
+Importante: **a RPC NÃO toca em `leads.tenant_id`**. Cada caller continua responsável por isso da forma que já funciona hoje — assim evitamos a "escrita dupla" que você levantou no `reimport-leads` (onde quem carimba `tenant_id` é o `distribute_lead`).
 
-## Fora do escopo
-- Não vou criar UI para o master rodar a normalização (disparo via curl/edge function direta).
-- Não vou tentar "adivinhar" dígitos faltantes.
-- Não mexo no fluxo de criação de indicação além do `sanitizePhone`.
+### 2) Edge function one-shot `_oneshot_create_rpc`
+
+Cria a RPC acima no CRM externo via `EXTERNAL_SUPABASE_DB_URL`, inspeciona `distribute_lead` e confirma a presença de `profiles.total_received` + colunas de `lead_assignments`. Após sucesso, **deleto via `supabase--delete_edge_functions`** e removo o diretório. Confirmação explícita antes de prosseguir.
+
+### 3) `fb-lead-webhook/index.ts`
+
+Mantém o `update leads set tenant_id = assignTo` já feito no `insert`. Substitui o bloco que faz `update profiles set last_received_at` (linhas ~360-369) por:
+
+```ts
+await crmAdmin.rpc("registrar_atribuicao_roleta", {
+  p_lead_id: lead.id, p_corretor_id: assignTo, p_source: "webhook",
+});
+```
+
+### 4) `reimport-leads/index.ts`
+
+Mantém `distribute_lead` intocado (escolhe e carimba `tenant_id`). Depois da chamada, lê `tenant_id` resultante e chama:
+
+```ts
+const { data: assigned } = await crmAdmin
+  .from("leads").select("tenant_id").eq("id", inserted.id).single();
+if (assigned?.tenant_id) {
+  await crmAdmin.rpc("registrar_atribuicao_roleta", {
+    p_lead_id: inserted.id, p_corretor_id: assigned.tenant_id, p_source: "reimport",
+  });
+}
+```
+
+Zero reescrita da regra de seleção.
+
+### 5) `auto-fill-leads/index.ts`
+
+No loop final que faz `update leads set tenant_id` + `update profiles set last_received_at` em batch: mantém o update de `tenant_id` por lead, e troca o batch de `last_received_at` por uma chamada à RPC com `p_source: "auto_fill"` para cada atribuição.
+
+## Garantias
+
+- `total_received` reflete só leads da roleta após este deploy.
+- Indicação manual e `roleta-redistribute` permanecem fora — não chamam a RPC.
+- Sem backfill, sem retroativo.
+
+## Entrega final (para sua validação)
+
+1. Confirmação de que `_oneshot_create_rpc` foi deletada.
+2. Diff de `reimport-leads` mostrando que não há escrita dupla de `tenant_id`.
+3. Teste e2e: invocar `fb-lead-webhook` com `_test_data`, mostrar `total_received` do corretor escolhido subindo de N → N+1 e a linha em `lead_assignments`.
 
 ## Arquivos
-- `src/lib/phoneUtils.ts` (editar)
-- `src/hooks/useLeads.ts` (editar `sanitizePhone`)
-- `supabase/functions/normalize-leads-phones/index.ts` (editar)
+
+- `supabase/functions/_oneshot_create_rpc/index.ts` (criar, executar, deletar)
+- `supabase/functions/fb-lead-webhook/index.ts` (editar)
+- `supabase/functions/reimport-leads/index.ts` (editar)
+- `supabase/functions/auto-fill-leads/index.ts` (editar)
