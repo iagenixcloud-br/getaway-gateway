@@ -1,0 +1,7 @@
+# Andrade Imobiliária CRM Elite
+
+> CRM privado de gestão de leads para a Andrade Imobiliária. Acesso restrito a corretores e administradores autenticados; não há conteúdo público.
+
+## Pages
+
+- [Login](/login): Tela de autenticação para corretores e administradores.

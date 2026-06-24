@@ -115,6 +115,7 @@ export function Leads() {
           </svg>
           <input
             type="text"
+            aria-label="Buscar leads"
             placeholder="Buscar por nome, telefone, email…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -131,6 +132,7 @@ export function Leads() {
         <div className="flex items-center gap-3 w-full md:w-auto">
           {/* Status Filter */}
           <select
+            aria-label="Filtrar por status"
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value as LeadStatus | "all")}
             className="flex-1 md:flex-none px-4 py-2.5 rounded-xl text-sm cursor-pointer"

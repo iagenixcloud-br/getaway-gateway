@@ -75,6 +75,7 @@ function MoveSelect({
 }) {
   return (
     <select
+      aria-label="Mover lead para outro status"
       onClick={(e) => e.stopPropagation()}
       onPointerDown={(e) => e.stopPropagation()}
       onTouchStart={(e) => e.stopPropagation()}
