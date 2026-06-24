@@ -3,6 +3,7 @@ import { Navigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { supabase } from "../lib/supabase";
 import { invokeCloudFunction } from "../lib/cloudFunctions";
+import { WebhookLogs } from "./WebhookLogs";
 
 interface UserWithRole {
   id: string;
