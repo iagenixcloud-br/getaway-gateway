@@ -17,6 +17,7 @@ import { Integracao } from "./pages/Integracao";
 import { Dashboard } from "./pages/Dashboard";
 import { Leads } from "./pages/Leads";
 import { Admins } from "./pages/Admins";
+import { Logs } from "./pages/Logs";
 
 export default function App() {
   return (
