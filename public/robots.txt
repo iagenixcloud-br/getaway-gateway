@@ -1,0 +1,4 @@
+User-agent: *
+Disallow: /
+
+Sitemap: https://get-your-code-buddy.lovable.app/sitemap.xml
