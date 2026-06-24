@@ -24,7 +24,7 @@ export function ProtectedRoute({ children, requireAdmin = false, requireMaster =
 
   if (!session) return <Navigate to="/login" replace />;
   if (requireMaster && !isMaster) return <Navigate to="/" replace />;
-  if (requireAdmin && !isAdmin) return <Navigate to="/" replace />;
+  if (requireAdmin && !isAdmin && !isMaster) return <Navigate to="/" replace />;
 
   return <>{children}</>;
 }
