@@ -115,6 +115,7 @@ export function Leads() {
           </svg>
           <input
             type="text"
+            aria-label="Buscar leads"
             placeholder="Buscar por nome, telefone, email…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
