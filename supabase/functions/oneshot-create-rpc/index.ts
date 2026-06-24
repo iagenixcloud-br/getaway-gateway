@@ -26,11 +26,16 @@ async function runSql(query: string) {
   return { ok: res.ok, status: res.status, body: json };
 }
 
+const SQL_DROP_OLD = `
+drop function if exists public.registrar_atribuicao_roleta(uuid,uuid,text);
+`;
+
 const SQL_CREATE = `
 create or replace function public.registrar_atribuicao_roleta(
   p_lead_id uuid,
   p_corretor_id uuid,
-  p_source text
+  p_source text,
+  p_skip_assignment boolean default false
 ) returns void
 language plpgsql
 security definer
@@ -49,14 +54,16 @@ begin
          total_received   = coalesce(total_received, 0) + 1
    where id = p_corretor_id;
 
-  insert into public.lead_assignments (lead_id, corretor_id, source, assigned_at)
-  values (p_lead_id, p_corretor_id, p_source, now());
+  if not p_skip_assignment then
+    insert into public.lead_assignments (lead_id, corretor_id, source, assigned_at)
+    values (p_lead_id, p_corretor_id, p_source, now());
+  end if;
 end;
 $fn$;
 `;
 
 const SQL_GRANT = `
-grant execute on function public.registrar_atribuicao_roleta(uuid,uuid,text)
+grant execute on function public.registrar_atribuicao_roleta(uuid,uuid,text,boolean)
   to authenticated, service_role, anon;
 `;
 
