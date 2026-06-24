@@ -52,7 +52,7 @@ export function Login() {
           </div>
           <div>
             <h1 style={{ fontFamily: "Montserrat", fontWeight: 700, fontSize: 18, color: "var(--gold)" }}>
-              Andrade
+              Andrade — Gestão de Leads Elite
             </h1>
             <p style={{ fontSize: 11, color: "var(--text-muted)", letterSpacing: "0.1em", textTransform: "uppercase" }}>
               Imobiliária Elite
