@@ -131,23 +131,26 @@ Deno.serve(async (req) => {
       }
     }
 
-    // 6. Execute assignments
+    // 6. Execute assignments — atualiza tenant_id por lead e registra a
+    // atribuição via RPC (last_received_at + total_received + lead_assignments)
     for (const a of assignments) {
       await crmAdmin
         .from("leads")
         .update({ tenant_id: a.corretor_id })
         .eq("id", a.lead_id);
+
+      try {
+        await crmAdmin.rpc("registrar_atribuicao_roleta", {
+          p_lead_id: a.lead_id,
+          p_corretor_id: a.corretor_id,
+          p_source: "auto_fill",
+        });
+      } catch (e) {
+        console.warn("registrar_atribuicao_roleta (auto_fill) failed:", e);
+      }
     }
 
-    // Update last_received_at for brokers that got leads
     const brokerIds = [...new Set(assignments.map((a) => a.corretor_id))];
-    for (const bId of brokerIds) {
-      await crmAdmin
-        .from("profiles")
-        .update({ last_received_at: new Date().toISOString() })
-        .eq("id", bId);
-    }
-
     console.log(`Auto-fill: ${totalAssigned} leads distribuídos para ${brokerIds.length} corretores`);
 
     return new Response(JSON.stringify({ ok: true, assigned: totalAssigned, brokers: brokerIds.length }), {
