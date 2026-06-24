@@ -68,13 +68,13 @@ Deno.serve(async (req) => {
       );
     }
     const callerRoleSet = new Set((callerRoles ?? []).map((r) => r.role));
-    if (callerRoleSet.size === 0) {
+    if (!callerRoleSet.has("master")) {
       return new Response(
-        JSON.stringify({ error: "Apenas administradores podem redefinir senhas" }),
+        JSON.stringify({ error: "Apenas o Admin Master pode redefinir senhas" }),
         { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
-    const callerIsMaster = callerRoleSet.has("master");
+    const callerIsMaster = true;
 
     const body = (await req.json()) as Body;
     const targetUserId = (body.user_id || "").trim();
