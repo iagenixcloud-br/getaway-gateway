@@ -129,36 +129,8 @@ export function Admins() {
   }
 
   return (
-    <div className={tab === "logs" ? "space-y-6" : "space-y-6 max-w-3xl"}>
-      {isMaster && (
-        <div className="flex gap-2">
-          {([
-            { id: "admins", label: "Administradores" },
-            { id: "logs", label: "Logs de Webhook" },
-          ] as const).map((t) => {
-            const active = tab === t.id;
-            return (
-              <button
-                key={t.id}
-                onClick={() => setTab(t.id)}
-                className="px-4 py-2 rounded-xl text-sm font-semibold transition-all"
-                style={{
-                  background: active ? "var(--gold-dim)" : "rgba(255,255,255,0.06)",
-                  border: `1px solid ${active ? "var(--gold)" : "var(--glass-border)"}`,
-                  color: active ? "var(--gold)" : "var(--text-muted)",
-                }}
-              >
-                {t.label}
-              </button>
-            );
-          })}
-        </div>
-      )}
+    <div className="space-y-6 max-w-3xl">
 
-      {tab === "logs" && isMaster ? (
-        <WebhookLogs />
-      ) : (
-        <>
 
       {error && (
         <div
