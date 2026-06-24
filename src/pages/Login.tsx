@@ -115,6 +115,7 @@ export function Login() {
               />
               <button
                 type="button"
+                aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
                 onClick={() => setShowPassword(!showPassword)}
                 style={{
                   position: "absolute",
