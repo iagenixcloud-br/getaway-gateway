@@ -623,7 +623,39 @@ export function Integracao() {
             {webhookStatus.text}
           </div>
         )}
+
+        <div className="mt-5 pt-5" style={{ borderTop: "1px solid var(--glass-border)" }}>
+          <p style={{ fontSize: 12, color: "var(--text-muted)", marginBottom: 8 }}>
+            Se algum lead foi importado mas o corretor não apareceu na roleta (last_received_at não atualizou),
+            clique aqui para corrigir retroativamente.
+          </p>
+          <button
+            onClick={handleRepararRoleta}
+            disabled={roletaBusy}
+            className="px-4 py-2 rounded-xl font-semibold text-sm transition-all"
+            style={{
+              background: roletaBusy ? "rgba(250,204,21,0.4)" : "linear-gradient(135deg, #facc15, #f59e0b)",
+              color: "#1f1300",
+              cursor: roletaBusy ? "not-allowed" : "pointer",
+            }}
+          >
+            {roletaBusy ? "Reparando..." : "🛠 Reparar roleta"}
+          </button>
+          {roletaMsg && (
+            <div
+              className="mt-3 rounded-lg px-4 py-3 text-sm"
+              style={{
+                background: roletaMsg.ok ? "rgba(34,197,94,0.12)" : "rgba(239,68,68,0.12)",
+                border: `1px solid ${roletaMsg.ok ? "rgba(34,197,94,0.4)" : "rgba(239,68,68,0.4)"}`,
+                color: roletaMsg.ok ? "#86efac" : "#fca5a5",
+              }}
+            >
+              {roletaMsg.text}
+            </div>
+          )}
+        </div>
       </div>
+
 
       {/* Sincronização Emergencial */}
       <div className="glass rounded-2xl p-6" style={{ border: "1px solid var(--glass-border)" }}>
