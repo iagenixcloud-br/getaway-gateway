@@ -420,13 +420,29 @@ Deno.serve(async (req) => {
         // - insert em lead_assignments com source='webhook'
         if (assignTo) {
           try {
-            await crmAdmin.rpc("registrar_atribuicao_roleta", {
+            const { error: rpcErr } = await crmAdmin.rpc("registrar_atribuicao_roleta", {
               p_lead_id: lead.id,
               p_corretor_id: assignTo,
               p_source: "webhook",
             });
+            if (rpcErr) {
+              console.error("registrar_atribuicao_roleta (webhook) error", {
+                lead_id: lead.id,
+                corretor_id: assignTo,
+                source: "webhook",
+                message: rpcErr.message,
+                details: (rpcErr as any).details,
+                hint: (rpcErr as any).hint,
+                code: (rpcErr as any).code,
+              });
+            }
           } catch (e) {
-            console.warn("registrar_atribuicao_roleta (webhook) failed:", e);
+            console.error("registrar_atribuicao_roleta (webhook) threw", {
+              lead_id: lead.id,
+              corretor_id: assignTo,
+              source: "webhook",
+              error: e instanceof Error ? e.message : String(e),
+            });
           }
         }
 

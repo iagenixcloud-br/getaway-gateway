@@ -140,13 +140,29 @@ Deno.serve(async (req) => {
         .eq("id", a.lead_id);
 
       try {
-        await crmAdmin.rpc("registrar_atribuicao_roleta", {
+        const { error: rpcErr } = await crmAdmin.rpc("registrar_atribuicao_roleta", {
           p_lead_id: a.lead_id,
           p_corretor_id: a.corretor_id,
           p_source: "auto_fill",
         });
+        if (rpcErr) {
+          console.error("registrar_atribuicao_roleta (auto_fill) error", {
+            lead_id: a.lead_id,
+            corretor_id: a.corretor_id,
+            source: "auto_fill",
+            message: rpcErr.message,
+            details: (rpcErr as any).details,
+            hint: (rpcErr as any).hint,
+            code: (rpcErr as any).code,
+          });
+        }
       } catch (e) {
-        console.warn("registrar_atribuicao_roleta (auto_fill) failed:", e);
+        console.error("registrar_atribuicao_roleta (auto_fill) threw", {
+          lead_id: a.lead_id,
+          corretor_id: a.corretor_id,
+          source: "auto_fill",
+          error: e instanceof Error ? e.message : String(e),
+        });
       }
     }
 

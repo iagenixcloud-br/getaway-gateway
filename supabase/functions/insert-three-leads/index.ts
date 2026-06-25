@@ -90,13 +90,29 @@ Deno.serve(async (req) => {
 
     if (assignTo) {
       try {
-        await crmAdmin.rpc("registrar_atribuicao_roleta", {
+        const { error: rpcErr } = await crmAdmin.rpc("registrar_atribuicao_roleta", {
           p_lead_id: lead.id,
           p_corretor_id: assignTo,
-          p_source: "manual_insert",
+          p_source: "reimport",
         });
+        if (rpcErr) {
+          console.error("registrar_atribuicao_roleta (insert-three-leads) error", {
+            lead_id: lead.id,
+            corretor_id: assignTo,
+            source: "reimport",
+            message: rpcErr.message,
+            details: (rpcErr as any).details,
+            hint: (rpcErr as any).hint,
+            code: (rpcErr as any).code,
+          });
+        }
       } catch (e) {
-        console.warn("roleta rpc failed:", e);
+        console.error("registrar_atribuicao_roleta (insert-three-leads) threw", {
+          lead_id: lead.id,
+          corretor_id: assignTo,
+          source: "reimport",
+          error: e instanceof Error ? e.message : String(e),
+        });
       }
     }
 

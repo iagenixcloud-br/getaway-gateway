@@ -340,18 +340,33 @@ Deno.serve(async (req) => {
       }
 
       // Atualiza a roleta: avança last_received_at, incrementa total_received,
-      // e registra em lead_assignments (skip_assignment=true porque o tenant_id
-      // já foi gravado no insert acima).
+      // e registra em lead_assignments. A RPC aceita só 3 params e os sources
+      // válidos são 'webhook' | 'reimport' | 'auto_fill'.
       if (row.tenant_id) {
         try {
-          await crmAdmin.rpc("registrar_atribuicao_roleta", {
+          const { error: rpcErr } = await crmAdmin.rpc("registrar_atribuicao_roleta", {
             p_lead_id: inserted.id,
             p_corretor_id: row.tenant_id,
-            p_source: "fb_sync",
-            p_skip_assignment: true,
+            p_source: "reimport",
           });
+          if (rpcErr) {
+            console.error("registrar_atribuicao_roleta (fb-sync) error", {
+              lead_id: inserted.id,
+              corretor_id: row.tenant_id,
+              source: "reimport",
+              message: rpcErr.message,
+              details: (rpcErr as any).details,
+              hint: (rpcErr as any).hint,
+              code: (rpcErr as any).code,
+            });
+          }
         } catch (e) {
-          console.warn("registrar_atribuicao_roleta (fb-sync) falhou:", e);
+          console.error("registrar_atribuicao_roleta (fb-sync) threw", {
+            lead_id: inserted.id,
+            corretor_id: row.tenant_id,
+            source: "reimport",
+            error: e instanceof Error ? e.message : String(e),
+          });
         }
       }
 
