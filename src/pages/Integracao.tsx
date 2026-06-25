@@ -112,6 +112,37 @@ export function Integracao() {
     }
   }
 
+  const [roletaBusy, setRoletaBusy] = useState(false);
+  const [roletaMsg, setRoletaMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  async function handleRepararRoleta() {
+    setRoletaBusy(true);
+    setRoletaMsg(null);
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const accessToken = sessionData.session?.access_token;
+      if (!accessToken) { setRoletaMsg({ ok: false, text: "Não autenticado." }); return; }
+      const res = await fetch(`${CLOUD_FUNCTIONS_URL}/roleta-backfill`, {
+        method: "POST",
+        headers: { apikey: CLOUD_PUBLISHABLE_KEY, Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
+        body: "{}",
+      });
+      const data = await res.json();
+      if (!res.ok || data?.ok === false) {
+        setRoletaMsg({ ok: false, text: data?.error || `Erro ${res.status}` });
+        return;
+      }
+      setRoletaMsg({
+        ok: true,
+        text: `✅ Roleta reparada: ${data.fixed} lead(s) corrigido(s) de ${data.missing_from_roleta} pendente(s).`,
+      });
+    } catch (e: any) {
+      setRoletaMsg({ ok: false, text: String(e?.message || e) });
+    } finally {
+      setRoletaBusy(false);
+    }
+  }
+
+
   useEffect(() => {
     invokeCloudFunction<{ fb_app_id: string | null }>("fb-public-config", { method: "GET" })
       .then(({ data }) => setFbAppId(data?.fb_app_id ?? null));
