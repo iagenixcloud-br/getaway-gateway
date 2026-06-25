@@ -339,18 +339,22 @@ Deno.serve(async (req) => {
           console.warn("corretor assignment failed:", e);
         }
 
-        // Dedup: se já existe lead com mesmo telefone normalizado, pula
+        // Dedup composto: (telefone normalizado + interest). Mesmo número em
+        // formulário diferente entra como lead novo (cada campanha = nova busca).
         const normPhone = normalizePhone(fields.phone);
+        const currentInterest = (fields.interest || "").trim();
         if (normPhone) {
           const { data: existing } = await crmAdmin
             .from("leads")
-            .select("id, phone")
+            .select("id, phone, interest")
             .limit(2000);
           const dup = (existing || []).find(
-            (l: any) => normalizePhone(l.phone || "") === normPhone
+            (l: any) =>
+              normalizePhone(l.phone || "") === normPhone &&
+              (l.interest || "").trim() === currentInterest
           );
           if (dup) {
-            console.log(`Lead duplicado ignorado (phone=${fields.phone}, existing=${dup.id})`);
+            console.log(`Lead duplicado ignorado (phone=${fields.phone}, interest="${currentInterest}", existing=${dup.id})`);
             await logWebhook({
               event_type: "leadgen",
               page_id: pageId,
@@ -358,7 +362,7 @@ Deno.serve(async (req) => {
               form_id: formId,
               status: "skipped_duplicate",
               lead_id: dup.id,
-              payload: { fields, reason: "phone_already_exists" },
+              payload: { fields, reason: "phone+interest_already_exists" },
             });
             continue;
           }

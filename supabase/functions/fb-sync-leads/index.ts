@@ -222,7 +222,7 @@ Deno.serve(async (req) => {
     const [{ data: corretoresRaw }, { data: allLeads }, { data: existingLeads }, { data: existingLogs }] = await Promise.all([
       crmAdmin.from("profiles").select("id, name, is_active, last_received_at").eq("is_active", true).order("last_received_at", { ascending: true, nullsFirst: true }),
       crmAdmin.from("leads").select("tenant_id").eq("status", "lead_novo").not("tenant_id", "is", null).limit(5000),
-      crmAdmin.from("leads").select("phone").limit(5000),
+      crmAdmin.from("leads").select("phone, interest").limit(5000),
       cloudAdmin.from("webhook_logs").select("leadgen_id").not("leadgen_id", "is", null).limit(5000),
     ]);
 
@@ -249,8 +249,16 @@ Deno.serve(async (req) => {
       return null;
     }
 
+    // Dedup composto: (telefone normalizado + interest). Mesmo número em
+    // formulário diferente entra como lead novo (cada campanha = nova busca do cliente).
     const existingPhones = new Set(
-      (existingLeads || []).map((l: any) => normalizePhone(l.phone || "")).filter(Boolean)
+      (existingLeads || [])
+        .map((l: any) => {
+          const np = normalizePhone(l.phone || "");
+          if (!np) return null;
+          return `${np}::${(l.interest || "").trim()}`;
+        })
+        .filter(Boolean) as string[]
     );
     const existingLeadgenIds = new Set(
       (existingLogs || []).map((l: any) => l.leadgen_id).filter(Boolean)
@@ -291,14 +299,15 @@ Deno.serve(async (req) => {
 
           const fields = parseLead(lead, form.name || form.id);
           const normPhone = normalizePhone(fields.phone);
+          const dedupKey = normPhone ? `${normPhone}::${(fields.interest || "").trim()}` : "";
 
-          if (normPhone && existingPhones.has(normPhone)) {
+          if (dedupKey && existingPhones.has(dedupKey)) {
             result.skipped++;
             existingLeadgenIds.add(lead.id);
             logsToInsert.push({
               event_type: "leadgen_sync", page_id: PAGE_ID, leadgen_id: lead.id,
               form_id: form.id, status: "skipped_duplicate",
-              payload: { form_name: form.name, phone: fields.phone },
+              payload: { form_name: form.name, phone: fields.phone, interest: fields.interest, reason: "phone+interest_already_exists" },
             });
             continue;
           }
@@ -306,7 +315,7 @@ Deno.serve(async (req) => {
           const assignTo = getNextCorretor();
           leadsToInsert.push({ ...fields, status: "lead_novo", tenant_id: assignTo, _leadgen_id: lead.id, _form_id: form.id, _form_name: form.name, _platform: lead.platform, _created_time: lead.created_time });
           existingLeadgenIds.add(lead.id);
-          if (normPhone) existingPhones.add(normPhone);
+          if (dedupKey) existingPhones.add(dedupKey);
           result.created++;
         }
         nextUrl = data.paging?.next || null;
