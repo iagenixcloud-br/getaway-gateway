@@ -299,14 +299,15 @@ Deno.serve(async (req) => {
 
           const fields = parseLead(lead, form.name || form.id);
           const normPhone = normalizePhone(fields.phone);
+          const dedupKey = normPhone ? `${normPhone}::${(fields.interest || "").trim()}` : "";
 
-          if (normPhone && existingPhones.has(normPhone)) {
+          if (dedupKey && existingPhones.has(dedupKey)) {
             result.skipped++;
             existingLeadgenIds.add(lead.id);
             logsToInsert.push({
               event_type: "leadgen_sync", page_id: PAGE_ID, leadgen_id: lead.id,
               form_id: form.id, status: "skipped_duplicate",
-              payload: { form_name: form.name, phone: fields.phone },
+              payload: { form_name: form.name, phone: fields.phone, interest: fields.interest, reason: "phone+interest_already_exists" },
             });
             continue;
           }
@@ -314,7 +315,7 @@ Deno.serve(async (req) => {
           const assignTo = getNextCorretor();
           leadsToInsert.push({ ...fields, status: "lead_novo", tenant_id: assignTo, _leadgen_id: lead.id, _form_id: form.id, _form_name: form.name, _platform: lead.platform, _created_time: lead.created_time });
           existingLeadgenIds.add(lead.id);
-          if (normPhone) existingPhones.add(normPhone);
+          if (dedupKey) existingPhones.add(dedupKey);
           result.created++;
         }
         nextUrl = data.paging?.next || null;
