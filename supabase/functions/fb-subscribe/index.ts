@@ -1,57 +1,67 @@
-import { corsHeaders } from "https://esm.sh/@supabase/supabase-js@2.95.0/cors";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.95.0";
+import { createClient } from "npm:@supabase/supabase-js@2.45.0";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "POST, GET, OPTIONS",
+};
 
 const PAGE_ID = "101491475744542";
-const FORM_ID = "849013068226913";
 
 const CLOUD_URL = Deno.env.get("SUPABASE_URL")!;
-const CLOUD_ANON = Deno.env.get("SUPABASE_ANON_KEY")!;
 const CLOUD_SERVICE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+const EXT_URL = Deno.env.get("EXTERNAL_SUPABASE_URL")!;
+const EXT_SERVICE = Deno.env.get("EXTERNAL_SUPABASE_SERVICE_ROLE_KEY")!;
 
-async function requireAdmin(req: Request): Promise<Response | null> {
+const cloudAdmin = createClient(CLOUD_URL, CLOUD_SERVICE, { auth: { autoRefreshToken: false, persistSession: false } });
+const crmAdmin = createClient(EXT_URL, EXT_SERVICE, { auth: { autoRefreshToken: false, persistSession: false } });
+
+function json(payload: unknown, status = 200) {
+  return new Response(JSON.stringify(payload, null, 2), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+}
+
+// Valida o JWT no MESMO projeto que o emitiu (externo) e checa role.
+async function requireAdmin(req: Request) {
   const authHeader = req.headers.get("Authorization");
-  if (!authHeader?.startsWith("Bearer ")) {
-    return new Response(JSON.stringify({ error: "Não autenticado" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+  if (!authHeader) return { error: json({ ok: false, error: "Não autenticado" }, 401) };
+
+  const token = authHeader.replace(/^Bearer\s+/i, "").trim();
+  const { data: userData, error: userErr } = await crmAdmin.auth.getUser(token);
+  if (userErr || !userData?.user) return { error: json({ ok: false, error: "Sessão inválida" }, 401) };
+
+  const { data: roleRows, error: roleErr } = await crmAdmin
+    .from("user_roles")
+    .select("role")
+    .eq("user_id", userData.user.id);
+
+  if (roleErr) {
+    return { error: json({ ok: false, error: "Falha ao validar permissões" }, 500) };
   }
-  const token = authHeader.slice("Bearer ".length);
-  const userClient = createClient(CLOUD_URL, CLOUD_ANON, { global: { headers: { Authorization: `Bearer ${token}` } } });
-  const { data: claims, error } = await userClient.auth.getClaims(token);
-  if (error || !claims?.claims?.sub) {
-    return new Response(JSON.stringify({ error: "Sessão inválida" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+
+  const roles = (roleRows || []).map((r: any) => r.role);
+  if (!roles.includes("admin") && !roles.includes("master")) {
+    return { error: json({ ok: false, error: "Apenas administradores podem alterar o webhook" }, 403) };
   }
-  const admin = createClient(CLOUD_URL, CLOUD_SERVICE, { auth: { autoRefreshToken: false, persistSession: false } });
-  const { data: roles } = await admin.from("user_roles").select("role").eq("user_id", claims.claims.sub);
-  const set = new Set((roles ?? []).map((r: any) => r.role));
-  if (!(set.has("admin") || set.has("master"))) {
-    return new Response(JSON.stringify({ error: "Acesso negado" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-  }
-  return null;
+  return { user: userData.user };
 }
 
 async function getFbToken(): Promise<string | null> {
-  try {
-    if (CLOUD_URL && CLOUD_SERVICE) {
-      const admin = createClient(CLOUD_URL, CLOUD_SERVICE);
-      const { data } = await admin.from("integration_secrets").select("value").eq("name", "FB_PAGE_TOKEN").maybeSingle();
-      if (data?.value) return data.value;
-    }
-  } catch (_) { /* fallback */ }
+  const { data } = await cloudAdmin.from("integration_secrets").select("value").eq("name", "FB_PAGE_TOKEN").maybeSingle();
+  if (data?.value) return data.value;
   return Deno.env.get("FB_PAGE_TOKEN") ?? null;
 }
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
-  const denied = await requireAdmin(req);
-  if (denied) return denied;
+  const auth = await requireAdmin(req);
+  if (auth.error) return auth.error;
 
   const token = await getFbToken();
-  if (!token) {
-    return new Response(JSON.stringify({ ok: false, error: "FB_PAGE_TOKEN não configurado" }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
-  }
+  if (!token) return json({ ok: false, error: "FB_PAGE_TOKEN não configurado. Conecte o Facebook primeiro." }, 500);
 
   const url = new URL(req.url);
   const action = url.searchParams.get("action") || "list";
@@ -59,57 +69,60 @@ Deno.serve(async (req) => {
   try {
     if (action === "list") {
       const res = await fetch(
-        `https://graph.facebook.com/v21.0/${PAGE_ID}/subscribed_apps?access_token=${token}`,
+        `https://graph.facebook.com/v21.0/${PAGE_ID}/subscribed_apps?access_token=${encodeURIComponent(token)}`,
       );
       const data = await res.json();
-      const formRes = await fetch(
-        `https://graph.facebook.com/v21.0/${FORM_ID}?fields=id,name,status&access_token=${token}`,
-      );
-      const form = await formRes.json();
-      return new Response(JSON.stringify({ action: "list", page_id: PAGE_ID, form_id: FORM_ID, subscribed_apps: data, form }, null, 2), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      const isSubscribed = Array.isArray(data?.data) &&
+        data.data.some((app: any) => Array.isArray(app.subscribed_fields) && app.subscribed_fields.includes("leadgen"));
+      return json({ ok: true, action: "list", page_id: PAGE_ID, is_subscribed_to_leadgen: isSubscribed, subscribed_apps: data });
     }
 
     if (action === "subscribe") {
       const res = await fetch(
-        `https://graph.facebook.com/v21.0/${PAGE_ID}/subscribed_apps?subscribed_fields=leadgen&access_token=${token}`,
+        `https://graph.facebook.com/v21.0/${PAGE_ID}/subscribed_apps?subscribed_fields=leadgen&access_token=${encodeURIComponent(token)}`,
         { method: "POST" },
       );
       const data = await res.json();
 
       const listRes = await fetch(
-        `https://graph.facebook.com/v21.0/${PAGE_ID}/subscribed_apps?access_token=${token}`,
+        `https://graph.facebook.com/v21.0/${PAGE_ID}/subscribed_apps?access_token=${encodeURIComponent(token)}`,
       );
       const listData = await listRes.json();
+      const isSubscribed = Array.isArray(listData?.data) &&
+        listData.data.some((app: any) => Array.isArray(app.subscribed_fields) && app.subscribed_fields.includes("leadgen"));
 
-      return new Response(JSON.stringify({
+      // log no banco para auditoria
+      try {
+        await cloudAdmin.from("webhook_logs").insert({
+          event_type: "subscribe_attempt",
+          page_id: PAGE_ID,
+          status: isSubscribed ? "success" : "error",
+          error_message: isSubscribed ? null : (data?.error?.message || "Page not subscribed after POST"),
+          payload: { subscribe_result: data, list_after: listData },
+        });
+      } catch (_) { /* ignore */ }
+
+      if (!isSubscribed) {
+        return json({
+          ok: false,
+          action: "subscribe",
+          error: data?.error?.message || "Página não ficou inscrita após a tentativa.",
+          subscribe_result: data,
+          all_subscribed_apps_after: listData,
+        }, 500);
+      }
+
+      return json({
+        ok: true,
         action: "subscribe",
+        message: "Página inscrita no webhook de leads (leadgen).",
         subscribe_result: data,
         all_subscribed_apps_after: listData,
-      }, null, 2), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    if (action === "leads") {
-      const res = await fetch(
-        `https://graph.facebook.com/v21.0/${FORM_ID}/leads?fields=id,created_time,field_data,platform&limit=5&access_token=${token}`,
-      );
-      const data = await res.json();
-      return new Response(JSON.stringify({ action: "leads", page_id: PAGE_ID, form_id: FORM_ID, ...data }, null, 2), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    return new Response(JSON.stringify({ error: "action deve ser 'list', 'subscribe' ou 'leads'" }), {
-      status: 400,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return json({ ok: false, error: "action deve ser 'list' ou 'subscribe'" }, 400);
   } catch (e) {
-    return new Response(JSON.stringify({ ok: false, error: String(e) }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return json({ ok: false, error: e instanceof Error ? e.message : String(e) }, 500);
   }
 });

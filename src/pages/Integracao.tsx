@@ -70,6 +70,48 @@ export function Integracao() {
   const [syncDateFilter, setSyncDateFilter] = useState("");
   const [syncProgress, setSyncProgress] = useState<{ label: string; step: number; total: number } | null>(null);
   const [syncStartTime, setSyncStartTime] = useState<number | null>(null);
+  const [webhookBusy, setWebhookBusy] = useState(false);
+  const [webhookStatus, setWebhookStatus] = useState<{ ok: boolean; text: string } | null>(null);
+
+  async function callFbSubscribe(action: "list" | "subscribe") {
+    setWebhookBusy(true);
+    setWebhookStatus(null);
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const accessToken = sessionData.session?.access_token;
+      if (!accessToken) {
+        setWebhookStatus({ ok: false, text: "Você precisa estar logado." });
+        return;
+      }
+      const res = await fetch(`${CLOUD_FUNCTIONS_URL}/fb-subscribe?action=${action}`, {
+        method: "GET",
+        headers: {
+          apikey: CLOUD_PUBLISHABLE_KEY,
+          Authorization: `Bearer ${accessToken}`,
+        },
+      });
+      const data = await res.json();
+      if (!res.ok || data?.ok === false) {
+        setWebhookStatus({ ok: false, text: data?.error || `Erro ${res.status}` });
+        return;
+      }
+      if (action === "list") {
+        setWebhookStatus({
+          ok: !!data.is_subscribed_to_leadgen,
+          text: data.is_subscribed_to_leadgen
+            ? "✅ Webhook ATIVO: a página está inscrita em leadgen — leads sobem automaticamente."
+            : "⚠️ Webhook INATIVO: a página NÃO está inscrita em leadgen. Clique em 'Ativar Webhook' abaixo.",
+        });
+      } else {
+        setWebhookStatus({ ok: true, text: "✅ Webhook ativado! Os próximos leads do Facebook entrarão automaticamente." });
+      }
+    } catch (e: any) {
+      setWebhookStatus({ ok: false, text: String(e?.message || e) });
+    } finally {
+      setWebhookBusy(false);
+    }
+  }
+
   useEffect(() => {
     invokeCloudFunction<{ fb_app_id: string | null }>("fb-public-config", { method: "GET" })
       .then(({ data }) => setFbAppId(data?.fb_app_id ?? null));
@@ -499,6 +541,58 @@ export function Integracao() {
           )}
         </div>
       )}
+
+      {/* Webhook automático (Meta -> nosso CRM) */}
+      <div className="glass rounded-2xl p-6" style={{ border: "1px solid var(--glass-border)" }}>
+        <h2 style={{ fontFamily: "Montserrat, sans-serif", fontWeight: 700, fontSize: 18, color: "var(--gold)" }}>
+          📡 Webhook automático
+        </h2>
+        <p style={{ fontSize: 13, color: "var(--text-muted)", marginTop: 6 }}>
+          Quando o webhook está ativo, todo lead novo do Facebook entra no CRM em segundos,
+          sem precisar clicar em "Importar". Se os leads estão demorando para aparecer, verifique
+          e reative o webhook abaixo.
+        </p>
+
+        <div className="mt-4 flex flex-wrap gap-3">
+          <button
+            onClick={() => callFbSubscribe("list")}
+            disabled={webhookBusy}
+            className="px-4 py-2 rounded-xl font-semibold text-sm transition-all"
+            style={{
+              background: webhookBusy ? "rgba(59,130,246,0.4)" : "linear-gradient(135deg, #3b82f6, #6366f1)",
+              color: "#fff",
+              cursor: webhookBusy ? "not-allowed" : "pointer",
+            }}
+          >
+            {webhookBusy ? "Verificando..." : "🔍 Verificar status"}
+          </button>
+          <button
+            onClick={() => callFbSubscribe("subscribe")}
+            disabled={webhookBusy}
+            className="px-4 py-2 rounded-xl font-semibold text-sm transition-all"
+            style={{
+              background: webhookBusy ? "rgba(34,197,94,0.4)" : "linear-gradient(135deg, #22c55e, #16a34a)",
+              color: "#fff",
+              cursor: webhookBusy ? "not-allowed" : "pointer",
+            }}
+          >
+            {webhookBusy ? "Ativando..." : "⚡ Ativar / Reativar Webhook"}
+          </button>
+        </div>
+
+        {webhookStatus && (
+          <div
+            className="mt-4 rounded-lg px-4 py-3 text-sm"
+            style={{
+              background: webhookStatus.ok ? "rgba(34,197,94,0.12)" : "rgba(239,68,68,0.12)",
+              border: `1px solid ${webhookStatus.ok ? "rgba(34,197,94,0.4)" : "rgba(239,68,68,0.4)"}`,
+              color: webhookStatus.ok ? "#86efac" : "#fca5a5",
+            }}
+          >
+            {webhookStatus.text}
+          </div>
+        )}
+      </div>
 
       {/* Sincronização Emergencial */}
       <div className="glass rounded-2xl p-6" style={{ border: "1px solid var(--glass-border)" }}>
