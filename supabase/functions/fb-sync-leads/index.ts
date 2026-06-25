@@ -222,7 +222,7 @@ Deno.serve(async (req) => {
     const [{ data: corretoresRaw }, { data: allLeads }, { data: existingLeads }, { data: existingLogs }] = await Promise.all([
       crmAdmin.from("profiles").select("id, name, is_active, last_received_at").eq("is_active", true).order("last_received_at", { ascending: true, nullsFirst: true }),
       crmAdmin.from("leads").select("tenant_id").eq("status", "lead_novo").not("tenant_id", "is", null).limit(5000),
-      crmAdmin.from("leads").select("phone").limit(5000),
+      crmAdmin.from("leads").select("phone, interest").limit(5000),
       cloudAdmin.from("webhook_logs").select("leadgen_id").not("leadgen_id", "is", null).limit(5000),
     ]);
 
