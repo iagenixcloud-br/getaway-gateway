@@ -322,12 +322,29 @@ Deno.serve(async (req) => {
         continue;
       }
 
+      // Atualiza a roleta: avança last_received_at, incrementa total_received,
+      // e registra em lead_assignments (skip_assignment=true porque o tenant_id
+      // já foi gravado no insert acima).
+      if (row.tenant_id) {
+        try {
+          await crmAdmin.rpc("registrar_atribuicao_roleta", {
+            p_lead_id: inserted.id,
+            p_corretor_id: row.tenant_id,
+            p_source: "fb_sync",
+            p_skip_assignment: true,
+          });
+        } catch (e) {
+          console.warn("registrar_atribuicao_roleta (fb-sync) falhou:", e);
+        }
+      }
+
       logsToInsert.push({
         event_type: "leadgen_sync", page_id: PAGE_ID, leadgen_id: _leadgen_id,
         form_id: _form_id, status: "success", lead_id: inserted.id,
         payload: { form_name: _form_name, platform: _platform, fields: { name: row.name, phone: row.phone, email: row.email, city: row.city, interest: row.interest }, created_time: _created_time },
       });
     }
+
 
     // 4. Batch insert webhook logs (chunks of 100)
     for (let i = 0; i < logsToInsert.length; i += 100) {
