@@ -128,8 +128,26 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (req.method !== "POST") return json({ ok: false, error: "Método não permitido" }, 405);
 
-  const auth = await requireAdmin(req);
-  if (auth.error) return auth.error;
+  // Bypass auth for cron jobs using x-cron-secret header (compared to DB-stored secret)
+  const providedCronSecret = req.headers.get("x-cron-secret");
+  let isCron = false;
+  if (providedCronSecret) {
+    const { data: secretRow } = await cloudAdmin
+      .from("integration_secrets")
+      .select("value")
+      .eq("name", "CRON_SECRET")
+      .maybeSingle();
+    if (secretRow?.value && secretRow.value === providedCronSecret) {
+      isCron = true;
+    }
+  }
+
+  if (!isCron) {
+    const auth = await requireAdmin(req);
+    if (auth.error) return auth.error;
+  } else {
+    console.log("fb-sync-leads invoked via cron");
+  }
 
   let body: { max_pages?: number; limit?: number; today_only?: boolean } = {};
   try { body = await req.json(); } catch { body = {}; }
