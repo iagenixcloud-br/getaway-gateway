@@ -70,6 +70,48 @@ export function Integracao() {
   const [syncDateFilter, setSyncDateFilter] = useState("");
   const [syncProgress, setSyncProgress] = useState<{ label: string; step: number; total: number } | null>(null);
   const [syncStartTime, setSyncStartTime] = useState<number | null>(null);
+  const [webhookBusy, setWebhookBusy] = useState(false);
+  const [webhookStatus, setWebhookStatus] = useState<{ ok: boolean; text: string } | null>(null);
+
+  async function callFbSubscribe(action: "list" | "subscribe") {
+    setWebhookBusy(true);
+    setWebhookStatus(null);
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const accessToken = sessionData.session?.access_token;
+      if (!accessToken) {
+        setWebhookStatus({ ok: false, text: "Você precisa estar logado." });
+        return;
+      }
+      const res = await fetch(`${CLOUD_FUNCTIONS_URL}/fb-subscribe?action=${action}`, {
+        method: "GET",
+        headers: {
+          apikey: CLOUD_PUBLISHABLE_KEY,
+          Authorization: `Bearer ${accessToken}`,
+        },
+      });
+      const data = await res.json();
+      if (!res.ok || data?.ok === false) {
+        setWebhookStatus({ ok: false, text: data?.error || `Erro ${res.status}` });
+        return;
+      }
+      if (action === "list") {
+        setWebhookStatus({
+          ok: !!data.is_subscribed_to_leadgen,
+          text: data.is_subscribed_to_leadgen
+            ? "✅ Webhook ATIVO: a página está inscrita em leadgen — leads sobem automaticamente."
+            : "⚠️ Webhook INATIVO: a página NÃO está inscrita em leadgen. Clique em 'Ativar Webhook' abaixo.",
+        });
+      } else {
+        setWebhookStatus({ ok: true, text: "✅ Webhook ativado! Os próximos leads do Facebook entrarão automaticamente." });
+      }
+    } catch (e: any) {
+      setWebhookStatus({ ok: false, text: String(e?.message || e) });
+    } finally {
+      setWebhookBusy(false);
+    }
+  }
+
   useEffect(() => {
     invokeCloudFunction<{ fb_app_id: string | null }>("fb-public-config", { method: "GET" })
       .then(({ data }) => setFbAppId(data?.fb_app_id ?? null));
