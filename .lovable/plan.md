@@ -1,39 +1,50 @@
-## Respostas rápidas
+## Diagnóstico
 
-**1. Webhook do Facebook — precisa ficar ativando?**
-Não. A inscrição da página no evento `leadgen` é permanente do lado do Facebook. Os botões "Verificar status" e "Ativar/Reativar" são só ferramentas de manutenção. Você só precisa usar de novo se:
-- alguém desconectar/reconectar a página no Facebook,
-- o token da página for revogado,
-- a permissão `leads_retrieval` cair.
+Confirmado: o banco externo tem **770 leads totais**, sendo **636 inseridos hoje (25/06)** entre 00:59 e 01:21 UTC (≈ 22h BR do dia 24). Antes desse bloco eram ~134 leads. Todos os 636 estão com `tenant_id: null` (não entraram na roleta).
 
-No dia a dia, depois de ativado uma vez, os leads entram sozinhos.
+Distribuição por campanha (top):
+- 145 — Recreio - Parcela R$1.500 • IG
+- 140 — Recreio 01 - Parcela Alta • IG
+- 115 — WOOD - DOUBLE SUÍTES • IG
+- 105 — Contratação Mar. 2026 • IG
+- 79 — Form Arte Wood 01.2026 • IG
+- … (e outras menores)
 
-**2. "Reparar roleta" — Failed to fetch**
-"Failed to fetch" no navegador = a requisição não chegou a receber resposta HTTP. O frontend chama `https://gycrprnkuwlzntqvpoxl.supabase.co/functions/v1/roleta-backfill` (projeto externo do CRM). Causa mais provável: a função `roleta-backfill` foi criada no repositório, mas **não foi efetivamente deployada no projeto externo** — só foi deployada no projeto gerenciado (Lovable Cloud). As outras funções (`fb-sync-leads`, `fb-subscribe`) já existiam no externo, por isso funcionam.
+Esse volume não é compatível com captação real de um dia — são leads antigos do Facebook que entraram em massa, provavelmente porque o guard de data que coloquei no `fb-lead-webhook` / `fb-sync-leads` não está bloqueando, ou alguma chamada manual disparou um sync amplo.
 
-## O que fazer
+## Plano
 
-### Passo 1 — Diagnosticar
-Fazer um `curl` direto pra `https://gycrprnkuwlzntqvpoxl.supabase.co/functions/v1/roleta-backfill` pra confirmar se retorna 404 (não deployada) ou outro erro.
+1. **Investigar a origem da entrada em massa**
+   - Ler logs do edge function `fb-sync-leads` e `fb-lead-webhook` no projeto externo no intervalo 00:55–01:25 UTC de 25/06.
+   - Conferir o `created_time` real desses leads no Facebook (amostra de 5 IDs) para confirmar se são antigos.
 
-### Passo 2 — Corrigir
-Como o deploy automático do Lovable só publica no projeto gerenciado, e a função precisa rodar no projeto externo (onde estão `leads`, `lead_assignments` e a RPC `registrar_atribuicao_roleta`), há duas opções:
+2. **Corrigir o guard de data definitivamente**
+   - Revisar a comparação `leadTs < sinceTimestamp` no `fb-lead-webhook` (provável bug de timezone/parse de `created_time`).
+   - Adicionar log explícito mostrando `lead.created_time`, `sinceTimestamp` e decisão (`skipped_old_lead` / `accepted`) em cada chamada.
+   - Garantir que `fb-sync-leads` aceite apenas leads com `created_time >= hoje 00:00 BRT`, mesmo quando o Facebook devolve histórico.
 
-**Opção A (recomendada): mover o backfill para uma rota dentro de `fb-sync-leads`**
-A função `fb-sync-leads` já está deployada no projeto externo e já tem acesso ao `crmAdmin` e à RPC. Adicionar um modo `?action=backfill-roleta` nela, e o frontend passa a chamar `fb-sync-leads?action=backfill-roleta` em vez de `roleta-backfill`. Zero infra nova, aproveita o que já está em produção.
+3. **Limpar os leads injetados indevidamente**
+   - Apagar do banco externo os 636 leads inseridos entre `2026-06-25 00:59 UTC` e `2026-06-25 01:21 UTC` (todos com `tenant_id IS NULL`, status `lead_novo`).
+   - Não mexer nos ~134 leads anteriores nem em leads atribuídos.
 
-**Opção B: deployar `roleta-backfill` manualmente no projeto externo**
-Exigiria acesso de deploy ao projeto externo via `SB_DEPLOY_ACCESS_TOKEN`. Mais frágil — toda vez que a função mudar precisa redeployar manualmente lá.
+4. **Validar**
+   - Conferir contagem volta a ~134.
+   - Rodar `fb-sync-leads` manualmente e confirmar via log que nada antigo entra.
+   - Confirmar com você se a roleta volta a operar normalmente com leads novos reais.
 
-### Passo 3 — Ajustar o frontend
-Em `src/pages/Integracao.tsx`, `handleRepararRoleta()` passa a chamar:
-```
-POST /functions/v1/fb-sync-leads?action=backfill-roleta
-```
-com o mesmo `Authorization: Bearer <session>` que já usa.
+## Detalhes técnicos
 
-### Passo 4 — Validar
-Clicar "🛠 Reparar roleta" e confirmar mensagem `✅ Roleta reparada: N lead(s) corrigido(s)`. Em seguida, conferir na tabela `lead_assignments` que os 2 leads (João B → Roberta, Vladerson → Wellington) agora têm linha registrada, e que `last_received_at` de Roberta e Wellington avançou.
+- Critério de limpeza (SQL no externo):
+  ```sql
+  DELETE FROM public.leads
+  WHERE created_at >= '2026-06-25 00:55:00+00'
+    AND created_at <= '2026-06-25 01:25:00+00'
+    AND tenant_id IS NULL
+    AND status = 'lead_novo';
+  ```
+- Antes de deletar, exportarei CSV de backup desses leads em `/mnt/documents/leads_removidos_2026-06-25.csv`.
+- Guard reforçado: comparar em **segundos UTC** com `Math.floor(Date.parse(lead.created_time)/1000)` e logar todos os rejeitados em `webhook_logs` (interno) com payload mínimo para auditoria.
 
-## Recomendação
-Seguir **Opção A**. Quer que eu implemente?
+## Confirmação necessária
+
+Posso seguir e **deletar os 636 leads** (após backup)? Ou prefere revisar a lista antes?
