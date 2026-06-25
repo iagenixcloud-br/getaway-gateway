@@ -67,7 +67,6 @@ export function Integracao() {
   const [check, setCheck] = useState<CheckResult | null>(null);
   const [debug, setDebug] = useState<any>(null);
   const [fbAppId, setFbAppId] = useState<string | null>(null);
-  const [syncDateFilter, setSyncDateFilter] = useState("");
   const [syncProgress, setSyncProgress] = useState<{ label: string; step: number; total: number } | null>(null);
   const [syncStartTime, setSyncStartTime] = useState<number | null>(null);
   const [webhookBusy, setWebhookBusy] = useState(false);
@@ -111,37 +110,6 @@ export function Integracao() {
       setWebhookBusy(false);
     }
   }
-
-  const [roletaBusy, setRoletaBusy] = useState(false);
-  const [roletaMsg, setRoletaMsg] = useState<{ ok: boolean; text: string } | null>(null);
-  async function handleRepararRoleta() {
-    setRoletaBusy(true);
-    setRoletaMsg(null);
-    try {
-      const { data: sessionData } = await supabase.auth.getSession();
-      const accessToken = sessionData.session?.access_token;
-      if (!accessToken) { setRoletaMsg({ ok: false, text: "Não autenticado." }); return; }
-      const res = await fetch(`${CLOUD_FUNCTIONS_URL}/fb-sync-leads?action=backfill-roleta`, {
-        method: "POST",
-        headers: { apikey: CLOUD_PUBLISHABLE_KEY, Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
-        body: "{}",
-      });
-      const data = await res.json();
-      if (!res.ok || data?.ok === false) {
-        setRoletaMsg({ ok: false, text: data?.error || `Erro ${res.status}` });
-        return;
-      }
-      setRoletaMsg({
-        ok: true,
-        text: `✅ Roleta reparada: ${data.fixed} lead(s) corrigido(s) de ${data.missing_from_roleta} pendente(s).`,
-      });
-    } catch (e: any) {
-      setRoletaMsg({ ok: false, text: String(e?.message || e) });
-    } finally {
-      setRoletaBusy(false);
-    }
-  }
-
 
   useEffect(() => {
     invokeCloudFunction<{ fb_app_id: string | null }>("fb-public-config", { method: "GET" })
@@ -241,7 +209,7 @@ export function Integracao() {
       setDebugging(false);
     }
   }
-  async function handleSyncLeads(opts: { today_only?: boolean; since?: string } = {}) {
+  async function handleSyncLeads() {
     setSyncing(true);
     setSyncResult(null);
     setSyncProgress({ label: "Autenticando…", step: 1, total: 5 });
@@ -257,9 +225,7 @@ export function Integracao() {
         return;
       }
       setSyncProgress({ label: "Conectando à API do Facebook…", step: 2, total: 5 });
-      const body: Record<string, unknown> = { max_pages: 5, limit: 50 };
-      if (opts.today_only) body.today_only = true;
-      if (opts.since) body.since = opts.since;
+      const body: Record<string, unknown> = { max_pages: 5, limit: 50, today_only: true };
 
       setSyncProgress({ label: "Buscando formulários e leads…", step: 3, total: 5 });
       const { data, error } = await invokeCloudFunction("fb-sync-leads", {
@@ -579,9 +545,7 @@ export function Integracao() {
           📡 Webhook automático
         </h2>
         <p style={{ fontSize: 13, color: "var(--text-muted)", marginTop: 6 }}>
-          Quando o webhook está ativo, todo lead novo do Facebook entra no CRM em segundos,
-          sem precisar clicar em "Importar". Se os leads estão demorando para aparecer, verifique
-          e reative o webhook abaixo.
+          Quando o webhook está ativo, somente leads novos do Facebook entram no CRM em segundos.
         </p>
 
         <div className="mt-4 flex flex-wrap gap-3">
@@ -623,37 +587,6 @@ export function Integracao() {
             {webhookStatus.text}
           </div>
         )}
-
-        <div className="mt-5 pt-5" style={{ borderTop: "1px solid var(--glass-border)" }}>
-          <p style={{ fontSize: 12, color: "var(--text-muted)", marginBottom: 8 }}>
-            Se algum lead foi importado mas o corretor não apareceu na roleta (last_received_at não atualizou),
-            clique aqui para corrigir retroativamente.
-          </p>
-          <button
-            onClick={handleRepararRoleta}
-            disabled={roletaBusy}
-            className="px-4 py-2 rounded-xl font-semibold text-sm transition-all"
-            style={{
-              background: roletaBusy ? "rgba(250,204,21,0.4)" : "linear-gradient(135deg, #facc15, #f59e0b)",
-              color: "#1f1300",
-              cursor: roletaBusy ? "not-allowed" : "pointer",
-            }}
-          >
-            {roletaBusy ? "Reparando..." : "🛠 Reparar roleta"}
-          </button>
-          {roletaMsg && (
-            <div
-              className="mt-3 rounded-lg px-4 py-3 text-sm"
-              style={{
-                background: roletaMsg.ok ? "rgba(34,197,94,0.12)" : "rgba(239,68,68,0.12)",
-                border: `1px solid ${roletaMsg.ok ? "rgba(34,197,94,0.4)" : "rgba(239,68,68,0.4)"}`,
-                color: roletaMsg.ok ? "#86efac" : "#fca5a5",
-              }}
-            >
-              {roletaMsg.text}
-            </div>
-          )}
-        </div>
       </div>
 
 
@@ -663,12 +596,12 @@ export function Integracao() {
           ⚡ Importar Leads do Facebook
         </h2>
         <p style={{ fontSize: 13, color: "var(--text-muted)", marginTop: 6 }}>
-          Importa leads diretamente da API do Facebook. Escolha importar apenas os de hoje, todos, ou filtre por data.
+          Importa somente leads criados hoje no Facebook. Leads antigos ficam bloqueados.
         </p>
 
         <div className="mt-4 flex flex-wrap gap-3">
           <button
-            onClick={() => handleSyncLeads({ today_only: true })}
+            onClick={handleSyncLeads}
             disabled={syncing}
             className="px-5 py-2.5 rounded-xl font-semibold text-sm transition-all inline-flex items-center gap-2"
             style={{
@@ -682,60 +615,6 @@ export function Integracao() {
             {syncing ? "Importando..." : "Leads de Hoje"}
           </button>
 
-          <button
-            onClick={() => handleSyncLeads()}
-            disabled={syncing}
-            className="px-5 py-2.5 rounded-xl font-semibold text-sm transition-all inline-flex items-center gap-2"
-            style={{
-              background: syncing ? "rgba(239,68,68,0.4)" : "linear-gradient(135deg, #ef4444, #f97316)",
-              color: "#fff",
-              boxShadow: "0 4px 14px rgba(239,68,68,0.35)",
-              cursor: syncing ? "not-allowed" : "pointer",
-            }}
-          >
-            <span style={{ fontSize: 16 }}>🔄</span>
-            {syncing ? "Importando..." : "Todos os Leads"}
-          </button>
-        </div>
-
-        {/* Filtro por data */}
-        <div className="mt-4 flex flex-wrap items-end gap-3">
-          <div>
-            <label style={{ fontSize: 12, color: "var(--text-muted)", display: "block", marginBottom: 4 }}>
-              Filtrar a partir de:
-            </label>
-            <input
-              type="date"
-              value={syncDateFilter}
-              onChange={(e) => setSyncDateFilter(e.target.value)}
-              className="rounded-lg px-3 py-2 text-sm"
-              style={{
-                background: "rgba(0,0,0,0.3)",
-                border: "1px solid var(--glass-border)",
-                color: "var(--text-primary)",
-              }}
-            />
-          </div>
-          <button
-            onClick={() => {
-              if (!syncDateFilter) {
-                toast.error("Selecione uma data primeiro.");
-                return;
-              }
-              handleSyncLeads({ since: syncDateFilter });
-            }}
-            disabled={syncing || !syncDateFilter}
-            className="px-5 py-2.5 rounded-xl font-semibold text-sm transition-all inline-flex items-center gap-2"
-            style={{
-              background: syncing || !syncDateFilter ? "rgba(59,130,246,0.3)" : "linear-gradient(135deg, #3b82f6, #6366f1)",
-              color: "#fff",
-              boxShadow: "0 4px 14px rgba(59,130,246,0.35)",
-              cursor: syncing || !syncDateFilter ? "not-allowed" : "pointer",
-            }}
-          >
-            <span style={{ fontSize: 16 }}>🔍</span>
-            {syncing ? "Importando..." : "Importar por Data"}
-          </button>
         </div>
 
         {/* Progress indicator */}

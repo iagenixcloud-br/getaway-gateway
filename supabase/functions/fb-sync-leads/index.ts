@@ -131,69 +131,22 @@ Deno.serve(async (req) => {
   const auth = await requireAdmin(req);
   if (auth.error) return auth.error;
 
-  // ---- Ação: backfill da roleta ----
-  // Para cada lead com tenant_id mas sem linha em lead_assignments,
-  // chama registrar_atribuicao_roleta para avançar last_received_at + total_received.
-  const url = new URL(req.url);
-  if (url.searchParams.get("action") === "backfill-roleta") {
-    try {
-      const { data: assignedRows } = await crmAdmin.from("lead_assignments").select("lead_id");
-      const known = new Set((assignedRows || []).map((r: any) => r.lead_id));
-
-      const { data: leads, error: leadsErr } = await crmAdmin
-        .from("leads")
-        .select("id, tenant_id, created_at, name")
-        .not("tenant_id", "is", null)
-        .order("created_at", { ascending: true })
-        .limit(2000);
-      if (leadsErr) return json({ ok: false, error: leadsErr.message }, 500);
-
-      const toFix = (leads || []).filter((l: any) => !known.has(l.id));
-      let fixed = 0;
-      const errors: string[] = [];
-      for (const lead of toFix) {
-        try {
-          await crmAdmin.rpc("registrar_atribuicao_roleta", {
-            p_lead_id: lead.id,
-            p_corretor_id: lead.tenant_id,
-            p_source: "backfill",
-            p_skip_assignment: true,
-          });
-          fixed++;
-        } catch (e) {
-          errors.push(`${lead.id}: ${e instanceof Error ? e.message : String(e)}`);
-        }
-      }
-      return json({
-        ok: true,
-        total_with_tenant: leads?.length || 0,
-        missing_from_roleta: toFix.length,
-        fixed,
-        errors,
-        sample: toFix.slice(0, 10).map((l: any) => ({ id: l.id, name: l.name, created_at: l.created_at })),
-      });
-    } catch (e) {
-      return json({ ok: false, error: e instanceof Error ? e.message : String(e) }, 500);
-    }
-  }
-
-  let body: { max_pages?: number; limit?: number; since?: string; today_only?: boolean } = {};
+  let body: { max_pages?: number; limit?: number; today_only?: boolean } = {};
   try { body = await req.json(); } catch { body = {}; }
 
-  const maxPages = Math.min(Math.max(Number(body.max_pages || 3), 1), 10);
+  const maxPages = Math.min(Math.max(Number(body.max_pages || 3), 1), 5);
   const limit = Math.min(Math.max(Number(body.limit || 50), 10), 100);
 
-  // Filtro por data: se today_only=true, usa início do dia UTC; se since="YYYY-MM-DD", usa essa data
-  let sinceTimestamp: number | null = null;
-  if (body.today_only) {
-    const now = new Date();
-    sinceTimestamp = Math.floor(new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime() / 1000);
-  } else if (body.since) {
-    const parsed = new Date(body.since);
-    if (!isNaN(parsed.getTime())) {
-      sinceTimestamp = Math.floor(parsed.getTime() / 1000);
-    }
-  }
+  // Segurança: sincronização manual nunca puxa histórico.
+  // Apenas leads criados a partir de 00:00 de hoje no horário de Brasília.
+  const now = new Date();
+  const brDate = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Sao_Paulo",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(now);
+  const sinceTimestamp = Math.floor(new Date(`${brDate}T00:00:00-03:00`).getTime() / 1000);
   const token = await getFbToken();
   if (!token) return json({ ok: false, error: "Token do Facebook não configurado" }, 500);
 
@@ -399,7 +352,7 @@ Deno.serve(async (req) => {
     }
 
     console.log("Sync completed", result);
-    return json({ ok: true, status: "completed", filter: sinceTimestamp ? { since: new Date(sinceTimestamp * 1000).toISOString(), today_only: !!body.today_only } : "all", ...result });
+    return json({ ok: true, status: "completed", filter: { since: new Date(sinceTimestamp * 1000).toISOString(), today_only: true }, ...result });
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     console.error("Sync failed", msg);
