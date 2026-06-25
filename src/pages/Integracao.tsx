@@ -121,7 +121,7 @@ export function Integracao() {
       const { data: sessionData } = await supabase.auth.getSession();
       const accessToken = sessionData.session?.access_token;
       if (!accessToken) { setRoletaMsg({ ok: false, text: "Não autenticado." }); return; }
-      const res = await fetch(`${CLOUD_FUNCTIONS_URL}/roleta-backfill`, {
+      const res = await fetch(`${CLOUD_FUNCTIONS_URL}/fb-sync-leads?action=backfill-roleta`, {
         method: "POST",
         headers: { apikey: CLOUD_PUBLISHABLE_KEY, Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
         body: "{}",
