@@ -542,6 +542,58 @@ export function Integracao() {
         </div>
       )}
 
+      {/* Webhook automático (Meta -> nosso CRM) */}
+      <div className="glass rounded-2xl p-6" style={{ border: "1px solid var(--glass-border)" }}>
+        <h2 style={{ fontFamily: "Montserrat, sans-serif", fontWeight: 700, fontSize: 18, color: "var(--gold)" }}>
+          📡 Webhook automático
+        </h2>
+        <p style={{ fontSize: 13, color: "var(--text-muted)", marginTop: 6 }}>
+          Quando o webhook está ativo, todo lead novo do Facebook entra no CRM em segundos,
+          sem precisar clicar em "Importar". Se os leads estão demorando para aparecer, verifique
+          e reative o webhook abaixo.
+        </p>
+
+        <div className="mt-4 flex flex-wrap gap-3">
+          <button
+            onClick={() => callFbSubscribe("list")}
+            disabled={webhookBusy}
+            className="px-4 py-2 rounded-xl font-semibold text-sm transition-all"
+            style={{
+              background: webhookBusy ? "rgba(59,130,246,0.4)" : "linear-gradient(135deg, #3b82f6, #6366f1)",
+              color: "#fff",
+              cursor: webhookBusy ? "not-allowed" : "pointer",
+            }}
+          >
+            {webhookBusy ? "Verificando..." : "🔍 Verificar status"}
+          </button>
+          <button
+            onClick={() => callFbSubscribe("subscribe")}
+            disabled={webhookBusy}
+            className="px-4 py-2 rounded-xl font-semibold text-sm transition-all"
+            style={{
+              background: webhookBusy ? "rgba(34,197,94,0.4)" : "linear-gradient(135deg, #22c55e, #16a34a)",
+              color: "#fff",
+              cursor: webhookBusy ? "not-allowed" : "pointer",
+            }}
+          >
+            {webhookBusy ? "Ativando..." : "⚡ Ativar / Reativar Webhook"}
+          </button>
+        </div>
+
+        {webhookStatus && (
+          <div
+            className="mt-4 rounded-lg px-4 py-3 text-sm"
+            style={{
+              background: webhookStatus.ok ? "rgba(34,197,94,0.12)" : "rgba(239,68,68,0.12)",
+              border: `1px solid ${webhookStatus.ok ? "rgba(34,197,94,0.4)" : "rgba(239,68,68,0.4)"}`,
+              color: webhookStatus.ok ? "#86efac" : "#fca5a5",
+            }}
+          >
+            {webhookStatus.text}
+          </div>
+        )}
+      </div>
+
       {/* Sincronização Emergencial */}
       <div className="glass rounded-2xl p-6" style={{ border: "1px solid var(--glass-border)" }}>
         <h2 style={{ fontFamily: "Montserrat, sans-serif", fontWeight: 700, fontSize: 18, color: "var(--gold)" }}>
