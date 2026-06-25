@@ -96,10 +96,21 @@ function formatPhoneE164(raw: string | null | undefined): string | null {
 async function fetchLeadDetails(leadgenId: string) {
   const token = await getFbToken();
   if (!token) return null;
-  const url = `https://graph.facebook.com/v25.0/${leadgenId}?access_token=${token}`;
+  const fields = encodeURIComponent("id,created_time,field_data,platform");
+  const url = `https://graph.facebook.com/v25.0/${leadgenId}?fields=${fields}&access_token=${token}`;
   const res = await fetch(url);
   if (!res.ok) return null;
   return await res.json();
+}
+
+function startOfTodaySaoPauloTimestamp() {
+  const brDate = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Sao_Paulo",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
+  return Math.floor(new Date(`${brDate}T00:00:00-03:00`).getTime() / 1000);
 }
 
 function cleanFbValue(v: string | null): string | null {
@@ -259,6 +270,22 @@ Deno.serve(async (req) => {
 
         // Tenta buscar dados completos do lead na Graph API
         const details = await fetchLeadDetails(leadgenId);
+
+        // Segurança: não deixa webhook reprocessar lead antigo se a Meta reenviar histórico.
+        if (details?.created_time) {
+          const leadTs = Math.floor(new Date(details.created_time).getTime() / 1000);
+          if (leadTs < startOfTodaySaoPauloTimestamp()) {
+            await logWebhook({
+              event_type: "leadgen",
+              page_id: pageId,
+              leadgen_id: leadgenId,
+              form_id: formId,
+              status: "skipped_old_lead",
+              payload: { created_time: details.created_time, reason: "older_than_today_brt" },
+            });
+            continue;
+          }
+        }
 
         let fields: ReturnType<typeof parseFields>;
         if (details?.field_data) {
