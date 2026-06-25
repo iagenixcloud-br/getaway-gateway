@@ -30,14 +30,16 @@ async function requireAdmin(req: Request) {
   const { data: userData, error: userErr } = await userClient.auth.getUser();
   if (userErr || !userData?.user) return { error: json({ ok: false, error: "Sessão inválida" }, 401) };
 
-  const { data: roleRow } = await userClient
+  // Verifica role usando service role (bypass RLS) e aceita admin OU master
+  const { data: roleRows } = await crmAdmin
     .from("user_roles")
     .select("role")
-    .eq("user_id", userData.user.id)
-    .eq("role", "admin")
-    .maybeSingle();
+    .eq("user_id", userData.user.id);
 
-  if (!roleRow) return { error: json({ ok: false, error: "Apenas administradores podem sincronizar leads" }, 403) };
+  const roles = (roleRows || []).map((r: any) => r.role);
+  if (!roles.includes("admin") && !roles.includes("master")) {
+    return { error: json({ ok: false, error: "Apenas administradores podem sincronizar leads" }, 403) };
+  }
   return { user: userData.user };
 }
 
