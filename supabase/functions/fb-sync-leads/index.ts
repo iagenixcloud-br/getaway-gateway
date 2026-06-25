@@ -249,8 +249,16 @@ Deno.serve(async (req) => {
       return null;
     }
 
+    // Dedup composto: (telefone normalizado + interest). Mesmo número em
+    // formulário diferente entra como lead novo (cada campanha = nova busca do cliente).
     const existingPhones = new Set(
-      (existingLeads || []).map((l: any) => normalizePhone(l.phone || "")).filter(Boolean)
+      (existingLeads || [])
+        .map((l: any) => {
+          const np = normalizePhone(l.phone || "");
+          if (!np) return null;
+          return `${np}::${(l.interest || "").trim()}`;
+        })
+        .filter(Boolean) as string[]
     );
     const existingLeadgenIds = new Set(
       (existingLogs || []).map((l: any) => l.leadgen_id).filter(Boolean)
