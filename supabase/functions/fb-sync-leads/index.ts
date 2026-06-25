@@ -26,18 +26,24 @@ async function requireAdmin(req: Request) {
   const authHeader = req.headers.get("Authorization");
   if (!authHeader) return { error: json({ ok: false, error: "Não autenticado" }, 401) };
 
-  const userClient = createClient(APP_AUTH_URL, APP_AUTH_ANON_KEY, { global: { headers: { Authorization: authHeader } } });
-  const { data: userData, error: userErr } = await userClient.auth.getUser();
+  const token = authHeader.replace(/^Bearer\s+/i, "").trim();
+  const { data: userData, error: userErr } = await crmAdmin.auth.getUser(token);
   if (userErr || !userData?.user) return { error: json({ ok: false, error: "Sessão inválida" }, 401) };
 
-  // Verifica role usando service role (bypass RLS) e aceita admin OU master
-  const { data: roleRows } = await crmAdmin
+  // Verifica role no mesmo backend que emitiu o JWT, usando service role (bypass RLS).
+  const { data: roleRows, error: roleErr } = await crmAdmin
     .from("user_roles")
     .select("role")
     .eq("user_id", userData.user.id);
 
+  if (roleErr) {
+    console.error("fb-sync-leads role lookup failed", { user_id: userData.user.id, message: roleErr.message });
+    return { error: json({ ok: false, error: "Não foi possível validar permissões de administrador" }, 500) };
+  }
+
   const roles = (roleRows || []).map((r: any) => r.role);
   if (!roles.includes("admin") && !roles.includes("master")) {
+    console.warn("fb-sync-leads forbidden", { user_id: userData.user.id, roles });
     return { error: json({ ok: false, error: "Apenas administradores podem sincronizar leads" }, 403) };
   }
   return { user: userData.user };
