@@ -196,10 +196,27 @@ export function Dashboard() {
             <p style={{ fontSize: 13, color: "var(--text-muted)", textAlign: "center", padding: 20 }}>Nenhum lead ainda.</p>
           )}
         </div>
+        </div>
       </div>
+
+      {openStatus && (() => {
+        const col = COLUMNS.find((c) => c.key === openStatus)!;
+        const filtered = leads.filter((l) => l.status === openStatus);
+        return (
+          <LeadsPorEtapaModal
+            status={openStatus}
+            label={col.label}
+            color={col.color}
+            icon={col.icon}
+            leads={filtered}
+            onClose={() => setOpenStatus(null)}
+          />
+        );
+      })()}
     </div>
   );
 }
+
 
 function KpiCard({ label, value, color }: { label: string; value: number; color: string }) {
   return (
