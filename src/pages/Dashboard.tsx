@@ -89,19 +89,46 @@ export function Dashboard() {
           Leads por Etapa
         </h2>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          {COLUMNS.map((col) => (
-            <div
-              key={col.key}
-              className="rounded-xl p-4 flex flex-col items-center gap-1 transition-all hover:scale-[1.03]"
-              style={{ background: `${col.color}10`, border: `1px solid ${col.color}30` }}
-            >
-              <span style={{ fontSize: 22 }}>{col.icon}</span>
-              <span style={{ fontSize: 28, fontWeight: 800, color: col.color, fontFamily: "Montserrat, sans-serif" }}>
-                {stats.counts[col.key]}
-              </span>
-              <span style={{ fontSize: 11, color: "var(--text-muted)", textAlign: "center" }}>{col.label}</span>
-            </div>
-          ))}
+          {COLUMNS.map((col) => {
+            const content = (
+              <>
+                <span style={{ fontSize: 22 }}>{col.icon}</span>
+                <span style={{ fontSize: 28, fontWeight: 800, color: col.color, fontFamily: "Montserrat, sans-serif" }}>
+                  {stats.counts[col.key]}
+                </span>
+                <span style={{ fontSize: 11, color: "var(--text-muted)", textAlign: "center" }}>{col.label}</span>
+              </>
+            );
+            const baseStyle: React.CSSProperties = {
+              background: `${col.color}10`,
+              border: `1px solid ${col.color}30`,
+              minHeight: 96,
+            };
+            if (isAdmin) {
+              return (
+                <button
+                  key={col.key}
+                  type="button"
+                  onClick={() => setOpenStatus(col.key)}
+                  aria-label={`Ver leads na etapa ${col.label}`}
+                  className="rounded-xl p-4 flex flex-col items-center gap-1 transition-all hover:scale-[1.03] hover:brightness-125 cursor-pointer text-center"
+                  style={baseStyle}
+                >
+                  {content}
+                </button>
+              );
+            }
+            return (
+              <div
+                key={col.key}
+                className="rounded-xl p-4 flex flex-col items-center gap-1 transition-all hover:scale-[1.03]"
+                style={baseStyle}
+              >
+                {content}
+              </div>
+            );
+          })}
+
         </div>
       </div>
 
