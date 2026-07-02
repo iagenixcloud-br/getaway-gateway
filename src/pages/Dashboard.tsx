@@ -28,6 +28,9 @@ function formatDuration(hours: number): string {
 
 export function Dashboard() {
   const { leads, loading } = useLeads();
+  const { isAdmin } = useAuth();
+  const [openStatus, setOpenStatus] = useState<LeadStatus | null>(null);
+
 
   const stats = useMemo(() => {
     const counts: Record<string, number> = {};
