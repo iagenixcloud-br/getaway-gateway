@@ -196,8 +196,8 @@ export function Dashboard() {
             <p style={{ fontSize: 13, color: "var(--text-muted)", textAlign: "center", padding: 20 }}>Nenhum lead ainda.</p>
           )}
         </div>
-        </div>
       </div>
+
 
       {openStatus && (() => {
         const col = COLUMNS.find((c) => c.key === openStatus)!;
