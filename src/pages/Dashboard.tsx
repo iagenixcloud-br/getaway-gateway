@@ -1,6 +1,9 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import { useLeads } from "../hooks/useLeads";
 import { LeadStatus } from "../data/mockData";
+import { useAuth } from "../contexts/AuthContext";
+import { LeadsPorEtapaModal } from "../components/LeadsPorEtapaModal";
+
 
 const COLUMNS: { key: LeadStatus; label: string; color: string; icon: string }[] = [
   { key: "lead_novo", label: "Lead Novo", color: "#D4AF37", icon: "✦" },
