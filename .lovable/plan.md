@@ -1,47 +1,42 @@
-# Inserir apenas 3 leads (manual, um a um)
+# Cards clicáveis no Dashboard (admin) → modal com leads da etapa
 
-## O que vou fazer
+## O que muda
 
-Inserir exatamente 3 linhas na tabela `leads` do CRM externo, via `crmAdmin` (ou edge function dedicada), com estes dados e nada mais:
+No `src/pages/Dashboard.tsx`, apenas para admin, cada quadrado da seção **"Leads por Etapa"** (os 10: Lead Novo, Curioso, Follow-up, Negócio, Agendamento, Visita, Proposta, Venda, Perda, Cliente Futuro) vira clicável. Ao clicar, abre um **modal responsivo** listando todos os leads daquela etapa com **nome e telefone**.
 
-| Nome   | Telefone           | Status     |
-|--------|--------------------|------------|
-| Italo  | +55 32 988138793   | lead_novo  |
-| Daine  | +55 21 979056620   | lead_novo  |
-| Lucas  | +55 21 993714193   | lead_novo  |
+Para não-admin: comportamento atual, cards não-clicáveis.
 
-Para cada um:
-1. Checar dedup por telefone normalizado — se já existir, **pula** (não duplica)
-2. Escolher próximo corretor da roleta (cap 10, `last_received_at ASC`)
-3. `INSERT` 1 linha
-4. `registrar_atribuicao_roleta` (avança fila + total_received + lead_assignments)
-5. Log em `webhook_logs` com `status=success`, `event_type=manual_insert`
+## Modal
 
-## O que NÃO vou fazer
+- Header: ícone + label da etapa + contagem (ex: "💼 Negócio — 14 leads").
+- Lista rolável: avatar, nome, telefone (com botão copiar), tempo de espera ("há 2d 3h"), e link clicável para abrir o lead no Kanban (`/leads?leadId=<id>`) — se essa rota já suporta deep-link; senão só fecha o modal.
+- Ordenação: mais recentes primeiro (`createdAt desc`).
+- Vazio: "Nenhum lead nesta etapa."
+- Fechar: botão X no canto, clique no backdrop, tecla ESC.
 
-- ❌ Não rodar `fb-sync-leads`, `seed-test-leads`, `auto-fill-leads`, `seed-pt-wagner`
-- ❌ Não puxar nada da Graph API por janela de tempo
-- ❌ Não inserir nenhum lead além desses 3
-- ❌ Não mexer em mais nada (corretores, profiles, status de outros leads)
+## Responsividade (celular, tablet, iPad, notebook, PC)
 
-## Validação final
+- Backdrop `fixed inset-0` com blur + overlay escuro.
+- Container: `w-[95vw] max-w-2xl max-h-[85vh]` centralizado, com `overflow-y-auto` no corpo e header/footer fixos.
+- Lista com `flex` que quebra em telas estreitas (nome em cima, telefone embaixo em `< sm`; lado a lado em `≥ sm`).
+- Alvo de toque mínimo 44px nos itens.
+- Testado nos breakpoints do projeto (mobile 375, tablet 768, desktop 1280+) — sem scroll horizontal.
 
-Depois rodo:
-```sql
-SELECT count(*) FROM leads WHERE status='lead_novo';
--- esperado: 18 (15 atuais + 3)
+## Arquivos
 
-SELECT name, phone, tenant_id, created_at
-FROM leads
-WHERE phone IN ('+55 32 988138793','+55 21 979056620','+55 21 993714193')
-ORDER BY created_at DESC;
--- esperado: exatamente 3 linhas
-```
+- **Editar** `src/pages/Dashboard.tsx`:
+  - Importar `useAuth` pra pegar `isAdmin`.
+  - Estado local `openStatus: LeadStatus | null`.
+  - Nos cards da seção "Leads por Etapa": se `isAdmin`, envolve em `<button>` com `onClick={() => setOpenStatus(col.key)}`, `cursor-pointer`, `aria-label`, e leve `hover:brightness-110`. Senão, mantém `<div>` atual.
+  - Renderiza `<LeadsPorEtapaModal>` quando `openStatus` não-null.
+- **Criar** `src/components/LeadsPorEtapaModal.tsx`: componente do modal descrito acima. Recebe `status`, `leads` (já filtrados), `label`, `color`, `icon`, `onClose`.
+- Nada muda em rotas, hooks, backend, RLS, edge functions ou tipos.
 
-Se contagem ≠ 18 ou aparecer 4ª linha, eu reverto.
+## O que NÃO faço
 
-## Depois disso
-
-Diagnóstico separado do porquê o webhook da Meta não disparou (token/inscrição) — **só depois** que você confirmar que os 3 entraram certos. Sem mexer em mais nada antes disso.
+- ❌ Não mexo nos outros blocos do Dashboard (KPIs de topo, "Tempo Médio", "Últimos Leads").
+- ❌ Não crio nova query — reuso `leads` já carregado por `useLeads()` e filtro em memória por `status`.
+- ❌ Não altero permissões/RLS — admin já vê todos os leads via `useLeads`.
+- ❌ Não toco em roleta, webhook, dedup, nada de backend.
 
 Aprovo e executo?
