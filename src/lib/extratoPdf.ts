@@ -141,27 +141,27 @@ export async function gerarExtratoPDF({ mesNome, ano, ymd, linhas }: ExtratoPara
   doc.setFontSize(10);
   doc.setTextColor(40, 40, 40);
   const rightX = pageW - margin;
+  const labelX = pageW - margin - 75;
 
-  doc.text("Licença CRM:", rightX - 45, ty);
+  doc.text("Licença CRM:", labelX, ty);
   doc.text(brl(LICENCA_CRM), rightX, ty, { align: "right" });
-  ty += 5.5;
+  ty += 6;
 
   doc.text(
     `Total de usuários (${linhas.length} × R$ 50,00):`,
-    rightX - 45,
+    labelX,
     ty,
   );
   doc.text(brl(totalUsuarios), rightX, ty, { align: "right" });
-  ty += 5.5;
+  ty += 6;
 
   doc.setDrawColor(180, 180, 180);
-  doc.line(rightX - 60, ty - 2, rightX, ty - 2);
-  ty += 2;
+  doc.line(labelX, ty - 3, rightX, ty - 3);
 
   doc.setFont("helvetica", "bold");
   doc.setFontSize(11);
   doc.setTextColor(17, 17, 17);
-  doc.text("Total geral:", rightX - 45, ty);
+  doc.text("Total geral:", labelX, ty);
   doc.text(brl(totalGeral), rightX, ty, { align: "right" });
 
   doc.save(`extrato-ia-genix-${ymd.slice(0, 7)}.pdf`);
