@@ -1,91 +1,84 @@
-# Extrato Mensal de Cobrança — Aba Assinaturas
+# Corrigir extrato retornando 0 corretores
 
-Adicionar geração de extrato mensal por mês/ano com prévia em tabela e exportação em PDF timbrado da IA Genix.
+## Diagnóstico
 
-## 1. Upload da logo
+O código atual em `src/pages/Assinaturas.tsx` (linhas 43–63) **já está correto** nos pontos citados:
 
-Salvar a imagem enviada como asset do projeto via `lovable-assets` a partir de `/mnt/user-uploads/07a125a3-5849-4c71-9c5e-2c1e7d33df53.jpeg`, gerando `src/assets/ia-genix-logo.jpg.asset.json` para import no componente.
+1. ✅ Chamada usa exatamente `mes_referencia`:
+   ```ts
+   supabase.rpc("extrato_mensal", { mes_referencia: ymd })
+   ```
+2. ✅ `ymd` é formatado como `YYYY-MM-01`:
+   ```ts
+   const ymd = `${ano}-${String(mes).padStart(2, "0")}-01`;
+   ```
+3. ✅ Erro é tratado e mostrado via `toast.error(...)`, mas silenciosamente descartado no console.
 
-## 2. Backend — RPC `extrato_mensal`
+Se está exibindo "0 corretores encontrados" **sem toast de erro**, então `error` é `null` e `data` é `[]`. Como a mesma função retorna 16 registros no SQL Editor (que roda como `postgres`/service_role, ignorando RLS), a causa mais provável é **RLS na tabela `profile_status_historico` bloqueando o role `authenticated`**. A função foi criada como `LANGUAGE sql STABLE` (sem `SECURITY DEFINER`), então roda no contexto do usuário chamador e respeita RLS.
 
-Criar migration com a função exata já validada (retorna os 16 corretores ativos):
+## Ações
 
-```sql
-create or replace function extrato_mensal(mes_referencia date)
-returns table (
-  profile_id uuid,
-  nome text,
-  email text,
-  valor numeric
-) as $$
-  select
-    p.id,
-    p.name,
-    p.email,
-    50.00 as valor
-  from profiles p
-  join profile_status_historico h on h.profile_id = p.id
-  where h.is_active = true
-    and h.data_inicio <= (date_trunc('month', mes_referencia) + interval '1 month - 1 day')::date
-    and (h.data_fim is null or h.data_fim >= date_trunc('month', mes_referencia)::date)
-  group by p.id, p.name, p.email
-  order by p.name;
-$$ language sql stable;
+### 1. Frontend — instrumentação (src/pages/Assinaturas.tsx)
+
+Trocar o `handleGerar` para logar payload, resposta e erro completos no console, e trazer a mensagem/detalhes do erro para o toast quando houver:
+
+```ts
+const handleGerar = async () => {
+  setGerando(true);
+  setExtrato(null);
+  console.log("[extrato_mensal] request", { mes_referencia: ymd });
+  const { data, error, status } = await supabase.rpc("extrato_mensal", {
+    mes_referencia: ymd,
+  });
+  console.log("[extrato_mensal] response", { status, error, count: data?.length, data });
+  setGerando(false);
+  if (error) {
+    toast.error(`Erro ao gerar extrato: ${error.message}${error.details ? ` — ${error.details}` : ""}`);
+    return;
+  }
+  // ...restante igual
+};
 ```
 
-Complementos na mesma migration: `SET search_path = public`, `SECURITY DEFINER`, e `GRANT EXECUTE ... TO authenticated`. Sem filtro por `user_roles` — a fonte da verdade é `profile_status_historico`.
+Isso confirma no console do navegador se está vindo `[]` sem erro (aponta RLS/permissão) ou algum erro sendo engolido.
 
-## 3. UI — `src/pages/Assinaturas.tsx`
+### 2. Backend — tornar a função `SECURITY DEFINER`
 
-Acima dos cards atuais, adicionar barra de controles:
+No Supabase externo (onde a função já existe), rodar no SQL Editor:
 
-- Dois `<select>` estilizados (glass): **Mês** (Jan–Dez pt-BR) e **Ano** (atual −2 até atual +1). Default: mês/ano atuais.
-- Botão **"Gerar extrato"** (dourado) → chama `supabase.rpc("extrato_mensal", { mes_referencia: "YYYY-MM-01" })` e guarda o resultado em estado.
-- Botão **"Baixar PDF"** (secundário) → habilitado somente quando há extrato gerado.
+```sql
+CREATE OR REPLACE FUNCTION public.extrato_mensal(mes_referencia date)
+RETURNS TABLE (profile_id uuid, nome text, email text, valor numeric)
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT p.id, p.name, p.email, 50.00::numeric AS valor
+  FROM profiles p
+  JOIN profile_status_historico h ON h.profile_id = p.id
+  WHERE h.is_active = true
+    AND h.data_inicio <= (date_trunc('month', mes_referencia) + interval '1 month - 1 day')::date
+    AND (h.data_fim IS NULL OR h.data_fim >= date_trunc('month', mes_referencia)::date)
+  GROUP BY p.id, p.name, p.email
+  ORDER BY p.name;
+$$;
 
-Abaixo, seção **Prévia do Extrato** (glass card):
+GRANT EXECUTE ON FUNCTION public.extrato_mensal(date) TO authenticated;
+```
 
-- Tabela: Nome | Email | Valor (R$ 50,00).
-- Bloco de totais alinhado à direita:
-  - Licença CRM: R$ 600,00
-  - Usuários: `N × R$ 50,00 = R$ X`
-  - **Total geral: R$ (X + 600)** (destaque em dourado)
+Com `SECURITY DEFINER`, a função roda como o owner (que tem bypass de RLS via `postgres`) e retorna as mesmas 16 linhas para o usuário autenticado.
 
-Os cards existentes no topo continuam refletindo o mês corrente (comportamento atual preservado).
+### 3. Validação
 
-Responsivo: controles em `flex-wrap`, tabela em `overflow-x:auto`.
+Após aplicar (1) e (2):
 
-## 4. PDF — jsPDF + jspdf-autotable
-
-Instalar `jspdf` e `jspdf-autotable`. Criar helper `src/lib/extratoPdf.ts` com função `gerarExtratoPDF({ mes, ano, linhas, totais })`:
-
-- A4 retrato, margens 15mm.
-- **Cabeçalho**: logo IA Genix à esquerda (~15mm altura, via `addImage` a partir do asset carregado como dataURL). Ao lado: "IA Genix" (bold 12pt), "CNPJ 62.468.644/0001-66", "Rua Prefeito José Basílio de Alvarenga, Centro — Santa Isabel/SP — CEP 07500-000".
-- **Bloco Cliente** (abaixo, com linha separadora): "Cliente: Andrade Consultoria Imobiliária", "CNPJ 53.573.430/0001-69", "Rua General Andrade Neves, nº 85, Centro — Niterói/RJ".
-- **Título centralizado**: `Extrato de Cobrança — {Mês}/{Ano}` (bold 14pt).
-- **Tabela** (autoTable): Nome | Email | Valor (R$). Cabeçalho preto/dourado.
-- **Totais** abaixo da tabela, alinhados à direita:
-  - Licença CRM: R$ 600,00
-  - Total de usuários: N × R$ 50,00 = R$ X
-  - **Total geral: R$ Y** (bold)
-- **Rodapé** (em toda página, via `didDrawPage`):
-  - Linha 1: "Conforme Cláusulas 5 e 6 do Contrato de Prestação de Serviços"
-  - Linha 2: `Emitido em DD/MM/AAAA` + numeração de página à direita
-- Salvar como `extrato-ia-genix-YYYY-MM.pdf`.
-
-## 5. Aspectos técnicos
-
-- Logo convertida para dataURL uma vez no mount (fetch do `asset.json.url` → blob → base64) e reutilizada.
-- Formatação monetária: helper `formatCurrency` já existente na página.
-- Nomes de meses em pt-BR via `Intl.DateTimeFormat`.
-- Sem mudanças em RLS de outras tabelas; nenhuma alteração no fluxo de auth existente.
+1. Recarregar a aba **Assinaturas**, selecionar **Junho / 2026**, clicar em **Gerar extrato**.
+2. Abrir o console do navegador: os logs `[extrato_mensal] request` e `[extrato_mensal] response` devem aparecer, com `count: 16`.
+3. Toast: "16 corretores encontrados". Tabela renderizada com os 16 nomes, totais = 16 × R$ 50 + R$ 600 = R$ 1.400,00.
+4. Clicar em **Baixar PDF** e confirmar que o PDF sai com as 16 linhas.
 
 ## Arquivos afetados
 
-```text
-src/assets/ia-genix-logo.jpg.asset.json      (novo, via lovable-assets)
-supabase/migrations/<ts>_extrato_mensal.sql  (RPC validada)
-src/lib/extratoPdf.ts                         (novo helper de PDF)
-src/pages/Assinaturas.tsx                     (controles + prévia + botões)
-package.json                                  (+ jspdf, jspdf-autotable)
-```
+- `src/pages/Assinaturas.tsx` — instrumentação em `handleGerar`.
+- Backend externo (via SQL Editor do usuário) — recriar `extrato_mensal` com `SECURITY DEFINER`.
