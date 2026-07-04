@@ -168,9 +168,175 @@ export function Assinaturas() {
     },
   ];
 
+  const totalUsuariosExtrato = extrato
+    ? extrato.reduce((s, l) => s + Number(l.valor), 0)
+    : 0;
+  const totalGeralExtrato = totalUsuariosExtrato + CRM_LICENSE;
+
+  const selectStyle: React.CSSProperties = {
+    background: "rgba(255,255,255,0.04)",
+    border: "1px solid var(--glass-border)",
+    borderRadius: 10,
+    color: "var(--text-primary)",
+    padding: "10px 12px",
+    fontSize: 13,
+    minWidth: 120,
+    outline: "none",
+    appearance: "none",
+    cursor: "pointer",
+  };
+
   return (
     <div style={{ maxWidth: 1100, margin: "0 auto" }}>
-      {/* Cards */}
+      {/* Extrato Mensal */}
+      <div
+        className="glass"
+        style={{
+          padding: "18px 22px",
+          borderRadius: 14,
+          border: "1px solid var(--glass-border)",
+          marginBottom: 20,
+          display: "flex",
+          gap: 12,
+          alignItems: "flex-end",
+          flexWrap: "wrap",
+        }}
+      >
+        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+          <label style={{ fontSize: 11, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.06em" }}>Mês</label>
+          <select value={mes} onChange={(e) => setMes(Number(e.target.value))} style={selectStyle}>
+            {MESES.map((m, i) => (
+              <option key={m} value={i + 1} style={{ background: "#111" }}>{m}</option>
+            ))}
+          </select>
+        </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+          <label style={{ fontSize: 11, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.06em" }}>Ano</label>
+          <select value={ano} onChange={(e) => setAno(Number(e.target.value))} style={selectStyle}>
+            {anos.map((y) => (
+              <option key={y} value={y} style={{ background: "#111" }}>{y}</option>
+            ))}
+          </select>
+        </div>
+        <button
+          onClick={handleGerar}
+          disabled={gerando}
+          style={{
+            background: "linear-gradient(135deg, var(--gold), #b8960c)",
+            color: "#0a0a0a",
+            border: "none",
+            borderRadius: 10,
+            padding: "11px 20px",
+            fontSize: 13,
+            fontWeight: 700,
+            cursor: gerando ? "wait" : "pointer",
+            opacity: gerando ? 0.7 : 1,
+            minHeight: 42,
+          }}
+        >
+          {gerando ? "Gerando..." : "Gerar extrato"}
+        </button>
+        <button
+          onClick={handlePDF}
+          disabled={!extrato || baixando}
+          style={{
+            background: "transparent",
+            color: "var(--text-primary)",
+            border: "1px solid var(--glass-border)",
+            borderRadius: 10,
+            padding: "11px 20px",
+            fontSize: 13,
+            fontWeight: 600,
+            cursor: !extrato || baixando ? "not-allowed" : "pointer",
+            opacity: !extrato || baixando ? 0.5 : 1,
+            minHeight: 42,
+          }}
+        >
+          {baixando ? "Gerando PDF..." : "Baixar PDF"}
+        </button>
+      </div>
+
+      {extrato && (
+        <div
+          className="glass"
+          style={{
+            borderRadius: 14,
+            overflow: "hidden",
+            border: "1px solid var(--glass-border)",
+            marginBottom: 24,
+          }}
+        >
+          <div style={{ padding: "14px 22px", borderBottom: "1px solid var(--glass-border)" }}>
+            <h2 style={{ fontFamily: "Montserrat, sans-serif", fontWeight: 700, fontSize: 14, color: "var(--text-primary)" }}>
+              Prévia — {MESES[mes - 1]}/{ano}
+            </h2>
+          </div>
+          {extrato.length === 0 ? (
+            <div style={{ padding: 32, textAlign: "center", color: "var(--text-muted)", fontSize: 13 }}>
+              Nenhum corretor ativo neste período.
+            </div>
+          ) : (
+            <>
+              <div style={{ overflowX: "auto" }}>
+                <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                  <thead>
+                    <tr style={{ borderBottom: "1px solid var(--glass-border)", textAlign: "left" }}>
+                      {["Nome", "Email", "Valor"].map((h, i) => (
+                        <th key={h} style={{
+                          padding: "12px 16px",
+                          fontSize: 11,
+                          fontWeight: 600,
+                          color: "var(--text-muted)",
+                          textTransform: "uppercase",
+                          letterSpacing: "0.06em",
+                          textAlign: i === 2 ? "right" : "left",
+                          whiteSpace: "nowrap",
+                        }}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {extrato.map((l, i) => (
+                      <tr key={i} style={{ borderBottom: "1px solid var(--glass-border)" }}>
+                        <td style={{ padding: "10px 16px", fontSize: 13, color: "var(--text-primary)", fontWeight: 500 }}>{l.nome}</td>
+                        <td style={{ padding: "10px 16px", fontSize: 13, color: "var(--text-muted)" }}>{l.email || "—"}</td>
+                        <td style={{ padding: "10px 16px", fontSize: 13, color: "var(--text-primary)", fontWeight: 600, textAlign: "right", whiteSpace: "nowrap" }}>
+                          {formatCurrency(l.valor)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <div style={{ padding: "16px 22px", borderTop: "1px solid var(--glass-border)", display: "flex", justifyContent: "flex-end" }}>
+                <div style={{ minWidth: 280, display: "flex", flexDirection: "column", gap: 6 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, color: "var(--text-muted)" }}>
+                    <span>Licença CRM:</span>
+                    <span style={{ color: "var(--text-primary)", fontWeight: 600 }}>{formatCurrency(CRM_LICENSE)}</span>
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, color: "var(--text-muted)" }}>
+                    <span>Usuários ({extrato.length} × R$ 50,00):</span>
+                    <span style={{ color: "var(--text-primary)", fontWeight: 600 }}>{formatCurrency(totalUsuariosExtrato)}</span>
+                  </div>
+                  <div style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    fontSize: 15,
+                    paddingTop: 8,
+                    marginTop: 4,
+                    borderTop: "1px solid var(--glass-border)",
+                  }}>
+                    <span style={{ fontWeight: 700, color: "var(--text-primary)" }}>Total geral:</span>
+                    <span style={{ fontWeight: 700, color: "var(--gold)" }}>{formatCurrency(totalGeralExtrato)}</span>
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+      )}
+
+
       <div
         style={{
           display: "grid",
