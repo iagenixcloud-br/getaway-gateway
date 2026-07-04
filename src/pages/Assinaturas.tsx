@@ -45,12 +45,23 @@ export function Assinaturas() {
   const handleGerar = async () => {
     setGerando(true);
     setExtrato(null);
-    const { data, error } = await supabase.rpc("extrato_mensal", {
+    console.log("[extrato_mensal] request", { mes_referencia: ymd });
+    const { data, error, status } = await supabase.rpc("extrato_mensal", {
       mes_referencia: ymd,
+    });
+    console.log("[extrato_mensal] response", {
+      status,
+      error,
+      count: Array.isArray(data) ? data.length : null,
+      data,
     });
     setGerando(false);
     if (error) {
-      toast.error(`Erro ao gerar extrato: ${error.message}`);
+      toast.error(
+        `Erro ao gerar extrato: ${error.message}${
+          (error as { details?: string }).details ? ` — ${(error as { details?: string }).details}` : ""
+        }`,
+      );
       return;
     }
     const linhas: ExtratoLinha[] = (data ?? []).map((r: any) => ({
