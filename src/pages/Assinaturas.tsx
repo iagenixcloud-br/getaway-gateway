@@ -1,11 +1,18 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Navigate } from "react-router-dom";
+import { toast } from "sonner";
 import { useAuth } from "../contexts/AuthContext";
 import { supabase } from "../lib/supabase";
+import { gerarExtratoPDF, type ExtratoLinha } from "../lib/extratoPdf";
 
 const ALLOWED_EMAIL = "iagenixcloud@gmail.com";
 const CRM_LICENSE = 600;
 const PER_USER = 50;
+
+const MESES = [
+  "Janeiro","Fevereiro","Março","Abril","Maio","Junho",
+  "Julho","Agosto","Setembro","Outubro","Novembro","Dezembro",
+];
 
 interface Corretor {
   user_id: string;
@@ -19,6 +26,58 @@ export function Assinaturas() {
   const { user, loading: authLoading } = useAuth();
   const [corretores, setCorretores] = useState<Corretor[]>([]);
   const [loading, setLoading] = useState(true);
+
+  const now = new Date();
+  const [mes, setMes] = useState<number>(now.getMonth() + 1); // 1-12
+  const [ano, setAno] = useState<number>(now.getFullYear());
+  const [extrato, setExtrato] = useState<ExtratoLinha[] | null>(null);
+  const [gerando, setGerando] = useState(false);
+  const [baixando, setBaixando] = useState(false);
+
+  const anos = useMemo(() => {
+    const y = now.getFullYear();
+    return [y - 2, y - 1, y, y + 1];
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const ymd = `${ano}-${String(mes).padStart(2, "0")}-01`;
+
+  const handleGerar = async () => {
+    setGerando(true);
+    setExtrato(null);
+    const { data, error } = await supabase.rpc("extrato_mensal", {
+      mes_referencia: ymd,
+    });
+    setGerando(false);
+    if (error) {
+      toast.error(`Erro ao gerar extrato: ${error.message}`);
+      return;
+    }
+    const linhas: ExtratoLinha[] = (data ?? []).map((r: any) => ({
+      nome: r.nome ?? "—",
+      email: r.email ?? "",
+      valor: Number(r.valor ?? PER_USER),
+    }));
+    setExtrato(linhas);
+    toast.success(`${linhas.length} corretores encontrados`);
+  };
+
+  const handlePDF = async () => {
+    if (!extrato) return;
+    setBaixando(true);
+    try {
+      await gerarExtratoPDF({
+        mesNome: MESES[mes - 1],
+        ano,
+        ymd,
+        linhas: extrato,
+      });
+    } catch (e) {
+      toast.error(`Erro ao gerar PDF: ${e instanceof Error ? e.message : "desconhecido"}`);
+    } finally {
+      setBaixando(false);
+    }
+  };
 
   useEffect(() => {
     if (!user || user.email !== ALLOWED_EMAIL) return;
