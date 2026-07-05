@@ -568,6 +568,11 @@ export function Exportar() {
                     <td style={{ padding: 12, color: "rgba(255,255,255,0.7)" }}>{r.phone}</td>
                     <td style={{ padding: 12 }}>{statusLabel(r.status)}</td>
                     <td style={{ padding: 12, color: "rgba(255,255,255,0.7)" }}>{r.substatus || "—"}</td>
+                    {showArquivadoCol && (
+                      <td style={{ padding: 12, color: r.arquivado ? "#D85A30" : "rgba(255,255,255,0.7)", fontWeight: r.arquivado ? 600 : 400 }}>
+                        {r.arquivado ? "Sim" : "Não"}
+                      </td>
+                    )}
                     <td style={{ padding: 12, color: "rgba(255,255,255,0.7)" }}>
                       {r.tenant_id ? corretorNome.get(r.tenant_id) ?? "—" : "—"}
                     </td>
