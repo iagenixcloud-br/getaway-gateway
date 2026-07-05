@@ -78,6 +78,8 @@ export function Exportar() {
   const [statusSel, setStatusSel] = useState<string[]>(["venda", "cliente_futuro"]);
   const [corretorSel, setCorretorSel] = useState<string>("");
   const [periodo, setPeriodo] = useState<Periodo>("90d");
+  const [incluirArquivados, setIncluirArquivados] = useState(false);
+  const [showArquivadoCol, setShowArquivadoCol] = useState(false);
 
   const [rows, setRows] = useState<LeadRow[]>([]);
   const [loading, setLoading] = useState(false);
