@@ -115,6 +115,7 @@ export function Exportar() {
       setRows([]);
     } else {
       setRows((data as LeadRow[]) ?? []);
+      setShowArquivadoCol(incluirArquivados);
     }
     setLoading(false);
   };
