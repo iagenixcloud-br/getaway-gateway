@@ -374,26 +374,8 @@ export function Exportar() {
             (clique em "Aplicar filtros" para atualizar)
           </span>
         </label>
-            onClick={fetchLeads}
-            disabled={loading}
-            className="w-full md:w-auto"
-            style={{
-              background: "#185FA5",
-              color: "#fff",
-              border: "none",
-              borderRadius: 8,
-              padding: "12px 18px",
-              fontSize: 13,
-              fontWeight: 600,
-              cursor: loading ? "wait" : "pointer",
-              whiteSpace: "nowrap",
-              minHeight: 44,
-            }}
-          >
-            {loading ? "Buscando..." : "Aplicar filtros"}
-          </button>
-        </div>
       </div>
+
 
       {/* Resumo */}
       <div
