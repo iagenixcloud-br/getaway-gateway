@@ -15,6 +15,7 @@ interface LeadRow {
   interest: string | null;
   created_at: string;
   tenant_id: string | null;
+  arquivado: boolean;
 }
 
 const STATUS_OPTIONS: { value: string; label: string }[] = [
