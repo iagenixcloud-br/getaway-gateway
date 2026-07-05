@@ -453,6 +453,9 @@ export function Exportar() {
                   </span>
                 </div>
                 <p style={{ fontSize: 12, color: "rgba(255,255,255,0.7)", marginTop: 2 }}>{r.phone}</p>
+                {r.substatus && (
+                  <p style={{ fontSize: 11, color: "rgba(255,255,255,0.6)", marginTop: 2 }}>Substatus: {r.substatus}</p>
+                )}
                 <div className="flex items-center justify-between gap-2 mt-1">
                   <span className="truncate" style={{ fontSize: 11, color: "rgba(255,255,255,0.55)" }}>
                     {r.tenant_id ? corretorNome.get(r.tenant_id) ?? "—" : "—"}
