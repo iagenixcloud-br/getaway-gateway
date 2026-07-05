@@ -501,7 +501,7 @@ export function Exportar() {
               {loading ? (
                 Array.from({ length: 6 }).map((_, i) => (
                   <tr key={i} style={{ borderTop: "0.5px solid rgba(255,255,255,0.06)" }}>
-                    {Array.from({ length: 6 }).map((__, j) => (
+                    {Array.from({ length: 7 }).map((__, j) => (
                       <td key={j} style={{ padding: 12 }}>
                         <div
                           className="animate-pulse"
@@ -513,7 +513,7 @@ export function Exportar() {
                 ))
               ) : rows.length === 0 ? (
                 <tr>
-                  <td colSpan={6} style={{ padding: 32, textAlign: "center", color: "rgba(255,255,255,0.5)" }}>
+                  <td colSpan={7} style={{ padding: 32, textAlign: "center", color: "rgba(255,255,255,0.5)" }}>
                     Nenhum lead encontrado com os filtros aplicados.
                   </td>
                 </tr>
@@ -530,6 +530,7 @@ export function Exportar() {
                     <td style={{ padding: 12 }}>{r.name}</td>
                     <td style={{ padding: 12, color: "rgba(255,255,255,0.7)" }}>{r.phone}</td>
                     <td style={{ padding: 12 }}>{statusLabel(r.status)}</td>
+                    <td style={{ padding: 12, color: "rgba(255,255,255,0.7)" }}>{r.substatus || "—"}</td>
                     <td style={{ padding: 12, color: "rgba(255,255,255,0.7)" }}>
                       {r.tenant_id ? corretorNome.get(r.tenant_id) ?? "—" : "—"}
                     </td>
