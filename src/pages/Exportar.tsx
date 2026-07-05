@@ -15,6 +15,7 @@ interface LeadRow {
   interest: string | null;
   created_at: string;
   tenant_id: string | null;
+  arquivado: boolean;
 }
 
 const STATUS_OPTIONS: { value: string; label: string }[] = [
@@ -77,6 +78,8 @@ export function Exportar() {
   const [statusSel, setStatusSel] = useState<string[]>(["venda", "cliente_futuro"]);
   const [corretorSel, setCorretorSel] = useState<string>("");
   const [periodo, setPeriodo] = useState<Periodo>("90d");
+  const [incluirArquivados, setIncluirArquivados] = useState(false);
+  const [showArquivadoCol, setShowArquivadoCol] = useState(false);
 
   const [rows, setRows] = useState<LeadRow[]>([]);
   const [loading, setLoading] = useState(false);
@@ -97,12 +100,12 @@ export function Exportar() {
     setSelected(new Set());
     let q = supabase
       .from("leads")
-      .select("id,name,phone,email,status,substatus,city,interest,created_at,tenant_id")
-      .eq("arquivado", false)
+      .select("id,name,phone,email,status,substatus,city,interest,created_at,tenant_id,arquivado")
       .gte("created_at", periodoToDate(periodo))
       .order("created_at", { ascending: false })
       .limit(1000);
 
+    if (!incluirArquivados) q = q.eq("arquivado", false);
     if (statusSel.length > 0) q = q.in("status", statusSel);
     if (corretorSel) q = q.eq("tenant_id", corretorSel);
 
@@ -112,6 +115,7 @@ export function Exportar() {
       setRows([]);
     } else {
       setRows((data as LeadRow[]) ?? []);
+      setShowArquivadoCol(incluirArquivados);
     }
     setLoading(false);
   };
@@ -165,6 +169,7 @@ export function Exportar() {
       "Email",
       "Status",
       "Substatus",
+      ...(showArquivadoCol ? ["Arquivado"] : []),
       "Corretor",
       "Data entrada",
       "Cidade",
@@ -179,6 +184,7 @@ export function Exportar() {
           r.email ?? "",
           statusLabel(r.status),
           r.substatus ?? "",
+          ...(showArquivadoCol ? [r.arquivado ? "Sim" : "Não"] : []),
           r.tenant_id ? corretorNome.get(r.tenant_id) ?? "" : "",
           new Date(r.created_at).toLocaleString("pt-BR"),
           r.city ?? "",
@@ -344,7 +350,32 @@ export function Exportar() {
             {loading ? "Buscando..." : "Aplicar filtros"}
           </button>
         </div>
+
+        <label
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 8,
+            marginTop: 12,
+            fontSize: 12,
+            color: "rgba(255,255,255,0.8)",
+            cursor: "pointer",
+            userSelect: "none",
+          }}
+        >
+          <input
+            type="checkbox"
+            checked={incluirArquivados}
+            onChange={(e) => setIncluirArquivados(e.target.checked)}
+            style={{ width: 16, height: 16, cursor: "pointer" }}
+          />
+          Incluir arquivados
+          <span style={{ fontSize: 11, color: "rgba(255,255,255,0.5)" }}>
+            (clique em "Aplicar filtros" para atualizar)
+          </span>
+        </label>
       </div>
+
 
       {/* Resumo */}
       <div
@@ -448,9 +479,16 @@ export function Exportar() {
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between gap-2">
                   <p className="truncate" style={{ fontSize: 14, fontWeight: 700 }}>{r.name}</p>
-                  <span style={{ fontSize: 10, padding: "2px 8px", borderRadius: 999, background: "rgba(24,95,165,0.2)", color: "#7eb6ff", whiteSpace: "nowrap" }}>
-                    {statusLabel(r.status)}
-                  </span>
+                  <div className="flex items-center gap-1" style={{ flexShrink: 0 }}>
+                    {showArquivadoCol && r.arquivado && (
+                      <span style={{ fontSize: 10, padding: "2px 8px", borderRadius: 999, background: "rgba(216,90,48,0.2)", color: "#f0a080", whiteSpace: "nowrap" }}>
+                        Arquivado
+                      </span>
+                    )}
+                    <span style={{ fontSize: 10, padding: "2px 8px", borderRadius: 999, background: "rgba(24,95,165,0.2)", color: "#7eb6ff", whiteSpace: "nowrap" }}>
+                      {statusLabel(r.status)}
+                    </span>
+                  </div>
                 </div>
                 <p style={{ fontSize: 12, color: "rgba(255,255,255,0.7)", marginTop: 2 }}>{r.phone}</p>
                 {r.substatus && (
@@ -496,6 +534,9 @@ export function Exportar() {
                 <th style={{ padding: 12, textAlign: "left", fontWeight: 600 }}>Telefone</th>
                 <th style={{ padding: 12, textAlign: "left", fontWeight: 600 }}>Status</th>
                 <th style={{ padding: 12, textAlign: "left", fontWeight: 600 }}>Substatus</th>
+                {showArquivadoCol && (
+                  <th style={{ padding: 12, textAlign: "left", fontWeight: 600 }}>Arquivado</th>
+                )}
                 <th style={{ padding: 12, textAlign: "left", fontWeight: 600 }}>Corretor</th>
                 <th style={{ padding: 12, textAlign: "left", fontWeight: 600 }}>Data</th>
               </tr>
@@ -504,7 +545,7 @@ export function Exportar() {
               {loading ? (
                 Array.from({ length: 6 }).map((_, i) => (
                   <tr key={i} style={{ borderTop: "0.5px solid rgba(255,255,255,0.06)" }}>
-                    {Array.from({ length: 7 }).map((__, j) => (
+                    {Array.from({ length: showArquivadoCol ? 8 : 7 }).map((__, j) => (
                       <td key={j} style={{ padding: 12 }}>
                         <div
                           className="animate-pulse"
@@ -516,7 +557,7 @@ export function Exportar() {
                 ))
               ) : rows.length === 0 ? (
                 <tr>
-                  <td colSpan={7} style={{ padding: 32, textAlign: "center", color: "rgba(255,255,255,0.5)" }}>
+                  <td colSpan={showArquivadoCol ? 8 : 7} style={{ padding: 32, textAlign: "center", color: "rgba(255,255,255,0.5)" }}>
                     Nenhum lead encontrado com os filtros aplicados.
                   </td>
                 </tr>
@@ -534,6 +575,11 @@ export function Exportar() {
                     <td style={{ padding: 12, color: "rgba(255,255,255,0.7)" }}>{r.phone}</td>
                     <td style={{ padding: 12 }}>{statusLabel(r.status)}</td>
                     <td style={{ padding: 12, color: "rgba(255,255,255,0.7)" }}>{r.substatus || "—"}</td>
+                    {showArquivadoCol && (
+                      <td style={{ padding: 12, color: r.arquivado ? "#D85A30" : "rgba(255,255,255,0.7)", fontWeight: r.arquivado ? 600 : 400 }}>
+                        {r.arquivado ? "Sim" : "Não"}
+                      </td>
+                    )}
                     <td style={{ padding: 12, color: "rgba(255,255,255,0.7)" }}>
                       {r.tenant_id ? corretorNome.get(r.tenant_id) ?? "—" : "—"}
                     </td>
