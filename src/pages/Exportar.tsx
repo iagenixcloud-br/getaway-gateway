@@ -100,12 +100,12 @@ export function Exportar() {
     setSelected(new Set());
     let q = supabase
       .from("leads")
-      .select("id,name,phone,email,status,substatus,city,interest,created_at,tenant_id")
-      .eq("arquivado", false)
+      .select("id,name,phone,email,status,substatus,city,interest,created_at,tenant_id,arquivado")
       .gte("created_at", periodoToDate(periodo))
       .order("created_at", { ascending: false })
       .limit(1000);
 
+    if (!incluirArquivados) q = q.eq("arquivado", false);
     if (statusSel.length > 0) q = q.in("status", statusSel);
     if (corretorSel) q = q.eq("tenant_id", corretorSel);
 
