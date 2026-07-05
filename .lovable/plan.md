@@ -1,43 +1,25 @@
-# Corrigir sobreposição no bloco de totais do PDF
+## Adicionar coluna "Substatus" na tela Exportar & Arquivar
 
-O label "Total de usuários (16 × R$ 50,00):" tem ~65mm de largura, mas está sendo desenhado a partir de `rightX - 45` (≈150mm), sobrepondo o valor à direita (~195mm). Ajustar para:
+Arquivo: `src/pages/Exportar.tsx`
 
-- Label X fixo em `pageW - margin - 75` (≈120mm), left-aligned.
-- Valor sempre em `pageW - margin` (≈195mm), right-aligned via `{ align: "right" }`.
-- Espaçamento vertical `ty += 6` entre linhas.
-- Linha separadora acima do "Total geral" cobrindo `labelX` até `rightX`.
+O campo `substatus` já é carregado do banco e já está incluído no CSV exportado (header `"Substatus"` entre Status e Corretor). Faltam apenas as exibições visuais.
 
-## Alteração em `src/lib/extratoPdf.ts` (linhas 140–fim)
+### Alterações
 
-```ts
-doc.setFont("helvetica", "normal");
-doc.setFontSize(10);
-doc.setTextColor(40, 40, 40);
-const rightX = pageW - margin;
-const labelX = pageW - margin - 75;
+1. **Tabela desktop** (`<table>` dentro do bloco `hidden md:block`):
+   - Adicionar `<th>Substatus</th>` entre "Status" e "Corretor".
+   - Adicionar `<td>{r.substatus || "—"}</td>` na mesma posição em cada linha.
+   - Atualizar `colSpan` do estado vazio de `6` para `7`.
+   - Atualizar o loading skeleton para gerar 7 células (em vez de 6).
 
-doc.text("Licença CRM:", labelX, ty);
-doc.text(brl(LICENCA_CRM), rightX, ty, { align: "right" });
-ty += 6;
+2. **Cards mobile** (`md:hidden`):
+   - Adicionar, abaixo da linha do telefone, uma linha com o substatus quando presente: `{r.substatus && <p style={{fontSize:11,color:"rgba(255,255,255,0.6)"}}>Substatus: {r.substatus}</p>}`.
 
-doc.text(
-  `Total de usuários (${linhas.length} × R$ 50,00):`,
-  labelX,
-  ty,
-);
-doc.text(brl(totalUsuarios), rightX, ty, { align: "right" });
-ty += 6;
+3. **Exportação CSV**: já contempla o header `"Substatus"` na posição correta — nenhum ajuste necessário.
 
-doc.setDrawColor(180, 180, 180);
-doc.line(labelX, ty - 3, rightX, ty - 3);
+4. **Vazio/null**: renderizar `"—"` na tabela e omitir a linha nos cards; nenhum tratamento adicional.
 
-doc.setFont("helvetica", "bold");
-doc.setFontSize(11);
-doc.setTextColor(17, 17, 17);
-doc.text("Total geral:", labelX, ty);
-doc.text(brl(totalGeral), rightX, ty, { align: "right" });
-```
+### Validação
 
-## Validação
-
-Gerar PDF de Junho/2026 pela UI e inspecionar visualmente as 3 linhas (Licença CRM, Total de usuários, Total geral) sem sobreposição, alinhadas em coluna com valores à direita.
+- Aplicar filtro "Perda" ou "Cliente Futuro" e confirmar que a coluna Substatus aparece preenchida (ex: "Sem perfil financeiro", "Busca imóvel mais barato").
+- Exportar CSV e conferir que a coluna Substatus permanece na mesma posição relativa.

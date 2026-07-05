@@ -492,6 +492,7 @@ export function Exportar() {
                 <th style={{ padding: 12, textAlign: "left", fontWeight: 600 }}>Nome</th>
                 <th style={{ padding: 12, textAlign: "left", fontWeight: 600 }}>Telefone</th>
                 <th style={{ padding: 12, textAlign: "left", fontWeight: 600 }}>Status</th>
+                <th style={{ padding: 12, textAlign: "left", fontWeight: 600 }}>Substatus</th>
                 <th style={{ padding: 12, textAlign: "left", fontWeight: 600 }}>Corretor</th>
                 <th style={{ padding: 12, textAlign: "left", fontWeight: 600 }}>Data</th>
               </tr>
