@@ -479,9 +479,16 @@ export function Exportar() {
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between gap-2">
                   <p className="truncate" style={{ fontSize: 14, fontWeight: 700 }}>{r.name}</p>
-                  <span style={{ fontSize: 10, padding: "2px 8px", borderRadius: 999, background: "rgba(24,95,165,0.2)", color: "#7eb6ff", whiteSpace: "nowrap" }}>
-                    {statusLabel(r.status)}
-                  </span>
+                  <div className="flex items-center gap-1" style={{ flexShrink: 0 }}>
+                    {showArquivadoCol && r.arquivado && (
+                      <span style={{ fontSize: 10, padding: "2px 8px", borderRadius: 999, background: "rgba(216,90,48,0.2)", color: "#f0a080", whiteSpace: "nowrap" }}>
+                        Arquivado
+                      </span>
+                    )}
+                    <span style={{ fontSize: 10, padding: "2px 8px", borderRadius: 999, background: "rgba(24,95,165,0.2)", color: "#7eb6ff", whiteSpace: "nowrap" }}>
+                      {statusLabel(r.status)}
+                    </span>
+                  </div>
                 </div>
                 <p style={{ fontSize: 12, color: "rgba(255,255,255,0.7)", marginTop: 2 }}>{r.phone}</p>
                 {r.substatus && (
