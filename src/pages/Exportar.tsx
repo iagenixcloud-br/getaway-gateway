@@ -453,6 +453,9 @@ export function Exportar() {
                   </span>
                 </div>
                 <p style={{ fontSize: 12, color: "rgba(255,255,255,0.7)", marginTop: 2 }}>{r.phone}</p>
+                {r.substatus && (
+                  <p style={{ fontSize: 11, color: "rgba(255,255,255,0.6)", marginTop: 2 }}>Substatus: {r.substatus}</p>
+                )}
                 <div className="flex items-center justify-between gap-2 mt-1">
                   <span className="truncate" style={{ fontSize: 11, color: "rgba(255,255,255,0.55)" }}>
                     {r.tenant_id ? corretorNome.get(r.tenant_id) ?? "—" : "—"}
@@ -492,6 +495,7 @@ export function Exportar() {
                 <th style={{ padding: 12, textAlign: "left", fontWeight: 600 }}>Nome</th>
                 <th style={{ padding: 12, textAlign: "left", fontWeight: 600 }}>Telefone</th>
                 <th style={{ padding: 12, textAlign: "left", fontWeight: 600 }}>Status</th>
+                <th style={{ padding: 12, textAlign: "left", fontWeight: 600 }}>Substatus</th>
                 <th style={{ padding: 12, textAlign: "left", fontWeight: 600 }}>Corretor</th>
                 <th style={{ padding: 12, textAlign: "left", fontWeight: 600 }}>Data</th>
               </tr>
@@ -500,7 +504,7 @@ export function Exportar() {
               {loading ? (
                 Array.from({ length: 6 }).map((_, i) => (
                   <tr key={i} style={{ borderTop: "0.5px solid rgba(255,255,255,0.06)" }}>
-                    {Array.from({ length: 6 }).map((__, j) => (
+                    {Array.from({ length: 7 }).map((__, j) => (
                       <td key={j} style={{ padding: 12 }}>
                         <div
                           className="animate-pulse"
@@ -512,7 +516,7 @@ export function Exportar() {
                 ))
               ) : rows.length === 0 ? (
                 <tr>
-                  <td colSpan={6} style={{ padding: 32, textAlign: "center", color: "rgba(255,255,255,0.5)" }}>
+                  <td colSpan={7} style={{ padding: 32, textAlign: "center", color: "rgba(255,255,255,0.5)" }}>
                     Nenhum lead encontrado com os filtros aplicados.
                   </td>
                 </tr>
@@ -529,6 +533,7 @@ export function Exportar() {
                     <td style={{ padding: 12 }}>{r.name}</td>
                     <td style={{ padding: 12, color: "rgba(255,255,255,0.7)" }}>{r.phone}</td>
                     <td style={{ padding: 12 }}>{statusLabel(r.status)}</td>
+                    <td style={{ padding: 12, color: "rgba(255,255,255,0.7)" }}>{r.substatus || "—"}</td>
                     <td style={{ padding: 12, color: "rgba(255,255,255,0.7)" }}>
                       {r.tenant_id ? corretorNome.get(r.tenant_id) ?? "—" : "—"}
                     </td>
