@@ -221,11 +221,12 @@ Deno.serve(async (req) => {
     // 1b. Load active corretores and their current lead counts for round-robin with cap.
     // Para dedup, carrega apenas leads das últimas 24h (janela deslizante).
     const since24h = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+    const since7d = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
     const [{ data: corretoresRaw }, { data: allLeads }, { data: existingLeads }, { data: existingLogs }] = await Promise.all([
       crmAdmin.from("profiles").select("id, name, is_active, last_received_at").eq("is_active", true).order("last_received_at", { ascending: true, nullsFirst: true }),
       crmAdmin.from("leads").select("tenant_id").eq("status", "lead_novo").not("tenant_id", "is", null).limit(5000),
-      crmAdmin.from("leads").select("phone, interest, created_at").gte("created_at", since24h).limit(5000),
-      cloudAdmin.from("webhook_logs").select("leadgen_id").not("leadgen_id", "is", null).limit(5000),
+      crmAdmin.from("leads").select("phone, interest, created_at").gte("created_at", since24h).order("created_at", { ascending: false }).limit(10000),
+      cloudAdmin.from("webhook_logs").select("leadgen_id").not("leadgen_id", "is", null).gte("created_at", since7d).order("created_at", { ascending: false }).limit(10000),
     ]);
 
     const leadCounts = new Map<string, number>();
