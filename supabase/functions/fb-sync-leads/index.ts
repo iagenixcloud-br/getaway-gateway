@@ -315,6 +315,29 @@ Deno.serve(async (req) => {
             continue;
           }
 
+          // Reforço: check pontual no CRM (elimina race entre execuções concorrentes do cron)
+          if (normPhone) {
+            const { data: existingRow } = await crmAdmin
+              .from("leads")
+              .select("id")
+              .eq("phone", fields.phone)
+              .eq("interest", fields.interest)
+              .gte("created_at", since24h)
+              .limit(1)
+              .maybeSingle();
+            if (existingRow) {
+              result.skipped++;
+              existingLeadgenIds.add(lead.id);
+              if (dedupKey) existingPhones.add(dedupKey);
+              logsToInsert.push({
+                event_type: "leadgen_sync", page_id: PAGE_ID, leadgen_id: lead.id,
+                form_id: form.id, status: "skipped_duplicate_24h",
+                payload: { form_name: form.name, phone: fields.phone, interest: fields.interest, reason: "phone+interest_within_24h_pointcheck" },
+              });
+              continue;
+            }
+          }
+
           const assignTo = getNextCorretor();
           leadsToInsert.push({ ...fields, status: "lead_novo", tenant_id: assignTo, _leadgen_id: lead.id, _form_id: form.id, _form_name: form.name, _platform: lead.platform, _created_time: lead.created_time });
           existingLeadgenIds.add(lead.id);
