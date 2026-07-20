@@ -1,46 +1,52 @@
+## Causa raiz (confirmada nos logs)
 
-## Objetivo
+Marcia (leadgen_id `2183149779132525`) e Daniele (`1057397330276382`) estão sendo reinseridas a cada 10 min pelo cron `fb-sync-leads`, sempre com status `success` — ou seja, o dedup **não está pegando**.
 
-Parar o loop da Marcia/Daniele (mesmo lead entrando várias vezes por dia) sem bloquear reentradas legítimas do mesmo cliente em datas diferentes.
+Investigando os logs:
+- Existem **18.676** registros em `webhook_logs` com `leadgen_id` preenchido; só nas últimas 24h são **3.569**.
+- A função hoje faz:
+  ```ts
+  cloudAdmin.from("webhook_logs").select("leadgen_id").not("leadgen_id","is",null).limit(5000)
+  ```
+  **sem `order by`**. Postgres devolve as linhas na ordem física (mais antigas primeiro), então o `Set` de `existingLeadgenIds` carrega 5.000 IDs antigos e **não inclui os leadgen_ids inseridos hoje** — inclusive os da Marcia/Daniele. Por isso o cron reprocessa esses mesmos IDs a cada rodada.
+- A dedup por telefone+interest também não segura porque a query de `existingLeads` no CRM externo tem o mesmo problema (`.limit(5000)` sem `order`), então em janelas com muitos leads a lista efetiva pode não conter os mais recentes.
 
-## Regra nova de deduplicação
+## Correção
 
-Para cada lead que chega (via `fb-lead-webhook` ou `fb-sync-leads`):
+Editar `supabase/functions/fb-sync-leads/index.ts`:
 
-- Chave = **telefone normalizado + interest (nome do formulário)**
-- Se já existe lead com essa chave criado nas **últimas 24 horas** → **ignora** (marca como `skipped_duplicate_24h` no `webhook_logs`).
-- Se o lead mais recente com essa chave tem **mais de 24 horas** → **deixa entrar** (reentrada legítima).
-- Se nunca existiu → entra normal.
+1. **Dedup por leadgen_id** — buscar só a janela relevante e ordenar:
+   ```ts
+   cloudAdmin.from("webhook_logs")
+     .select("leadgen_id")
+     .not("leadgen_id","is",null)
+     .gte("created_at", new Date(Date.now() - 7*24*3600*1000).toISOString())
+     .order("created_at", { ascending: false })
+     .limit(10000)
+   ```
+   (7 dias cobre com folga a janela de reprocessamento do Facebook.)
 
-Isso substitui o dedup atual "telefone+interest para sempre" que estava deixando passar duplicatas em execuções concorrentes do cron e/ou webhook.
+2. **Dedup por telefone+interest (24h)** — garantir ordenação para nunca perder recentes:
+   ```ts
+   crmAdmin.from("leads")
+     .select("phone, interest, created_at")
+     .gte("created_at", since24h)
+     .order("created_at", { ascending: false })
+     .limit(10000)
+   ```
 
-## Mudanças
+3. **Reforço** — antes de inserir cada lead, fazer um `select` pontual `phone=? AND interest=? AND created_at>=since24h limit 1` no CRM (mesmo padrão que já existe no `fb-lead-webhook`). Custo baixo (~1 query por lead novo) e elimina qualquer race entre execuções simultâneas do cron.
 
-### 1. `supabase/functions/fb-sync-leads/index.ts`
-- Trocar o `Set<string>` de `existingPhones` (que hoje carrega todos os leads históricos) por um `Map<string, string>` onde a chave é `phone::interest` e o valor é o `created_at` **mais recente** desse par.
-- Ao popular: buscar `leads` filtrando `created_at >= now() - 24h` (não precisa dos 5000 históricos).
-- No loop de processamento: se `map.has(key)` → skip com motivo `duplicate_last_24h`. Senão insere e adiciona ao map com `created_at = now()` para dedup intra-batch.
-- Manter o retry do insert que trata `23505` como skip (fallback caso a constraint UNIQUE seja adicionada depois).
+Não mexe em schema, frontend nem lógica da roleta.
 
-### 2. `supabase/functions/fb-lead-webhook/index.ts`
-- Mesma lógica: antes de inserir, `SELECT id, created_at FROM leads WHERE phone = ? AND interest = ? AND created_at >= now() - interval '24 hours' LIMIT 1`.
-- Se retornar linha → responde 200 e loga `skipped_duplicate_24h` no `webhook_logs`.
-- Senão insere normalmente e chama a RPC da roleta.
+## Limpeza dos duplicados de hoje (Marcia/Daniele/etc.)
 
-### 3. Limpeza dos duplicados atuais (one-shot via psql no banco externo)
-- Manter a **cópia mais antiga** de cada `(phone, interest)` das últimas 24h e deletar as demais.
-- Antes de deletar: reverter `last_received_at`/`total_received` dos corretores que receberam as cópias extras, para a roleta não ficar enviesada.
-- Rodar como comandos SQL no chat de build; sem migration (é banco externo).
-
-## Detalhes técnicos
-
-- Normalização de telefone continua via `normalizePhone` (só dígitos, sem prefixo 0).
-- `interest` é comparado exatamente como está gravado (ex: `Lumiere Parcela Alta 14.07.26 • IG`) — é o mesmo valor gerado pelo `parseLead`, então bate.
-- Janela de 24h calculada em UTC no servidor (`new Date(Date.now() - 24*3600*1000).toISOString()`).
-- Não altera schema. A constraint UNIQUE composta continua fora de escopo (banco externo, sem migration tool aqui).
+Depois de publicar o fix, rodar o mesmo script de limpeza que já usamos:
+- manter a cópia mais antiga de cada `(phone, interest)` das últimas 24h no CRM externo;
+- arquivar/deletar as demais;
+- decrementar `total_received` dos corretores que receberam as cópias extras.
 
 ## Fora de escopo
 
-- Não mexe em telas do frontend.
-- Não altera lógica da roleta em si (só reverte contadores dos leads deletados).
-- Não adiciona constraint no banco externo neste passo.
+- Constraint UNIQUE no banco externo (segue pendente por não ter migration tool no CRM externo).
+- Qualquer mudança de UI.
