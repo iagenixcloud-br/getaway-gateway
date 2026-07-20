@@ -221,11 +221,12 @@ Deno.serve(async (req) => {
     // 1b. Load active corretores and their current lead counts for round-robin with cap.
     // Para dedup, carrega apenas leads das últimas 24h (janela deslizante).
     const since24h = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+    const since7d = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
     const [{ data: corretoresRaw }, { data: allLeads }, { data: existingLeads }, { data: existingLogs }] = await Promise.all([
       crmAdmin.from("profiles").select("id, name, is_active, last_received_at").eq("is_active", true).order("last_received_at", { ascending: true, nullsFirst: true }),
       crmAdmin.from("leads").select("tenant_id").eq("status", "lead_novo").not("tenant_id", "is", null).limit(5000),
-      crmAdmin.from("leads").select("phone, interest, created_at").gte("created_at", since24h).limit(5000),
-      cloudAdmin.from("webhook_logs").select("leadgen_id").not("leadgen_id", "is", null).limit(5000),
+      crmAdmin.from("leads").select("phone, interest, created_at").gte("created_at", since24h).order("created_at", { ascending: false }).limit(10000),
+      cloudAdmin.from("webhook_logs").select("leadgen_id").not("leadgen_id", "is", null).gte("created_at", since7d).order("created_at", { ascending: false }).limit(10000),
     ]);
 
     const leadCounts = new Map<string, number>();
@@ -312,6 +313,29 @@ Deno.serve(async (req) => {
               payload: { form_name: form.name, phone: fields.phone, interest: fields.interest, reason: "phone+interest_within_24h" },
             });
             continue;
+          }
+
+          // Reforço: check pontual no CRM (elimina race entre execuções concorrentes do cron)
+          if (normPhone) {
+            const { data: existingRow } = await crmAdmin
+              .from("leads")
+              .select("id")
+              .eq("phone", fields.phone)
+              .eq("interest", fields.interest)
+              .gte("created_at", since24h)
+              .limit(1)
+              .maybeSingle();
+            if (existingRow) {
+              result.skipped++;
+              existingLeadgenIds.add(lead.id);
+              if (dedupKey) existingPhones.add(dedupKey);
+              logsToInsert.push({
+                event_type: "leadgen_sync", page_id: PAGE_ID, leadgen_id: lead.id,
+                form_id: form.id, status: "skipped_duplicate_24h",
+                payload: { form_name: form.name, phone: fields.phone, interest: fields.interest, reason: "phone+interest_within_24h_pointcheck" },
+              });
+              continue;
+            }
           }
 
           const assignTo = getNextCorretor();
