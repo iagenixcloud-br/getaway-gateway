@@ -217,12 +217,14 @@ Deno.serve(async (req) => {
     const activeForms = (formsData.data || []).filter((f: any) => f.status === "ACTIVE");
     result.forms_checked = activeForms.length;
 
-    // 1b. Load active corretores and their current lead counts for round-robin with cap
     const MAX_LEADS_PER_CORRETOR = 10;
+    // 1b. Load active corretores and their current lead counts for round-robin with cap.
+    // Para dedup, carrega apenas leads das últimas 24h (janela deslizante).
+    const since24h = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
     const [{ data: corretoresRaw }, { data: allLeads }, { data: existingLeads }, { data: existingLogs }] = await Promise.all([
       crmAdmin.from("profiles").select("id, name, is_active, last_received_at").eq("is_active", true).order("last_received_at", { ascending: true, nullsFirst: true }),
       crmAdmin.from("leads").select("tenant_id").eq("status", "lead_novo").not("tenant_id", "is", null).limit(5000),
-      crmAdmin.from("leads").select("phone, interest").limit(5000),
+      crmAdmin.from("leads").select("phone, interest, created_at").gte("created_at", since24h).limit(5000),
       cloudAdmin.from("webhook_logs").select("leadgen_id").not("leadgen_id", "is", null).limit(5000),
     ]);
 
@@ -249,8 +251,8 @@ Deno.serve(async (req) => {
       return null;
     }
 
-    // Dedup composto: (telefone normalizado + interest). Mesmo número em
-    // formulário diferente entra como lead novo (cada campanha = nova busca do cliente).
+    // Dedup composto (telefone normalizado + interest) DENTRO das últimas 24h.
+    // Reentrada legítima do mesmo cliente/form após 24h é permitida.
     const existingPhones = new Set(
       (existingLeads || [])
         .map((l: any) => {
@@ -306,8 +308,8 @@ Deno.serve(async (req) => {
             existingLeadgenIds.add(lead.id);
             logsToInsert.push({
               event_type: "leadgen_sync", page_id: PAGE_ID, leadgen_id: lead.id,
-              form_id: form.id, status: "skipped_duplicate",
-              payload: { form_name: form.name, phone: fields.phone, interest: fields.interest, reason: "phone+interest_already_exists" },
+              form_id: form.id, status: "skipped_duplicate_24h",
+              payload: { form_name: form.name, phone: fields.phone, interest: fields.interest, reason: "phone+interest_within_24h" },
             });
             continue;
           }

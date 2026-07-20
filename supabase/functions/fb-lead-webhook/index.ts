@@ -339,30 +339,33 @@ Deno.serve(async (req) => {
           console.warn("corretor assignment failed:", e);
         }
 
-        // Dedup composto: (telefone normalizado + interest). Mesmo número em
-        // formulário diferente entra como lead novo (cada campanha = nova busca).
+        // Dedup por (telefone normalizado + interest) DENTRO das últimas 24h.
+        // Se o mesmo cliente voltar depois de 24h no mesmo formulário, entra
+        // como reentrada legítima.
         const normPhone = normalizePhone(fields.phone);
         const currentInterest = (fields.interest || "").trim();
         if (normPhone) {
-          const { data: existing } = await crmAdmin
+          const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+          const { data: recent } = await crmAdmin
             .from("leads")
-            .select("id, phone, interest")
+            .select("id, phone, interest, created_at")
+            .gte("created_at", since)
             .limit(2000);
-          const dup = (existing || []).find(
+          const dup = (recent || []).find(
             (l: any) =>
               normalizePhone(l.phone || "") === normPhone &&
               (l.interest || "").trim() === currentInterest
           );
           if (dup) {
-            console.log(`Lead duplicado ignorado (phone=${fields.phone}, interest="${currentInterest}", existing=${dup.id})`);
+            console.log(`Lead duplicado nas últimas 24h ignorado (phone=${fields.phone}, interest="${currentInterest}", existing=${dup.id})`);
             await logWebhook({
               event_type: "leadgen",
               page_id: pageId,
               leadgen_id: leadgenId,
               form_id: formId,
-              status: "skipped_duplicate",
+              status: "skipped_duplicate_24h",
               lead_id: dup.id,
-              payload: { fields, reason: "phone+interest_already_exists" },
+              payload: { fields, reason: "phone+interest_within_24h", existing_created_at: dup.created_at },
             });
             continue;
           }
