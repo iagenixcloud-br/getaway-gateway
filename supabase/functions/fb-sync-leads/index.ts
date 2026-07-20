@@ -308,8 +308,8 @@ Deno.serve(async (req) => {
             existingLeadgenIds.add(lead.id);
             logsToInsert.push({
               event_type: "leadgen_sync", page_id: PAGE_ID, leadgen_id: lead.id,
-              form_id: form.id, status: "skipped_duplicate",
-              payload: { form_name: form.name, phone: fields.phone, interest: fields.interest, reason: "phone+interest_already_exists" },
+              form_id: form.id, status: "skipped_duplicate_24h",
+              payload: { form_name: form.name, phone: fields.phone, interest: fields.interest, reason: "phone+interest_within_24h" },
             });
             continue;
           }
