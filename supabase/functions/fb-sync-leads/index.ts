@@ -217,6 +217,7 @@ Deno.serve(async (req) => {
     const activeForms = (formsData.data || []).filter((f: any) => f.status === "ACTIVE");
     result.forms_checked = activeForms.length;
 
+    const MAX_LEADS_PER_CORRETOR = 10;
     // 1b. Load active corretores and their current lead counts for round-robin with cap.
     // Para dedup, carrega apenas leads das últimas 24h (janela deslizante).
     const since24h = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
