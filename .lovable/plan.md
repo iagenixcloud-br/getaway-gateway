@@ -1,52 +1,45 @@
-## Causa raiz (confirmada nos logs)
+Plano: Exportar leads para Google Sheets
 
-Marcia (leadgen_id `2183149779132525`) e Daniele (`1057397330276382`) estão sendo reinseridas a cada 10 min pelo cron `fb-sync-leads`, sempre com status `success` — ou seja, o dedup **não está pegando**.
+Contexto atual
+-------------
+- `src/pages/Exportar.tsx` já exporta CSV com separador vírgula e BOM UTF-8, o que é compatível com Google Sheets.
+- O fato do arquivo CSV estar abrindo no Visual Studio Code é uma configuração do sistema operacional/navegador do usuário para arquivos `.csv`, não um bug do app.
+- Nenhum conector Google Sheets está configurado no workspace ainda (não há clients de `google_sheets`).
 
-Investigando os logs:
-- Existem **18.676** registros em `webhook_logs` com `leadgen_id` preenchido; só nas últimas 24h são **3.569**.
-- A função hoje faz:
-  ```ts
-  cloudAdmin.from("webhook_logs").select("leadgen_id").not("leadgen_id","is",null).limit(5000)
-  ```
-  **sem `order by`**. Postgres devolve as linhas na ordem física (mais antigas primeiro), então o `Set` de `existingLeadgenIds` carrega 5.000 IDs antigos e **não inclui os leadgen_ids inseridos hoje** — inclusive os da Marcia/Daniele. Por isso o cron reprocessa esses mesmos IDs a cada rodada.
-- A dedup por telefone+interest também não segura porque a query de `existingLeads` no CRM externo tem o mesmo problema (`.limit(5000)` sem `order`), então em janelas com muitos leads a lista efetiva pode não conter os mais recentes.
+O que será feito
+----------------
+1. Melhorar a experiência do CSV para Google Sheets
+   - Manter o botão/download CSV existente.
+   - Garantir que o CSV continue usando vírgula como delimitador, UTF-8 BOM e escaping correto (já está assim).
+   - Adicionar um texto/ícone informativo na tela explicando que, após baixar, basta arrastar o arquivo para o Google Sheets ou usar `Arquivo > Importar` dentro do Sheets.
+   - Adicionar um link secundário "Abrir sheets.google.com" para facilitar o upload manual.
 
-## Correção
+2. Configurar Google Sheets App User Connector (exportação direta)
+   - Linkar um cliente OAuth do workspace para o connector `google_sheets` (`connector_app_user--connect_client`).
+   - Escopos necessários: `https://www.googleapis.com/auth/userinfo.email`, `https://www.googleapis.com/auth/userinfo.profile`, `https://www.googleapis.com/auth/spreadsheets`.
+   - Redirect URI obrigatório: `https://connector-gateway.lovable.dev/api/v1/app-users/oauth2/callback`.
+   - Nota: isso exige que o workspace tenha um Google OAuth web client configurado. Se ainda não existir, você precisará criar/aprovar pelo painel de App User Connectors.
 
-Editar `supabase/functions/fb-sync-leads/index.ts`:
+3. Criar Edge Function `export-leads-to-sheets`
+   - Receber via POST os mesmos filtros da tela: `status`, `corretor`, `periodo`, `incluirArquivados` e opcionalmente a lista de `ids` selecionados.
+   - Validar JWT e garantir que o usuário tenha role `admin` ou `master`.
+   - Buscar os leads no banco externo (`gycrprnkuwlzntqvpoxl`) com os mesmos filtros da query do frontend.
+   - Usar a conexão do App User Connector para chamar o Google Sheets API via gateway Lovable:
+     - Criar nova planilha (`POST /sheets/v4/spreadsheets`) com título tipo `Leads_YYYY-MM-DD`.
+     - Escrever os dados em uma aba (`PUT /sheets/v4/spreadsheets/{id}/values/A1:Z{n}?valueInputOption=USER_ENTERED`) com os mesmos cabeçalhos do CSV.
+   - Retornar a URL da planilha (`https://docs.google.com/spreadsheets/d/{id}/edit`) para o frontend abrir.
 
-1. **Dedup por leadgen_id** — buscar só a janela relevante e ordenar:
-   ```ts
-   cloudAdmin.from("webhook_logs")
-     .select("leadgen_id")
-     .not("leadgen_id","is",null)
-     .gte("created_at", new Date(Date.now() - 7*24*3600*1000).toISOString())
-     .order("created_at", { ascending: false })
-     .limit(10000)
-   ```
-   (7 dias cobre com folga a janela de reprocessamento do Facebook.)
+4. Atualizar frontend `src/pages/Exportar.tsx`
+   - Adicionar botão primário "Exportar para Google Sheets" ao lado do botão "Exportar CSV".
+   - Se o usuário ainda não tiver conectado o Google, mostrar um botão "Conectar Google Sheets" que inicia o OAuth.
+   - Durante a exportação, mostrar estado de loading.
+   - Em caso de sucesso, abrir a nova planilha em uma aba do navegador.
+   - Em caso de erro, exibir toast com a mensagem detalhada.
 
-2. **Dedup por telefone+interest (24h)** — garantir ordenação para nunca perder recentes:
-   ```ts
-   crmAdmin.from("leads")
-     .select("phone, interest, created_at")
-     .gte("created_at", since24h)
-     .order("created_at", { ascending: false })
-     .limit(10000)
-   ```
+5. Testes
+   - Verificar que o CSV baixado importa corretamente no Google Sheets (colunas alinhadas, caracteres especiais OK).
+   - Verificar que o botão de exportação direta cria uma nova planilha no Google Drive da conta conectada e preenche os dados.
 
-3. **Reforço** — antes de inserir cada lead, fazer um `select` pontual `phone=? AND interest=? AND created_at>=since24h limit 1` no CRM (mesmo padrão que já existe no `fb-lead-webhook`). Custo baixo (~1 query por lead novo) e elimina qualquer race entre execuções simultâneas do cron.
-
-Não mexe em schema, frontend nem lógica da roleta.
-
-## Limpeza dos duplicados de hoje (Marcia/Daniele/etc.)
-
-Depois de publicar o fix, rodar o mesmo script de limpeza que já usamos:
-- manter a cópia mais antiga de cada `(phone, interest)` das últimas 24h no CRM externo;
-- arquivar/deletar as demais;
-- decrementar `total_received` dos corretores que receberam as cópias extras.
-
-## Fora de escopo
-
-- Constraint UNIQUE no banco externo (segue pendente por não ter migration tool no CRM externo).
-- Qualquer mudança de UI.
+Pendente de decisão
+-------------------
+- Confirmar se você tem permissão de workspace admin para criar o App User Connector. Se não tiver, a exportação direta só será possível depois que um admin criar o client OAuth do Google.
