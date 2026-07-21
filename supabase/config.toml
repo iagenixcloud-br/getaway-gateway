@@ -39,3 +39,6 @@ verify_jwt = false
 [functions.seed-test-leads]
 verify_jwt = false
 
+[functions.export-leads-to-sheets]
+verify_jwt = false
+
