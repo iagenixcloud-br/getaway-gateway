@@ -3,6 +3,7 @@ import { toast } from "sonner";
 import { supabase } from "../lib/supabase";
 import { useAuth } from "../contexts/AuthContext";
 import { useCorretores } from "../hooks/useCorretores";
+import { invokeCloudFunction } from "../lib/cloudFunctions";
 
 interface LeadRow {
   id: string;
