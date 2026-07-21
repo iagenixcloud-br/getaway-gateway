@@ -484,7 +484,7 @@ export function Exportar() {
           )}
         </div>
 
-        <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+        <div className="flex flex-col sm:flex-row flex-wrap gap-2 w-full sm:w-auto">
           <button
             onClick={exportCsv}
             disabled={loading || rows.length === 0}
@@ -503,6 +503,45 @@ export function Exportar() {
             }}
           >
             Exportar CSV{selected.size > 0 ? ` (${selected.size})` : ""}
+          </button>
+          <button
+            onClick={copyCsvToClipboard}
+            disabled={loading || rows.length === 0}
+            className="w-full sm:w-auto"
+            style={{
+              background: "transparent",
+              color: "#fff",
+              border: "0.5px solid rgba(255,255,255,0.2)",
+              borderRadius: 8,
+              padding: "12px 18px",
+              fontSize: 13,
+              fontWeight: 600,
+              cursor: "pointer",
+              opacity: loading || rows.length === 0 ? 0.5 : 1,
+              minHeight: 44,
+            }}
+          >
+            Copiar CSV
+          </button>
+          <button
+            onClick={exportSheets}
+            disabled={loading || rows.length === 0 || sheetsLoading}
+            className="w-full sm:w-auto"
+            style={{
+              background: "#0F9D58",
+              color: "#fff",
+              border: "none",
+              borderRadius: 8,
+              padding: "12px 18px",
+              fontSize: 13,
+              fontWeight: 600,
+              cursor: "pointer",
+              opacity: loading || rows.length === 0 || sheetsLoading ? 0.5 : 1,
+              minHeight: 44,
+            }}
+          >
+            {sheetsLoading ? "Criando planilha..." : "Exportar Google Sheets"}
+            {selected.size > 0 ? ` (${selected.size})` : ""}
           </button>
           <button
             onClick={openArchiveModal}
