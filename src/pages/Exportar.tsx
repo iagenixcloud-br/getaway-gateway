@@ -563,6 +563,39 @@ export function Exportar() {
             Arquivar{selected.size > 0 ? ` (${selected.size})` : ""}
           </button>
         </div>
+        <button
+          onClick={() => setShowSheetsHelp((s) => !s)}
+          style={{
+            background: "transparent",
+            border: "none",
+            color: "rgba(255,255,255,0.5)",
+            fontSize: 12,
+            cursor: "pointer",
+            marginTop: 8,
+            padding: 0,
+            textAlign: "left",
+          }}
+        >
+          {showSheetsHelp ? "Ocultar dica" : "💡 Como jogar no Google Sheets?"}
+        </button>
+        {showSheetsHelp && (
+          <div
+            style={{
+              width: "100%",
+              background: "#0d1b2a",
+              border: "0.5px solid rgba(255,255,255,0.08)",
+              borderRadius: 8,
+              padding: 12,
+              marginTop: 8,
+              fontSize: 12,
+              color: "rgba(255,255,255,0.7)",
+              lineHeight: 1.6,
+            }}
+          >
+            <strong>Opção 1 (automática):</strong> clique em "Exportar Google Sheets". É necessário configurar uma conexão Google Sheets em Configurações &gt; Conectores. <br />
+            <strong>Opção 2 (manual):</strong> clique em "Copiar CSV", abra o Google Sheets e cole com <kbd>Ctrl+V</kbd> (ou <kbd>Cmd+V</kbd> no Mac). Os dados já vêm separados por colunas.
+          </div>
+        )}
       </div>
 
       {/* Mobile card list */}
