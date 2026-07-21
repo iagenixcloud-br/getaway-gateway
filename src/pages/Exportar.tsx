@@ -90,6 +90,9 @@ export function Exportar() {
   const [confirmText, setConfirmText] = useState("");
   const [archiving, setArchiving] = useState(false);
 
+  const [sheetsLoading, setSheetsLoading] = useState(false);
+  const [showSheetsHelp, setShowSheetsHelp] = useState(false);
+
   const corretorNome = useMemo(() => {
     const m = new Map<string, string>();
     corretores.forEach((c) => m.set(c.id, c.name || c.email));
