@@ -210,6 +210,79 @@ export function Exportar() {
     toast.success(`${source.length} leads exportados`);
   };
 
+  const buildCsvContent = () => {
+    const source = selected.size > 0 ? rows.filter((r) => selected.has(r.id)) : rows;
+    if (source.length === 0) return null;
+    const headers = [
+      "Nome",
+      "Telefone",
+      "Email",
+      "Status",
+      "Substatus",
+      ...(showArquivadoCol ? ["Arquivado"] : []),
+      "Corretor",
+      "Data entrada",
+      "Cidade",
+      "Interesse",
+    ];
+    const lines = [headers.join(",")];
+    source.forEach((r) => {
+      lines.push(
+        [
+          r.name,
+          r.phone,
+          r.email ?? "",
+          statusLabel(r.status),
+          r.substatus ?? "",
+          ...(showArquivadoCol ? [r.arquivado ? "Sim" : "Não"] : []),
+          r.tenant_id ? corretorNome.get(r.tenant_id) ?? "" : "",
+          new Date(r.created_at).toLocaleString("pt-BR"),
+          r.city ?? "",
+          r.interest ?? "",
+        ]
+          .map(csvEscape)
+          .join(","),
+      );
+    });
+    return { content: "\uFEFF" + lines.join("\n"), count: source.length };
+  };
+
+  const copyCsvToClipboard = async () => {
+    const csv = buildCsvContent();
+    if (!csv) {
+      toast.error("Nenhum lead para copiar");
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(csv.content);
+      toast.success(`${csv.count} leads copiados. Agora cole no Google Sheets (Ctrl+V).`);
+    } catch {
+      toast.error("Não foi possível copiar automaticamente. Use o botão Exportar CSV.");
+    }
+  };
+
+  const exportSheets = async () => {
+    if (rows.length === 0) {
+      toast.error("Nenhum lead para exportar");
+      return;
+    }
+    setSheetsLoading(true);
+    const { data, error } = await invokeCloudFunction("export-leads-to-sheets", {
+      status: statusSel,
+      tenant_id: corretorSel || undefined,
+      since: periodoToDate(periodo),
+      incluirArquivados,
+      title: `Leads ${new Date().toLocaleDateString("pt-BR")}`,
+    });
+    setSheetsLoading(false);
+    if (error || !data?.ok) {
+      toast.error(error?.message || data?.error || "Erro ao exportar para Google Sheets");
+      return;
+    }
+    toast.success(`${data.count} leads exportados para Google Sheets`);
+    window.open(data.spreadsheetUrl, "_blank", "noopener,noreferrer");
+  };
+
   const openArchiveModal = () => {
     if (selected.size === 0) {
       toast.error("Selecione ao menos um lead");
