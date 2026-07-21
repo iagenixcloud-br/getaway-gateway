@@ -3,6 +3,7 @@ import { toast } from "sonner";
 import { supabase } from "../lib/supabase";
 import { useAuth } from "../contexts/AuthContext";
 import { useCorretores } from "../hooks/useCorretores";
+import { invokeCloudFunction } from "../lib/cloudFunctions";
 
 interface LeadRow {
   id: string;
@@ -88,6 +89,9 @@ export function Exportar() {
   const [showModal, setShowModal] = useState(false);
   const [confirmText, setConfirmText] = useState("");
   const [archiving, setArchiving] = useState(false);
+
+  const [sheetsLoading, setSheetsLoading] = useState(false);
+  const [showSheetsHelp, setShowSheetsHelp] = useState(false);
 
   const corretorNome = useMemo(() => {
     const m = new Map<string, string>();
@@ -204,6 +208,79 @@ export function Exportar() {
     a.click();
     URL.revokeObjectURL(url);
     toast.success(`${source.length} leads exportados`);
+  };
+
+  const buildCsvContent = () => {
+    const source = selected.size > 0 ? rows.filter((r) => selected.has(r.id)) : rows;
+    if (source.length === 0) return null;
+    const headers = [
+      "Nome",
+      "Telefone",
+      "Email",
+      "Status",
+      "Substatus",
+      ...(showArquivadoCol ? ["Arquivado"] : []),
+      "Corretor",
+      "Data entrada",
+      "Cidade",
+      "Interesse",
+    ];
+    const lines = [headers.join(",")];
+    source.forEach((r) => {
+      lines.push(
+        [
+          r.name,
+          r.phone,
+          r.email ?? "",
+          statusLabel(r.status),
+          r.substatus ?? "",
+          ...(showArquivadoCol ? [r.arquivado ? "Sim" : "Não"] : []),
+          r.tenant_id ? corretorNome.get(r.tenant_id) ?? "" : "",
+          new Date(r.created_at).toLocaleString("pt-BR"),
+          r.city ?? "",
+          r.interest ?? "",
+        ]
+          .map(csvEscape)
+          .join(","),
+      );
+    });
+    return { content: "\uFEFF" + lines.join("\n"), count: source.length };
+  };
+
+  const copyCsvToClipboard = async () => {
+    const csv = buildCsvContent();
+    if (!csv) {
+      toast.error("Nenhum lead para copiar");
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(csv.content);
+      toast.success(`${csv.count} leads copiados. Agora cole no Google Sheets (Ctrl+V).`);
+    } catch {
+      toast.error("Não foi possível copiar automaticamente. Use o botão Exportar CSV.");
+    }
+  };
+
+  const exportSheets = async () => {
+    if (rows.length === 0) {
+      toast.error("Nenhum lead para exportar");
+      return;
+    }
+    setSheetsLoading(true);
+    const { data, error } = await invokeCloudFunction("export-leads-to-sheets", {
+      status: statusSel,
+      tenant_id: corretorSel || undefined,
+      since: periodoToDate(periodo),
+      incluirArquivados,
+      title: `Leads ${new Date().toLocaleDateString("pt-BR")}`,
+    });
+    setSheetsLoading(false);
+    if (error || !data?.ok) {
+      toast.error(error?.message || data?.error || "Erro ao exportar para Google Sheets");
+      return;
+    }
+    toast.success(`${data.count} leads exportados para Google Sheets`);
+    window.open(data.spreadsheetUrl, "_blank", "noopener,noreferrer");
   };
 
   const openArchiveModal = () => {
@@ -407,7 +484,7 @@ export function Exportar() {
           )}
         </div>
 
-        <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+        <div className="flex flex-col sm:flex-row flex-wrap gap-2 w-full sm:w-auto">
           <button
             onClick={exportCsv}
             disabled={loading || rows.length === 0}
@@ -426,6 +503,45 @@ export function Exportar() {
             }}
           >
             Exportar CSV{selected.size > 0 ? ` (${selected.size})` : ""}
+          </button>
+          <button
+            onClick={copyCsvToClipboard}
+            disabled={loading || rows.length === 0}
+            className="w-full sm:w-auto"
+            style={{
+              background: "transparent",
+              color: "#fff",
+              border: "0.5px solid rgba(255,255,255,0.2)",
+              borderRadius: 8,
+              padding: "12px 18px",
+              fontSize: 13,
+              fontWeight: 600,
+              cursor: "pointer",
+              opacity: loading || rows.length === 0 ? 0.5 : 1,
+              minHeight: 44,
+            }}
+          >
+            Copiar CSV
+          </button>
+          <button
+            onClick={exportSheets}
+            disabled={loading || rows.length === 0 || sheetsLoading}
+            className="w-full sm:w-auto"
+            style={{
+              background: "#0F9D58",
+              color: "#fff",
+              border: "none",
+              borderRadius: 8,
+              padding: "12px 18px",
+              fontSize: 13,
+              fontWeight: 600,
+              cursor: "pointer",
+              opacity: loading || rows.length === 0 || sheetsLoading ? 0.5 : 1,
+              minHeight: 44,
+            }}
+          >
+            {sheetsLoading ? "Criando planilha..." : "Exportar Google Sheets"}
+            {selected.size > 0 ? ` (${selected.size})` : ""}
           </button>
           <button
             onClick={openArchiveModal}
@@ -447,6 +563,39 @@ export function Exportar() {
             Arquivar{selected.size > 0 ? ` (${selected.size})` : ""}
           </button>
         </div>
+        <button
+          onClick={() => setShowSheetsHelp((s) => !s)}
+          style={{
+            background: "transparent",
+            border: "none",
+            color: "rgba(255,255,255,0.5)",
+            fontSize: 12,
+            cursor: "pointer",
+            marginTop: 8,
+            padding: 0,
+            textAlign: "left",
+          }}
+        >
+          {showSheetsHelp ? "Ocultar dica" : "💡 Como jogar no Google Sheets?"}
+        </button>
+        {showSheetsHelp && (
+          <div
+            style={{
+              width: "100%",
+              background: "#0d1b2a",
+              border: "0.5px solid rgba(255,255,255,0.08)",
+              borderRadius: 8,
+              padding: 12,
+              marginTop: 8,
+              fontSize: 12,
+              color: "rgba(255,255,255,0.7)",
+              lineHeight: 1.6,
+            }}
+          >
+            <strong>Opção 1 (automática):</strong> clique em "Exportar Google Sheets". É necessário configurar uma conexão Google Sheets em Configurações &gt; Conectores. <br />
+            <strong>Opção 2 (manual):</strong> clique em "Copiar CSV", abra o Google Sheets e cole com <kbd>Ctrl+V</kbd> (ou <kbd>Cmd+V</kbd> no Mac). Os dados já vêm separados por colunas.
+          </div>
+        )}
       </div>
 
       {/* Mobile card list */}
